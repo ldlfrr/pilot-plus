@@ -97,17 +97,17 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col min-h-0 animate-fade-in">
-      <div className="h-14 border-b border-white/5 bg-[#13161e] flex items-center px-6 flex-shrink-0">
+      <div className="h-14 border-b border-white/5 bg-[#13161e] flex items-center px-4 md:px-6 flex-shrink-0">
         <div>
           <h1 className="text-base font-semibold text-white">Dashboard</h1>
           <p className="text-xs text-white/40">Vue d&apos;ensemble de votre activité commerciale</p>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-5">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5">
 
         {/* KPIs */}
-        <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {kpis.map(({ label, value, color, bg, sub }) => (
             <div key={label} className={cn('rounded-xl border border-white/8 p-4', bg)}>
               <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2">{label}</p>

@@ -30,7 +30,12 @@ const BOTTOM_NAV = [
   { href: '/subscription', label: 'Mon abonnement',   icon: CreditCard },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  open?: boolean
+  onClose?: () => void
+}
+
+export function Sidebar({ open = false, onClose }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -48,7 +53,12 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 w-60 bg-[#13161e] border-r border-white/5 flex flex-col z-30">
+    <aside className={cn(
+      'fixed inset-y-0 left-0 w-60 bg-[#13161e] border-r border-white/5 flex flex-col z-30',
+      'transition-transform duration-200 ease-in-out',
+      'md:translate-x-0',
+      open ? 'translate-x-0' : '-translate-x-full'
+    )}>
 
       {/* Logo + tagline */}
       <div className="h-16 flex items-center px-5 border-b border-white/5">
@@ -76,6 +86,7 @@ export function Sidebar() {
             <Link
               key={href}
               href={href}
+              onClick={onClose}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
                 active

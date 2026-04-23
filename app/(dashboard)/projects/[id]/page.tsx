@@ -144,41 +144,38 @@ export default function ProjectPage() {
     <div className="flex flex-col min-h-0 animate-fade-in">
 
       {/* ── Project header ──────────────────────────────────────────────── */}
-      <div className="bg-[#13161e] border-b border-white/5 px-6 py-4 flex-shrink-0">
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <div className="min-w-0">
-            {/* Title row */}
-            <div className="flex items-center gap-3 flex-wrap mb-2">
-              <h1 className="text-xl font-bold text-white">{project.name}</h1>
-              {verdictCfg && (
-                <span className={cn('text-xs font-bold px-2.5 py-1 rounded-full border', verdictCfg.bg, verdictCfg.text)}>
-                  {verdictCfg.label}
-                </span>
-              )}
-              {score && (
-                <span className={cn('text-lg font-extrabold', verdictCfg?.text ?? 'text-white/50')}>
-                  {score.total_score}/100
-                </span>
-              )}
-            </div>
-            {/* Meta */}
-            <div className="flex items-center gap-4 text-xs text-white/40 flex-wrap">
-              <span className="flex items-center gap-1.5"><Building size={12} />{project.client}</span>
-              <span className="flex items-center gap-1.5"><MapPin size={12} />{project.location}</span>
-              {project.offer_deadline && (
-                <span className="flex items-center gap-1.5 text-amber-400/70">
-                  <Calendar size={12} />
-                  Limite : {new Date(project.offer_deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                </span>
-              )}
-              {latestAnalysis?.result?.ref_ao && latestAnalysis.result.ref_ao !== 'NON PRÉCISÉ' && (
-                <span className="flex items-center gap-1.5"><Hash size={12} />Réf : {latestAnalysis.result.ref_ao}</span>
-              )}
-            </div>
+      <div className="bg-[#13161e] border-b border-white/5 px-4 md:px-6 py-4 flex-shrink-0">
+        <div className="flex flex-col gap-3 mb-4">
+          {/* Title + badges */}
+          <div className="flex items-start gap-3 flex-wrap">
+            <h1 className="text-lg md:text-xl font-bold text-white leading-tight">{project.name}</h1>
+            {verdictCfg && (
+              <span className={cn('text-xs font-bold px-2.5 py-1 rounded-full border mt-0.5', verdictCfg.bg, verdictCfg.text)}>
+                {verdictCfg.label}
+              </span>
+            )}
+            {score && (
+              <span className={cn('text-lg font-extrabold mt-0.5', verdictCfg?.text ?? 'text-white/50')}>
+                {score.total_score}/100
+              </span>
+            )}
           </div>
-
+          {/* Meta */}
+          <div className="flex items-center gap-3 text-xs text-white/40 flex-wrap">
+            <span className="flex items-center gap-1.5"><Building size={12} />{project.client}</span>
+            <span className="flex items-center gap-1.5"><MapPin size={12} />{project.location}</span>
+            {project.offer_deadline && (
+              <span className="flex items-center gap-1.5 text-amber-400/70">
+                <Calendar size={12} />
+                Limite : {new Date(project.offer_deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
+            )}
+            {latestAnalysis?.result?.ref_ao && latestAnalysis.result.ref_ao !== 'NON PRÉCISÉ' && (
+              <span className="flex items-center gap-1.5"><Hash size={12} />Réf : {latestAnalysis.result.ref_ao}</span>
+            )}
+          </div>
           {/* Action buttons */}
-          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             <button className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-xs font-medium rounded-lg transition-all">
               <Download size={13} />Export PDF
             </button>
@@ -188,7 +185,6 @@ export default function ProjectPage() {
             <button className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-xs font-medium rounded-lg transition-all">
               <FilePlus size={13} />Ajouter doc
             </button>
-
             <button
               onClick={handleAnalyze}
               disabled={analyzing || files.filter(f => f.extraction_status === 'done').length === 0}
@@ -197,7 +193,6 @@ export default function ProjectPage() {
               {analyzing ? <Loader2 size={13} className="animate-spin" /> : <Cpu size={13} />}
               {analyzing ? 'Analyse...' : 'Analyser'}
             </button>
-
             <button
               onClick={handleScore}
               disabled={scoring || analyses.length === 0}
@@ -206,7 +201,6 @@ export default function ProjectPage() {
               {scoring ? <Loader2 size={13} className="animate-spin" /> : <Target size={13} />}
               {scoring ? 'Scoring...' : 'Scorer'}
             </button>
-
             <button
               onClick={() => router.push(`/projects/${id}/edit`)}
               className="p-2 text-white/30 hover:text-white border border-white/10 rounded-lg hover:bg-white/5 transition-all"
@@ -235,7 +229,7 @@ export default function ProjectPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-0.5 -mb-px">
+        <div className="flex gap-0.5 -mb-px overflow-x-auto scrollbar-hide">
           {TABS.map(({ id: tabId, label, icon: Icon }) => (
             <button
               key={tabId}
@@ -254,34 +248,35 @@ export default function ProjectPage() {
         </div>
       </div>
 
-      {/* ── Tab content ──────────────────────────────────────────────────── */}
-      <div className="flex-1 p-6 overflow-y-auto">
-        {activeTab === 'synthese' && (
-          latestAnalysis
+      {/* ── Tab content — all mounted, hidden via display:none for instant switching */}
+      <div className="flex-1 overflow-y-auto">
+
+        <div style={{ display: activeTab === 'synthese' ? 'block' : 'none' }} className="p-4 md:p-6">
+          {latestAnalysis
             ? <SyntheseTab result={latestAnalysis.result} />
-            : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />
-        )}
+            : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />}
+        </div>
 
-        {activeTab === 'besoin' && (
-          latestAnalysis
+        <div style={{ display: activeTab === 'besoin' ? 'block' : 'none' }} className="p-4 md:p-6">
+          {latestAnalysis
             ? <BesoinClientTab result={latestAnalysis.result} />
-            : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />
-        )}
+            : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />}
+        </div>
 
-        {activeTab === 'pieces' && (
-          latestAnalysis
+        <div style={{ display: activeTab === 'pieces' ? 'block' : 'none' }} className="p-4 md:p-6">
+          {latestAnalysis
             ? <PiecesTab result={latestAnalysis.result} projectId={id} initialStates={taskStates} />
-            : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />
-        )}
+            : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />}
+        </div>
 
-        {activeTab === 'specificites' && (
-          latestAnalysis
+        <div style={{ display: activeTab === 'specificites' ? 'block' : 'none' }} className="p-4 md:p-6">
+          {latestAnalysis
             ? <SpecificitesTab result={latestAnalysis.result} />
-            : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />
-        )}
+            : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />}
+        </div>
 
-        {activeTab === 'gonogo' && (
-          score
+        <div style={{ display: activeTab === 'gonogo' ? 'block' : 'none' }} className="p-4 md:p-6">
+          {score
             ? <ScoreDisplay score={score} />
             : (
               <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-10 text-center">
@@ -292,24 +287,23 @@ export default function ProjectPage() {
                     : 'Cliquez sur "Scorer" pour calculer le Go/No Go.'}
                 </p>
               </div>
-            )
-        )}
+            )}
+        </div>
 
-        {activeTab === 'actions' && (
-          latestAnalysis
+        <div style={{ display: activeTab === 'actions' ? 'block' : 'none' }} className="p-4 md:p-6">
+          {latestAnalysis
             ? <ActionsTab result={latestAnalysis.result} projectId={id} initialStates={taskStates} />
-            : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />
-        )}
+            : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />}
+        </div>
 
-        {activeTab === 'documents' && (
-          <div className="max-w-2xl">
-            <FileUpload
-              projectId={project.id}
-              existingFiles={files}
-              onFilesChange={updated => setData(prev => prev ? { ...prev, files: updated } : prev)}
-            />
-          </div>
-        )}
+        <div style={{ display: activeTab === 'documents' ? 'block' : 'none' }} className="p-4 md:p-6 max-w-2xl">
+          <FileUpload
+            projectId={project.id}
+            existingFiles={files}
+            onFilesChange={updated => setData(prev => prev ? { ...prev, files: updated } : prev)}
+          />
+        </div>
+
       </div>
     </div>
   )

@@ -73,7 +73,7 @@ export default async function AccueilPage() {
     <div className="flex flex-col min-h-0 animate-fade-in">
 
       {/* ── Top bar ──────────────────────────────────────────────────────── */}
-      <div className="h-14 border-b border-white/5 bg-[#13161e] flex items-center justify-between px-6 flex-shrink-0">
+      <div className="h-14 border-b border-white/5 bg-[#13161e] flex items-center justify-between px-4 md:px-6 flex-shrink-0">
         <div>
           <p className="text-xs text-white/40 capitalize">
             {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
@@ -84,7 +84,7 @@ export default async function AccueilPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
 
         {/* ── Welcome ─────────────────────────────────────────────────────── */}
         <div>
@@ -116,7 +116,7 @@ export default async function AccueilPage() {
         </div>
 
         {/* ── KPI cards ───────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           <KpiCard
             label="PROJETS"
             value={stats.total}
