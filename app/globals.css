@@ -55,3 +55,33 @@
     @apply bg-[#1a1d2e] border border-[#2a2d3e] rounded-xl;
   }
 }
+
+/* ── Print / Export PDF ─────────────────────────────────────────────────────── */
+@media print {
+  /* Force white background + black text for readability */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Hide everything except the project tab content */
+  aside,
+  nav,
+  [data-print-hide],
+  .md\\:ml-60 > .md\\:hidden {
+    display: none !important;
+  }
+
+  /* Remove sidebar margin */
+  main {
+    margin-left: 0 !important;
+  }
+
+  /* Hide top bar, action buttons, tab bar */
+  [data-print-hide] { display: none !important; }
+
+  body {
+    background: white !important;
+    color: #111 !important;
+  }
+
+  /* Page break hints */
+  .print-break-before { page-break-before: always; }
+}

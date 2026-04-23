@@ -47,6 +47,7 @@ export default function ProjectPage() {
   const [scoring, setScoring]     = useState(false)
   const [actionError, setActionError]     = useState<string | null>(null)
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
+  const [copyOk, setCopyOk] = useState(false)
 
   const fetchProject = useCallback(async () => {
     try {
@@ -99,6 +100,29 @@ export default function ProjectPage() {
     } finally { setScoring(false) }
   }
 
+  function handleAddDoc() {
+    setActiveTab('documents')
+  }
+
+  async function handleShare() {
+    try {
+      const url = window.location.href
+      if (navigator.share) {
+        await navigator.share({ title: data?.project.name ?? 'PILOT+', url })
+      } else {
+        await navigator.clipboard.writeText(url)
+        setCopyOk(true)
+        setTimeout(() => setCopyOk(false), 2500)
+      }
+    } catch {
+      // user cancelled or not supported — ignore
+    }
+  }
+
+  function handleExportPdf() {
+    window.print()
+  }
+
   async function handleDelete() {
     if (!confirm('Supprimer ce projet ? Action irréversible.')) return
     const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' })
@@ -144,7 +168,7 @@ export default function ProjectPage() {
     <div className="flex flex-col min-h-0 animate-fade-in">
 
       {/* ── Project header ──────────────────────────────────────────────── */}
-      <div className="bg-[#13161e] border-b border-white/5 px-4 md:px-6 py-4 flex-shrink-0">
+      <div data-print-hide className="bg-[#13161e] border-b border-white/5 px-4 md:px-6 py-4 flex-shrink-0">
         <div className="flex flex-col gap-3 mb-4">
           {/* Title + badges */}
           <div className="flex items-start gap-3 flex-wrap">
@@ -176,13 +200,28 @@ export default function ProjectPage() {
           </div>
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-wrap">
-            <button className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-xs font-medium rounded-lg transition-all">
+            <button
+              onClick={handleExportPdf}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-xs font-medium rounded-lg transition-all"
+            >
               <Download size={13} />Export PDF
             </button>
-            <button className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-xs font-medium rounded-lg transition-all">
-              <Share2 size={13} />Partager
+            <button
+              onClick={handleShare}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-2 border text-xs font-medium rounded-lg transition-all',
+                copyOk
+                  ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
+                  : 'bg-white/5 hover:bg-white/10 border-white/10 text-white/70 hover:text-white'
+              )}
+            >
+              {copyOk ? <CheckCircle size={13} /> : <Share2 size={13} />}
+              {copyOk ? 'Lien copié !' : 'Partager'}
             </button>
-            <button className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-xs font-medium rounded-lg transition-all">
+            <button
+              onClick={handleAddDoc}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-xs font-medium rounded-lg transition-all"
+            >
               <FilePlus size={13} />Ajouter doc
             </button>
             <button
