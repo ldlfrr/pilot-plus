@@ -1,0 +1,39 @@
+{
+  "nom_projet": "Installation photovoltaïque toiture entrepôt logistique — Lot 3",
+  "contexte": "Société ABC Logistics, opérateur logistique national, consulte des entreprises spécialisées pour l'installation d'une centrale photovoltaïque en toiture sur son entrepôt de 12 000 m² situé à Vénissieux (69). L'objectif est d'atteindre l'autoconsommation à 70% et de vendre le surplus au réseau EDF OA.",
+  "besoin_client": "Fourniture et installation d'une centrale PV en autoconsommation avec revente de surplus, incluant le raccordement réseau, la mise en service et la maintenance préventive sur 10 ans.",
+  "fourniture_demandee": "Modules photovoltaïques haute performance (mono-PERC ou HJT), onduleurs string certifiés, câblage DC/AC, monitoring IoT temps réel, système de protection foudre, coffrets DC/AC, et pose sur support métallique adapté à la charpente existante.",
+  "surface_pv": "8 500 m² de toiture disponible — puissance cible entre 900 kWc et 1 100 kWc selon étude d'ombrage.",
+  "repartition": "Lot 1 : Études et ingénierie (déjà attribué). Lot 2 : Génie civil et renforcement toiture. Lot 3 : Fourniture et installation PV + raccordement (présent appel d'offres). Lot 4 : Maintenance 10 ans (option).",
+  "perimetre": "Études d'exécution, fourniture complète du matériel PV, installation et câblage, raccordement réseau (dossier CONSUEL + Enedis), mise en service, formation exploitation client, garantie 2 ans sur main-d'œuvre.",
+  "points_cles": [
+    "Critères de sélection : 60% prix, 30% valeur technique, 10% planning",
+    "Garantie producteur modules exigée : 25 ans minimum",
+    "Délai de réalisation : 16 semaines à compter de l'ordre de service",
+    "Visite de site obligatoire avant remise d'offre (date communiquée par le MO)",
+    "BIM Level 2 requis pour les livrables d'études",
+    "Caution de bonne fin de 5% du marché"
+  ],
+  "points_rse": [
+    "Priorité aux modules fabriqués en Europe ou certifiés Solar Impulse Foundation",
+    "Plan de gestion des déchets chantier obligatoire (SOGED)",
+    "Insertion professionnelle : clause d'au moins 5% d'heures travaillées pour publics éloignés de l'emploi",
+    "Bilan carbone du projet exigé avec les livrables finals"
+  ],
+  "date_offre": "15 mai 2026 — 12h00 (heure de Paris)",
+  "date_travaux": "Démarrage prévu semaine 35 (août 2026) — livraison avant fin novembre 2026",
+  "risques": [
+    "Contrainte de charpente : renforcement structurel potentiel à charge du Lot 2 mais risque d'interface et de retard",
+    "Délai raccordement Enedis : délai moyen 4-6 mois, potentiellement supérieur à la durée travaux",
+    "Clause de pénalité de retard : 0,1% par jour ouvré, plafonnée à 10% du marché",
+    "Clause de production garantie P90 : indemnisation si production annuelle < P90 sur 3 ans",
+    "Accès toiture conditionné à la présence du responsable sécurité client"
+  ],
+  "details_importants": [
+    "Dossier de consultation disponible sur la plateforme Klekoon jusqu'au 30 avril 2026",
+    "Contrat au forfait — pas de révision de prix possible",
+    "Paiement à 60 jours fin de mois à compter de la réception de facture",
+    "L'entreprise attributaire doit être qualifiée QualiPV Bat ou Qualifelec ENR",
+    "Assurance décennale obligatoire avec attestation à joindre à l'offre"
+  ]
+}

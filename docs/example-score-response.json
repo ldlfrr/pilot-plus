@@ -1,0 +1,26 @@
+{
+  "score_details": {
+    "rentabilite": {
+      "score": 16,
+      "justification": "Projet de taille significative (900-1100 kWc). Contrat au forfait sans révision de prix — risque de dérive. Délai de paiement à 60 jours impacte la trésorerie. Marge estimée correcte mais pas exceptionnelle."
+    },
+    "complexite": {
+      "score": 12,
+      "justification": "Interface avec Lot 2 (génie civil) à gérer. Clause de production garantie P90 contraignante. Raccordement Enedis potentiellement critique sur le planning. BIM Level 2 requis. Complexité maîtrisable mais significative."
+    },
+    "alignement_capacite": {
+      "score": 17,
+      "justification": "Installation toiture industrielle entre 900 et 1100 kWc — parfaitement dans notre cœur de métier. Qualifications QualiPV Bat disponibles. Expériences similaires récentes sur entrepôts logistiques."
+    },
+    "probabilite_gain": {
+      "score": 14,
+      "justification": "Pondération prix favorable à 60%. Notre positionnement tarifaire habituel nous place dans le premier tiers. Visite de site obligatoire = engagement fort des soumissionnaires. Concurrence probable de 3-5 entreprises nationales."
+    },
+    "charge_interne": {
+      "score": 13,
+      "justification": "16 semaines de chantier avec coordination multi-lots. Livrables BIM à produire. Formation client et dossier CONSUEL à gérer. Charge de chantier et administrative au-dessus de la moyenne mais gérable avec notre équipe actuelle."
+    }
+  },
+  "total_score": 72,
+  "verdict": "A_ETUDIER"
+}
