@@ -22,7 +22,7 @@ export function SyntheseTab({ result }: { result: AnalysisResult }) {
   return (
     <div className="space-y-5">
       {/* Grid info */}
-      <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+      <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <div className="w-4 h-4 bg-blue-500/20 rounded flex items-center justify-center">
             <div className="w-2 h-2 bg-blue-400 rounded-sm" />
@@ -58,7 +58,7 @@ export function SyntheseTab({ result }: { result: AnalysisResult }) {
       )}
 
       {/* Résumé exécutif */}
-      <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+      <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
         <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 mb-3">Résumé exécutif</h3>
         <p className="text-sm text-white/70 leading-relaxed">
           {result.resume_executif ?? result.contexte ?? 'Aucun résumé disponible.'}
@@ -67,7 +67,7 @@ export function SyntheseTab({ result }: { result: AnalysisResult }) {
 
       {/* Points clés */}
       {(result.points_cles?.length ?? 0) > 0 && (
-        <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+        <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
           <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 mb-3">Points clés</h3>
           <ul className="space-y-1.5">
             {result.points_cles.map((pt, i) => (

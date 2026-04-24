@@ -3,7 +3,7 @@ export default function ProjectLoading() {
     <div className="flex flex-col min-h-0 animate-pulse">
 
       {/* Header skeleton */}
-      <div className="bg-[#13161e] border-b border-white/5 px-4 md:px-6 py-4 flex-shrink-0">
+      <div className="bg-[var(--bg-surface)] border-b border-white/5 px-4 md:px-6 py-4 flex-shrink-0">
         <div className="flex flex-col gap-3 mb-4">
           {/* Title row */}
           <div className="flex items-center gap-3">

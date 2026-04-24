@@ -8,7 +8,9 @@ import React, {
   useState,
 } from 'react'
 
-export type Theme = 'dark' | 'pilot' | 'light'
+export type Theme = 'dark' | 'pilot' | 'midnight' | 'slate' | 'forest' | 'aurora' | 'dusk' | 'light'
+
+const VALID_THEMES: Theme[] = ['dark', 'pilot', 'midnight', 'slate', 'forest', 'aurora', 'dusk', 'light']
 
 const STORAGE_KEY = 'pilot-theme'
 
@@ -39,10 +41,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // with server profile.
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as Theme | null
-    const initial: Theme =
-      stored === 'dark' || stored === 'pilot' || stored === 'light'
-        ? stored
-        : 'dark'
+    const initial: Theme = stored && VALID_THEMES.includes(stored) ? stored : 'dark'
     setThemeState(initial)
     applyTheme(initial)
 
@@ -57,11 +56,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           (data as Record<string, unknown>).theme !== initial
         ) {
           const serverTheme = (data as Record<string, unknown>).theme as Theme
-          if (
-            serverTheme === 'dark' ||
-            serverTheme === 'pilot' ||
-            serverTheme === 'light'
-          ) {
+          if (VALID_THEMES.includes(serverTheme)) {
             setThemeState(serverTheme)
             localStorage.setItem(STORAGE_KEY, serverTheme)
             applyTheme(serverTheme)

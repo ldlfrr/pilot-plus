@@ -73,7 +73,7 @@ export default async function AccueilPage() {
     <div className="flex flex-col min-h-0 animate-fade-in">
 
       {/* ── Top bar ──────────────────────────────────────────────────────── */}
-      <div className="h-14 border-b border-white/5 bg-[#13161e] flex items-center justify-between px-4 md:px-6 flex-shrink-0">
+      <div className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center justify-between px-4 md:px-6 flex-shrink-0">
         <div>
           <p className="text-xs text-white/40 capitalize">
             {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
@@ -100,9 +100,9 @@ export default async function AccueilPage() {
         <div className="flex flex-wrap gap-3">
           {[
             { href: '/projects/new', icon: Upload,     label: 'Importer un DCE',  color: 'bg-blue-600 hover:bg-blue-500' },
-            { href: '/projects/new', icon: PlusCircle, label: 'Créer un projet',  color: 'bg-[#1e2235] hover:bg-[#252840] border border-white/10' },
-            { href: '/projects',     icon: FolderOpen, label: 'Mes projets',      color: 'bg-[#1e2235] hover:bg-[#252840] border border-white/10' },
-            { href: '/dashboard',    icon: BarChart3,  label: 'Dashboard',        color: 'bg-[#1e2235] hover:bg-[#252840] border border-white/10' },
+            { href: '/projects/new', icon: PlusCircle, label: 'Créer un projet',  color: 'bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] border border-white/10' },
+            { href: '/projects',     icon: FolderOpen, label: 'Mes projets',      color: 'bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] border border-white/10' },
+            { href: '/dashboard',    icon: BarChart3,  label: 'Dashboard',        color: 'bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] border border-white/10' },
           ].map(({ href, icon: Icon, label, color }) => (
             <Link
               key={label}
@@ -122,7 +122,7 @@ export default async function AccueilPage() {
             value={stats.total}
             sub="total cumulé"
             icon={<FolderOpen size={18} className="text-white/60" />}
-            bg="bg-[#1a1d2e]"
+            bg="bg-[var(--bg-card)]"
           />
           <KpiCard
             label="GO"
@@ -146,7 +146,7 @@ export default async function AccueilPage() {
             value={`${stats.tauxTransfo}%`}
             sub="GO / total"
             icon={<TrendingUp size={18} className="text-blue-400" />}
-            bg="bg-[#1a1d2e]"
+            bg="bg-[var(--bg-card)]"
             valueColor="text-blue-400"
           />
           <KpiCard
@@ -169,7 +169,7 @@ export default async function AccueilPage() {
           </div>
 
           {recent.length === 0 ? (
-            <div className="bg-[#1a1d2e] border border-dashed border-white/10 rounded-xl p-10 text-center">
+            <div className="bg-[var(--bg-card)] border border-dashed border-white/10 rounded-xl p-10 text-center">
               <FolderOpen size={28} className="mx-auto text-white/20 mb-3" />
               <p className="text-white/50 text-sm mb-4">Aucun projet pour l&apos;instant</p>
               <Link
@@ -228,7 +228,7 @@ function RichProjectCard({ project }: { project: ProjectWithScore }) {
   return (
     <Link
       href={`/projects/${project.id}`}
-      className="group bg-[#1a1d2e] border border-white/8 hover:border-blue-500/40 rounded-xl p-4 flex flex-col gap-3 transition-all hover:shadow-lg hover:shadow-blue-500/5"
+      className="group bg-[var(--bg-card)] border border-white/8 hover:border-blue-500/40 rounded-xl p-4 flex flex-col gap-3 transition-all hover:shadow-lg hover:shadow-blue-500/5"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">

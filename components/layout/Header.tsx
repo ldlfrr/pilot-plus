@@ -13,7 +13,7 @@ export async function Header({ title, description, action }: HeaderProps) {
   const initial = user?.email?.[0]?.toUpperCase() ?? '?'
 
   return (
-    <header className="h-14 border-b border-white/5 bg-[#13161e] flex items-center justify-between px-6 flex-shrink-0">
+    <header className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center justify-between px-6 flex-shrink-0">
       <div className="min-w-0">
         <h1 className="text-base font-semibold text-white truncate">{title}</h1>
         {description && (

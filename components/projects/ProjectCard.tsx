@@ -24,7 +24,7 @@ export function ProjectCard({ project }: Props) {
   return (
     <Link
       href={`/projects/${project.id}`}
-      className="group bg-[#1a1d2e] border border-white/8 hover:border-blue-500/40 rounded-xl p-4 flex flex-col gap-3 transition-all hover:shadow-lg hover:shadow-blue-500/5"
+      className="group bg-[var(--bg-card)] border border-white/8 hover:border-blue-500/40 rounded-xl p-4 flex flex-col gap-3 transition-all hover:shadow-lg hover:shadow-blue-500/5"
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">

@@ -32,7 +32,7 @@ export default function SharePage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f1117] gap-3">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--bg-base)] gap-3">
         <Loader2 className="animate-spin text-blue-400" size={28} />
         <p className="text-white/30 text-sm">Chargement du projet…</p>
       </div>
@@ -41,7 +41,7 @@ export default function SharePage() {
 
   if (error || !data) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f1117] gap-3">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--bg-base)] gap-3">
         <Lock size={28} className="text-white/20" />
         <p className="text-white/50 text-sm">{error ?? 'Lien invalide ou expiré'}</p>
         <Link href="/login" className="mt-2 text-xs text-blue-400 hover:text-blue-300">
@@ -52,10 +52,10 @@ export default function SharePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f1117]">
+    <div className="min-h-screen bg-[var(--bg-base)]">
 
       {/* ── Top bar ─────────────────────────────────────────────────── */}
-      <div className="border-b border-white/5 bg-[#13161e] px-4 md:px-8 py-3 flex items-center justify-between gap-4">
+      <div className="border-b border-white/5 bg-[var(--bg-surface)] px-4 md:px-8 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <div className="relative h-6 w-24 flex-shrink-0">
             <Image
@@ -83,7 +83,7 @@ export default function SharePage() {
       </div>
 
       {/* ── Project title bar ────────────────────────────────────────── */}
-      <div className="bg-[#13161e] border-b border-white/5 px-4 md:px-8 py-4">
+      <div className="bg-[var(--bg-surface)] border-b border-white/5 px-4 md:px-8 py-4">
         <div className="max-w-3xl mx-auto">
           <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1">Projet partagé</p>
           <h1 className="text-lg font-bold text-white">{data.project.name}</h1>
@@ -104,7 +104,7 @@ export default function SharePage() {
       </div>
 
       {/* ── Footer CTA ───────────────────────────────────────────────── */}
-      <div className="border-t border-white/5 bg-[#13161e] px-6 py-10 text-center">
+      <div className="border-t border-white/5 bg-[var(--bg-surface)] px-6 py-10 text-center">
         <p className="text-white/30 text-sm mb-1">
           Partagé via <strong className="text-white/50">PILOT+</strong>
         </p>

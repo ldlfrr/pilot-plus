@@ -64,7 +64,7 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
     <div className="flex flex-col min-h-0 animate-fade-in">
 
       {/* Header */}
-      <div className="h-14 border-b border-white/5 bg-[#13161e] flex items-center justify-between px-6 flex-shrink-0">
+      <div className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center justify-between px-6 flex-shrink-0">
         <div>
           <h1 className="text-base font-semibold text-white">Mes projets</h1>
           <p className="text-xs text-white/40 mt-0.5">{filtered.length} projet{filtered.length !== 1 ? 's' : ''}</p>
@@ -104,7 +104,7 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
             ))}
           </div>
         ) : (
-          <div className="bg-[#1a1d2e] border border-dashed border-white/10 rounded-xl p-12 text-center">
+          <div className="bg-[var(--bg-card)] border border-dashed border-white/10 rounded-xl p-12 text-center">
             <FolderOpen size={32} className="mx-auto text-white/20 mb-3" />
             <p className="text-white/60 font-medium">Aucun projet trouvé</p>
             <p className="text-sm text-white/30 mt-1 mb-5">

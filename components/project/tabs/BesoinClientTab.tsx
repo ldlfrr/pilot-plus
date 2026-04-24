@@ -16,7 +16,7 @@ export function BesoinClientTab({ result }: { result: AnalysisResult }) {
 
   if (!detail) {
     return (
-      <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-8 text-center">
+      <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-8 text-center">
         <p className="text-white/40 text-sm">
           Aucune analyse structurée du besoin client disponible.
           <br />
@@ -28,7 +28,7 @@ export function BesoinClientTab({ result }: { result: AnalysisResult }) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+      <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
         <div className="flex items-center gap-2 mb-5">
           <div className="w-4 h-4 bg-blue-500/20 rounded-full flex items-center justify-center">
             <div className="w-2 h-2 rounded-full bg-blue-400" />
@@ -41,7 +41,7 @@ export function BesoinClientTab({ result }: { result: AnalysisResult }) {
           {SECTIONS.map(({ key, label }) => {
             const items: string[] = (detail[key] as string[]) ?? []
             return (
-              <div key={key} className="bg-[#0f1117] rounded-lg border border-white/5 p-4">
+              <div key={key} className="bg-[var(--bg-base)] rounded-lg border border-white/5 p-4">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-3">
                   {label}
                 </p>
@@ -63,7 +63,7 @@ export function BesoinClientTab({ result }: { result: AnalysisResult }) {
 
       {/* General context */}
       {result.besoin_client && (
-        <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+        <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
           <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 mb-3">Vue générale</h3>
           <p className="text-sm text-white/60 leading-relaxed">{result.besoin_client}</p>
         </div>

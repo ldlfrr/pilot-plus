@@ -159,7 +159,7 @@ export default function ProjectPage() {
   if (loading) {
     return (
       <div className="flex flex-col min-h-0 animate-pulse">
-        <div className="bg-[#13161e] border-b border-white/5 px-4 md:px-6 py-4 flex-shrink-0">
+        <div className="bg-[var(--bg-surface)] border-b border-white/5 px-4 md:px-6 py-4 flex-shrink-0">
           <div className="flex flex-col gap-3 mb-4">
             <div className="flex items-center gap-3">
               <div className="h-6 w-56 bg-white/8 rounded-lg" />
@@ -234,7 +234,7 @@ export default function ProjectPage() {
     <div className="flex flex-col min-h-0 animate-fade-in">
 
       {/* ── Project header ──────────────────────────────────────────────── */}
-      <div data-print-hide className="bg-[#13161e] border-b border-white/5 px-4 md:px-6 py-4 flex-shrink-0">
+      <div data-print-hide className="bg-[var(--bg-surface)] border-b border-white/5 px-4 md:px-6 py-4 flex-shrink-0">
         <div className="flex flex-col gap-3 mb-4">
           {/* Title + badges */}
           <div className="flex items-start gap-3 flex-wrap">
@@ -480,7 +480,7 @@ export default function ProjectPage() {
             score
               ? <ScoreDisplay score={score} />
               : (
-                <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-10 text-center">
+                <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-10 text-center">
                   <Target size={28} className="mx-auto text-white/20 mb-3" />
                   <p className="text-white/50 text-sm">
                     {analyses.length === 0
@@ -516,7 +516,7 @@ export default function ProjectPage() {
 function UpgradePrompt({ tabName }: { tabName: string }) {
   return (
     <div className="max-w-md mx-auto mt-8">
-      <div className="bg-[#1a1d2e] border border-white/8 rounded-2xl p-8 text-center">
+      <div className="bg-[var(--bg-card)] border border-white/8 rounded-2xl p-8 text-center">
         <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-4">
           <Lock size={20} className="text-amber-400" />
         </div>
@@ -542,7 +542,7 @@ function UpgradePrompt({ tabName }: { tabName: string }) {
 
 function EmptyAnalysis({ onAnalyze, analyzing }: { onAnalyze: () => void; analyzing: boolean }) {
   return (
-    <div className="bg-[#1a1d2e] border border-dashed border-white/10 rounded-xl p-10 text-center">
+    <div className="bg-[var(--bg-card)] border border-dashed border-white/10 rounded-xl p-10 text-center">
       <Cpu size={28} className="mx-auto text-white/20 mb-3" />
       <p className="text-white/50 text-sm mb-4">
         Uploadez des fichiers et lancez l&apos;analyse IA pour voir cette vue.

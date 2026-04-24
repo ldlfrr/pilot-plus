@@ -49,7 +49,7 @@ const VERDICT_CFG = {
 function useTheme(v: 'light' | 'dark') {
   const d = v === 'dark'
   return {
-    card:      d ? 'bg-[#1a1d2e] border border-white/8 rounded-xl p-5'               : 'bg-white border border-gray-200 rounded-xl p-5 shadow-sm',
+    card:      d ? 'bg-[var(--bg-card)] border border-white/8 rounded-xl p-5'               : 'bg-white border border-gray-200 rounded-xl p-5 shadow-sm',
     secTitle:  d ? 'text-xs font-bold uppercase tracking-widest text-white/40 mb-4'  : 'text-xs font-bold uppercase tracking-widest text-gray-400 mb-4',
     label:     d ? 'text-[11px] font-semibold uppercase tracking-wide text-white/40' : 'text-[11px] font-semibold uppercase tracking-wide text-gray-400',
     text:      d ? 'text-sm text-white/70'  : 'text-sm text-gray-600',

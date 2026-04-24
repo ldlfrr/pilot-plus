@@ -139,7 +139,7 @@ export default async function SubscriptionPage() {
     <div className="flex flex-col min-h-0 animate-fade-in">
 
       {/* ── Top bar ──────────────────────────────────────────────────────── */}
-      <div className="h-14 border-b border-white/5 bg-[#13161e] flex items-center px-4 md:px-6 flex-shrink-0">
+      <div className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center px-4 md:px-6 flex-shrink-0">
         <div>
           <h1 className="text-base font-semibold text-white">Mon abonnement</h1>
           <p className="text-xs text-white/40">Gérez votre formule PILOT+</p>
@@ -207,7 +207,7 @@ function CurrentPlanBanner({ tier }: { tier: SubscriptionTier }) {
     <div className={cn(
       'rounded-xl border p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4',
       isFree
-        ? 'bg-[#1a1d2e] border-white/8'
+        ? 'bg-[var(--bg-card)] border-white/8'
         : 'bg-blue-950/20 border-blue-500/20'
     )}>
       <div>
@@ -286,7 +286,7 @@ function PlanCard({
   return (
     <div className={cn(
       'relative flex flex-col rounded-xl border transition-all duration-200',
-      'bg-[#1a1d2e]',
+      'bg-[var(--bg-card)]',
       isCurrent
         ? 'border-blue-500/60 shadow-[0_0_24px_rgba(59,130,246,0.1)]'
         : plan.ringClass,
@@ -385,7 +385,7 @@ function CtaButton({ plan }: { plan: Plan }) {
 
 function InfoCard({ title, items }: { title: string; items: string[] }) {
   return (
-    <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+    <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
       <p className="text-xs font-bold uppercase tracking-widest text-white/40 mb-4">{title}</p>
       <ul className="space-y-2">
         {items.map((item, i) => (

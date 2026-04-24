@@ -87,17 +87,17 @@ export default async function DashboardPage() {
   ].filter(d => d.value > 0)
 
   const kpis = [
-    { label: 'TOTAL PROJETS', value: stats.total, color: 'text-white',       bg: 'bg-[#1a1d2e]' },
+    { label: 'TOTAL PROJETS', value: stats.total, color: 'text-white',       bg: 'bg-[var(--bg-card)]' },
     { label: 'GO',            value: stats.go,    color: 'text-emerald-400', bg: 'bg-emerald-900/30 border-emerald-800/40' },
     { label: 'NO GO',         value: stats.nogo,  color: 'text-red-400',     bg: 'bg-red-900/30 border-red-800/40' },
     { label: 'EN COURS',      value: stats.enCours, color: 'text-amber-400', bg: 'bg-amber-900/20 border-amber-800/30' },
-    { label: 'TAUX TRANSFO.', value: `${stats.tauxTransfo}%`, color: 'text-blue-400', bg: 'bg-[#1a1d2e]', sub: stats.tauxTransfo > 0 ? `↑ +${Math.min(stats.tauxTransfo, 5)}%` : undefined },
+    { label: 'TAUX TRANSFO.', value: `${stats.tauxTransfo}%`, color: 'text-blue-400', bg: 'bg-[var(--bg-card)]', sub: stats.tauxTransfo > 0 ? `↑ +${Math.min(stats.tauxTransfo, 5)}%` : undefined },
     { label: 'TAUX GO',       value: `${stats.tauxGo}%`,      color: 'text-purple-400', bg: 'bg-purple-900/20 border-purple-800/30' },
   ]
 
   return (
     <div className="flex flex-col min-h-0 animate-fade-in">
-      <div className="h-14 border-b border-white/5 bg-[#13161e] flex items-center px-4 md:px-6 flex-shrink-0">
+      <div className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center px-4 md:px-6 flex-shrink-0">
         <div>
           <h1 className="text-base font-semibold text-white">Dashboard</h1>
           <p className="text-xs text-white/40">Vue d&apos;ensemble de votre activité commerciale</p>
@@ -120,7 +120,7 @@ export default async function DashboardPage() {
         {/* Charts row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Donut */}
-          <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
             <h2 className="text-sm font-semibold text-white mb-5">Répartition Go / No Go</h2>
             {donutData.length > 0 ? (
               <DonutChart data={donutData} />
@@ -132,7 +132,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* Monthly bar */}
-          <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
             <h2 className="text-sm font-semibold text-white mb-5">Projets par mois</h2>
             <MonthlyBarChart data={monthlyData} />
           </div>
@@ -142,7 +142,7 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
           {/* Top clients */}
-          <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
               <Users size={15} className="text-blue-400" />
               <h2 className="text-sm font-semibold text-white">Top clients</h2>
@@ -163,7 +163,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* Upcoming deadlines */}
-          <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
               <Clock size={15} className="text-amber-400" />
               <h2 className="text-sm font-semibold text-white">Échéances proches</h2>
@@ -195,7 +195,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* Quick insights */}
-          <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
               <Lightbulb size={15} className="text-amber-400" />
               <h2 className="text-sm font-semibold text-white">Quick Insights</h2>

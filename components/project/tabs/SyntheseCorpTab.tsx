@@ -99,7 +99,7 @@ function SectionCard({
 }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="bg-[#1a1d2e] border border-white/8 rounded-xl overflow-hidden">
+    <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
@@ -753,7 +753,7 @@ export function SyntheseCorpTab({
       )}
 
       {/* ── Sticky save / export bar ──────────────────────────────────────── */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0e1117]/90 backdrop-blur-md border-t border-white/8 px-4 py-3 flex items-center justify-end gap-3">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-base)]/90 backdrop-blur-md border-t border-white/8 px-4 py-3 flex items-center justify-end gap-3">
         {saved && (
           <span className="flex items-center gap-1.5 text-xs text-emerald-400 mr-auto">
             <CheckCircle size={13} />Sauvegardé

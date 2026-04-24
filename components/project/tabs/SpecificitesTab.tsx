@@ -8,7 +8,7 @@ export function SpecificitesTab({ result }: { result: AnalysisResult }) {
 
   if (!spec) {
     return (
-      <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-8 text-center">
+      <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-8 text-center">
         <p className="text-white/40 text-sm">
           Aucune spécificité technique extraite.
           <br />Relancez l&apos;analyse pour obtenir cette vue.
@@ -50,7 +50,7 @@ export function SpecificitesTab({ result }: { result: AnalysisResult }) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+      <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
         <div className="flex items-center gap-2 mb-5">
           <div className="w-4 h-4 bg-blue-500/20 rounded-full flex items-center justify-center">
             <div className="w-2 h-2 rounded-full bg-blue-400" />

@@ -53,7 +53,7 @@ export function ActionsTab({ result, projectId, initialStates }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+      <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-blue-500/20 rounded-full flex items-center justify-center">
@@ -116,7 +116,7 @@ export function ActionsTab({ result, projectId, initialStates }: Props) {
             onChange={e => setNewAction(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addCustom()}
             placeholder="Ajouter une action personnalisée..."
-            className="flex-1 px-3 py-2 bg-[#0f1117] border border-white/10 rounded-lg text-sm text-white placeholder-white/25 focus:outline-none focus:border-blue-500 transition-colors"
+            className="flex-1 px-3 py-2 bg-[var(--bg-base)] border border-white/10 rounded-lg text-sm text-white placeholder-white/25 focus:outline-none focus:border-blue-500 transition-colors"
           />
           <button
             onClick={addCustom}

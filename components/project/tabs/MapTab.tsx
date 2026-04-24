@@ -24,7 +24,7 @@ export interface MapPoint {
 const MapInner = dynamic(
   () => import('./MapInner').then(m => m.MapInner),
   { ssr: false, loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-[#1a1d2e] rounded-xl">
+    <div className="w-full h-full flex items-center justify-center bg-[var(--bg-card)] rounded-xl">
       <Loader2 size={24} className="animate-spin text-blue-400" />
     </div>
   )}
@@ -244,7 +244,7 @@ export function MapTab({
         <MapInner points={points} isActive={isActive} />
 
         {/* Legend */}
-        <div className="absolute bottom-3 left-3 z-[999] bg-[#0e1117]/90 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2.5 space-y-1.5 text-xs">
+        <div className="absolute bottom-3 left-3 z-[999] bg-[var(--bg-base)]/90 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2.5 space-y-1.5 text-xs">
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0" />
             <span className="text-white/60">Site projet</span>
@@ -262,7 +262,7 @@ export function MapTab({
         {/* Export button */}
         <button
           onClick={handleExport}
-          className="absolute top-3 right-3 z-[999] flex items-center gap-1.5 px-3 py-2 bg-[#0e1117]/90 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white text-xs font-medium rounded-lg transition-all"
+          className="absolute top-3 right-3 z-[999] flex items-center gap-1.5 px-3 py-2 bg-[var(--bg-base)]/90 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white text-xs font-medium rounded-lg transition-all"
         >
           <Download size={13} />Export PNG
         </button>
@@ -272,7 +272,7 @@ export function MapTab({
           onClick={geocodeProjectSites}
           disabled={geocoding}
           title="Repositionner le site du projet"
-          className="absolute top-3 left-3 z-[999] flex items-center gap-1.5 px-3 py-2 bg-[#0e1117]/90 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white text-xs font-medium rounded-lg transition-all disabled:opacity-40"
+          className="absolute top-3 left-3 z-[999] flex items-center gap-1.5 px-3 py-2 bg-[var(--bg-base)]/90 backdrop-blur-sm border border-white/10 text-white/70 hover:text-white text-xs font-medium rounded-lg transition-all disabled:opacity-40"
         >
           {geocoding ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
           Recalculer
@@ -283,7 +283,7 @@ export function MapTab({
       <div className="w-full lg:w-80 flex flex-col gap-3 overflow-y-auto">
 
         {/* Project sites */}
-        <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-4">
+        <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <MapPin size={14} className="text-blue-400" />
             <h3 className="text-sm font-semibold text-white">Site(s) du projet</h3>
@@ -335,7 +335,7 @@ export function MapTab({
         </div>
 
         {/* Company agencies */}
-        <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-4 flex-1">
+        <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-4 flex-1">
           <div className="flex items-center gap-2 mb-3">
             <Building2 size={14} className="text-violet-400" />
             <h3 className="text-sm font-semibold text-white">Agences</h3>
@@ -414,7 +414,7 @@ export function MapTab({
 
         {/* User-added extra points */}
         {userExtras.length > 0 && (
-          <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-4">
+          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <MapPin size={14} className="text-amber-400" />
               <h3 className="text-sm font-semibold text-white">Points extra</h3>

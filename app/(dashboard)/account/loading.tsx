@@ -3,7 +3,7 @@ export default function AccountLoading() {
     <div className="flex flex-col min-h-0">
 
       {/* Top bar skeleton */}
-      <div className="h-14 border-b border-white/5 bg-[#13161e] flex items-center px-4 md:px-6 flex-shrink-0">
+      <div className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center px-4 md:px-6 flex-shrink-0">
         <div className="space-y-1.5">
           <div className="skeleton h-4 w-28 rounded" />
           <div className="skeleton h-3 w-44 rounded" />
@@ -13,7 +13,7 @@ export default function AccountLoading() {
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 max-w-2xl w-full mx-auto">
 
         {/* Profile card */}
-        <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+        <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
           <div className="skeleton h-3 w-12 rounded mb-4" />
           <div className="flex items-center gap-4 mb-6">
             <div className="skeleton w-[72px] h-[72px] rounded-full flex-shrink-0" />
@@ -37,7 +37,7 @@ export default function AccountLoading() {
         </div>
 
         {/* Theme card */}
-        <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+        <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
           <div className="skeleton h-3 w-20 rounded mb-4" />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -47,7 +47,7 @@ export default function AccountLoading() {
         </div>
 
         {/* Security card */}
-        <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+        <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
           <div className="skeleton h-3 w-16 rounded mb-4" />
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -62,7 +62,7 @@ export default function AccountLoading() {
         </div>
 
         {/* Subscription card */}
-        <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5">
+        <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
           <div className="skeleton h-3 w-24 rounded mb-4" />
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -77,7 +77,7 @@ export default function AccountLoading() {
         </div>
 
         {/* Danger zone */}
-        <div className="bg-[#1a1d2e] border border-red-500/20 rounded-xl p-5">
+        <div className="bg-[var(--bg-card)] border border-red-500/20 rounded-xl p-5">
           <div className="skeleton h-3 w-24 rounded mb-4" />
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-start gap-3">
