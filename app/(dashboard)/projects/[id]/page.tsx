@@ -419,7 +419,7 @@ export default function ProjectPage() {
         </div>
 
         <div style={{ display: activeTab === 'map' ? 'block' : 'none' }} className="p-4 md:p-6">
-          <MapTab project={project} analysisResult={latestAnalysis?.result ?? null} />
+          <MapTab project={project} analysisResult={latestAnalysis?.result ?? null} isActive={activeTab === 'map'} />
         </div>
 
         <div style={{ display: activeTab === 'besoin' ? 'block' : 'none' }} className="p-4 md:p-6">

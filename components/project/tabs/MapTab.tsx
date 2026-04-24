@@ -8,8 +8,17 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { Project, AnalysisResult } from '@/types'
-import type { MapPoint } from './MapInner'
 import type { Agency } from '@/app/api/settings/agencies/route'
+
+// ─── Exported so MapInner can import it ───────────────────────────────────────
+export interface MapPoint {
+  id:      string
+  label:   string
+  address: string
+  lat:     number
+  lng:     number
+  type:    'project' | 'agency' | 'extra'
+}
 
 // ─── Dynamic import (no SSR) ─────────────────────────────────────────────────
 const MapInner = dynamic(
@@ -48,9 +57,11 @@ interface ExtraPoint {
 export function MapTab({
   project,
   analysisResult,
+  isActive = true,
 }: {
   project:         Project
   analysisResult?: AnalysisResult | null
+  isActive?:       boolean
 }) {
   const [points,        setPoints]       = useState<MapPoint[]>([])
   const [agencies,      setAgencies]     = useState<Agency[]>([])
@@ -230,7 +241,7 @@ export function MapTab({
 
       {/* ── Map ──────────────────────────────────────────────────────────── */}
       <div ref={mapRef} className="flex-1 min-h-[300px] lg:min-h-0 relative">
-        <MapInner points={points} loading={geocoding} />
+        <MapInner points={points} isActive={isActive} />
 
         {/* Legend */}
         <div className="absolute bottom-3 left-3 z-[999] bg-[#0e1117]/90 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2.5 space-y-1.5 text-xs">

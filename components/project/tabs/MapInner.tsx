@@ -1,110 +1,151 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-import { Loader2 } from 'lucide-react'
-import type { Agency } from '@/app/api/settings/agencies/route'
+import { useEffect, useRef } from 'react'
+import type { MapPoint } from './MapTab'
 
-// Fix default icon paths broken by webpack
-delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl:       'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl:     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-})
+// All leaflet imports done lazily to avoid SSR issues
+export function MapInner({ points, isActive }: { points: MapPoint[]; isActive: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const mapRef       = useRef<import('leaflet').Map | null>(null)
+  const markersRef   = useRef<import('leaflet').Marker[]>([])
 
-// Custom marker icons
-function makeIcon(color: string, size = 32) {
-  return L.divIcon({
-    html: `<div style="
-      width:${size}px;height:${size}px;
-      background:${color};
-      border:3px solid rgba(255,255,255,0.9);
-      border-radius:50% 50% 50% 0;
-      transform:rotate(-45deg);
-      box-shadow:0 2px 8px rgba(0,0,0,0.4);
-    "></div>`,
-    className: '',
-    iconSize:   [size, size],
-    iconAnchor: [size / 2, size],
-    popupAnchor:[0, -size],
-  })
-}
-
-const ICON_PROJECT  = makeIcon('#3b82f6', 34)  // blue
-const ICON_AGENCY   = makeIcon('#8b5cf6', 28)  // violet
-const ICON_EXTRA    = makeIcon('#f59e0b', 28)  // amber
-
-export interface MapPoint {
-  id:      string
-  label:   string
-  address: string
-  lat:     number
-  lng:     number
-  type:    'project' | 'agency' | 'extra'
-}
-
-// Auto-fits the map to show all markers
-function FitBounds({ points }: { points: MapPoint[] }) {
-  const map = useMap()
+  // ── Init map once ───────────────────────────────────────────────────────────
   useEffect(() => {
-    if (points.length === 0) return
-    if (points.length === 1) {
-      map.setView([points[0].lat, points[0].lng], 12)
-      return
+    if (!containerRef.current || mapRef.current) return
+
+    let map: import('leaflet').Map
+
+    ;(async () => {
+      const L = (await import('leaflet')).default
+
+      // Fix default icons
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (L.Icon.Default.prototype as any)._getIconUrl
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      })
+
+      if (!containerRef.current) return
+      map = L.map(containerRef.current, {
+        center:    [46.8, 2.3],
+        zoom:      6,
+        zoomControl: true,
+        attributionControl: true,
+      })
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19,
+      }).addTo(map)
+
+      mapRef.current = map
+    })()
+
+    return () => {
+      map?.remove()
+      mapRef.current = null
     }
-    const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng]))
-    map.fitBounds(bounds, { padding: [50, 50] })
-  }, [map, points])
-  return null
-}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-interface Props {
-  points: MapPoint[]
-  loading?: boolean
-}
+  // ── Invalidate size when tab becomes visible ────────────────────────────────
+  useEffect(() => {
+    if (!isActive || !mapRef.current) return
+    setTimeout(() => mapRef.current?.invalidateSize(), 50)
+  }, [isActive])
 
-export function MapInner({ points, loading }: Props) {
+  // ── Update markers when points change ──────────────────────────────────────
+  useEffect(() => {
+    if (!mapRef.current) {
+      // Map not ready yet — retry shortly
+      const t = setTimeout(() => {
+        updateMarkers()
+      }, 300)
+      return () => clearTimeout(t)
+    }
+    updateMarkers()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [points])
+
+  function updateMarkers() {
+    const map = mapRef.current
+    if (!map) return
+
+    ;(async () => {
+      const L = (await import('leaflet')).default
+
+      // Clear old markers
+      markersRef.current.forEach(m => m.remove())
+      markersRef.current = []
+
+      if (points.length === 0) return
+
+      const COLORS: Record<MapPoint['type'], string> = {
+        project: '#3b82f6',
+        agency:  '#8b5cf6',
+        extra:   '#f59e0b',
+      }
+
+      const newMarkers = points.map(p => {
+        const color = COLORS[p.type]
+        const icon  = L.divIcon({
+          html: `
+            <div style="
+              position:relative;
+              width:28px;height:28px;
+              filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+            ">
+              <div style="
+                width:22px;height:22px;
+                background:${color};
+                border:3px solid rgba(255,255,255,0.95);
+                border-radius:50% 50% 50% 0;
+                transform:rotate(-45deg);
+                position:absolute;top:0;left:3px;
+              "></div>
+            </div>`,
+          className:   '',
+          iconSize:    [28, 28],
+          iconAnchor:  [14, 28],
+          popupAnchor: [0, -30],
+        })
+
+        const typeLabel = p.type === 'project' ? '📍 Site projet' : p.type === 'agency' ? '🏢 Agence' : '📌 Extra'
+        const marker = L.marker([p.lat, p.lng], { icon })
+          .bindPopup(`
+            <div style="min-width:140px">
+              <div style="font-weight:700;font-size:13px;margin-bottom:3px">${p.label}</div>
+              <div style="font-size:11px;color:#94a3b8;margin-bottom:6px">${p.address}</div>
+              <span style="
+                font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;
+                background:${color}22;color:${color};border:1px solid ${color}44;
+              ">${typeLabel}</span>
+            </div>
+          `)
+          .addTo(map)
+
+        return marker
+      })
+
+      markersRef.current = newMarkers
+
+      // Fit bounds
+      if (newMarkers.length === 1) {
+        map.setView([points[0].lat, points[0].lng], 13, { animate: true })
+      } else {
+        const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng]))
+        map.fitBounds(bounds, { padding: [60, 60], animate: true, maxZoom: 14 })
+      }
+    })()
+  }
+
   return (
-    <div className="relative w-full h-full rounded-xl overflow-hidden">
-      {loading && (
-        <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-[#0e1117]/60 backdrop-blur-sm">
-          <Loader2 size={24} className="animate-spin text-blue-400" />
-        </div>
-      )}
-      <MapContainer
-        center={[46.8, 2.3]}
-        zoom={6}
-        style={{ width: '100%', height: '100%' }}
-        zoomControl={true}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <FitBounds points={points} />
-        {points.map(p => (
-          <Marker
-            key={p.id}
-            position={[p.lat, p.lng]}
-            icon={p.type === 'project' ? ICON_PROJECT : p.type === 'agency' ? ICON_AGENCY : ICON_EXTRA}
-          >
-            <Popup>
-              <div className="text-sm font-semibold">{p.label}</div>
-              <div className="text-xs text-gray-500 mt-0.5">{p.address}</div>
-              <div className="text-[10px] mt-1 px-1.5 py-0.5 rounded-full inline-block font-medium"
-                style={{
-                  background: p.type === 'project' ? '#eff6ff' : p.type === 'agency' ? '#f5f3ff' : '#fffbeb',
-                  color:      p.type === 'project' ? '#1d4ed8' : p.type === 'agency' ? '#6d28d9' : '#b45309',
-                }}>
-                {p.type === 'project' ? '📍 Site projet' : p.type === 'agency' ? '🏢 Agence' : '📌 Point extra'}
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
-    </div>
+    <div
+      ref={containerRef}
+      className="w-full h-full rounded-xl overflow-hidden"
+      style={{ minHeight: 300 }}
+    />
   )
 }
