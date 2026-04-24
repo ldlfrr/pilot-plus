@@ -82,6 +82,10 @@ export default function ProjectPage() {
     try { json = text ? JSON.parse(text) : {} } catch {
       throw new Error(`Réponse invalide${text ? `: ${text.slice(0, 120)}` : ''}`)
     }
+    if (!res.ok && json.code === 'LIMIT_REACHED') {
+      // Refresh limits after a blocked call
+      fetch('/api/user/limits').then(r => r.json()).then(setUserLimits).catch(() => {})
+    }
     return { ok: res.ok, json }
   }
 
@@ -91,6 +95,8 @@ export default function ProjectPage() {
       const { ok, json } = await callApi(`/api/projects/${id}/analyze`)
       if (!ok) throw new Error((json.error as string) ?? 'Erreur analyse')
       await fetchProject()
+      // Refresh limits counter
+      fetch('/api/user/limits').then(r => r.json()).then(setUserLimits).catch(() => {})
       setActiveTab('synthese')
       setActionSuccess('Analyse IA terminée.')
     } catch (err) {
@@ -346,8 +352,21 @@ export default function ProjectPage() {
 
         {/* Feedback */}
         {actionError && (
-          <div className="mb-3 flex items-center gap-2 text-sm text-red-400 bg-red-950/30 border border-red-800/40 rounded-lg px-3.5 py-2.5">
-            <AlertCircle size={14} />{actionError}
+          <div className={cn(
+            'mb-3 flex items-center gap-2 text-sm rounded-lg px-3.5 py-2.5',
+            actionError.includes('49€') || actionError.includes('plan')
+              ? 'text-amber-400 bg-amber-950/30 border border-amber-800/40'
+              : 'text-red-400 bg-red-950/30 border border-red-800/40'
+          )}>
+            {actionError.includes('49€') || actionError.includes('plan')
+              ? <Lock size={14} className="flex-shrink-0" />
+              : <AlertCircle size={14} className="flex-shrink-0" />}
+            <span>{actionError}</span>
+            {(actionError.includes('49€') || actionError.includes('plan')) && (
+              <Link href="/subscription" className="ml-auto flex-shrink-0 text-xs font-semibold underline hover:text-amber-300">
+                Voir les offres →
+              </Link>
+            )}
           </div>
         )}
         {actionSuccess && (

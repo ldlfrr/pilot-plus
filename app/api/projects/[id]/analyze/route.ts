@@ -53,32 +53,31 @@ async function handleAnalyze(params: Params['params']) {
     .single()
 
   const tier: string = (profile as { subscription_tier?: string })?.subscription_tier ?? 'free'
-  const limit = TIER_LIMITS[tier] ?? 1
+  const limit = TIER_LIMITS[tier] ?? 1   // unknown tier → treat as free (1)
 
   if (limit !== null) {
+    // Collect all user project IDs — always include current project as safety net
     const { data: userProjects } = await supabase
       .from('projects')
       .select('id')
       .eq('user_id', user.id)
 
-    const projectIds = userProjects?.map(p => p.id) ?? []
+    const projectIds = [...new Set([...(userProjects?.map(p => p.id) ?? []), id])]
 
-    if (projectIds.length > 0) {
-      const { count: totalAnalyses } = await supabase
-        .from('project_analyses')
-        .select('id', { count: 'exact', head: true })
-        .in('project_id', projectIds)
+    const { count: totalAnalyses } = await supabase
+      .from('project_analyses')
+      .select('id', { count: 'exact', head: true })
+      .in('project_id', projectIds)
 
-      if ((totalAnalyses ?? 0) >= limit) {
-        return NextResponse.json({
-          error: tier === 'free'
-            ? `Plan gratuit : 1 analyse incluse. Passez au plan Basic (49€/mois) pour continuer.`
-            : `Limite de ${limit} analyses atteinte pour votre plan ${tier}. Passez au plan supérieur.`,
-          code: 'LIMIT_REACHED',
-          tier,
-          upgrade_url: '/subscription',
-        }, { status: 402 })
-      }
+    // Fail-closed: if count query fails (null) treat as limit reached
+    if ((totalAnalyses ?? limit) >= limit) {
+      return NextResponse.json({
+        error: tier === 'free'
+          ? `Plan gratuit : 1 analyse incluse. Passez au plan Basic (49€/mois) pour continuer.`
+          : `Limite de ${limit} analyses atteinte. Passez au plan supérieur.`,
+        code: 'LIMIT_REACHED',
+        upgrade_url: '/subscription',
+      }, { status: 402 })
     }
   }
   // ────────────────────────────────────────────────────────────────────────────
