@@ -13,18 +13,9 @@ const DEP_LABELS: Record<string, string> = {
   '84':'Vaucluse','92':'Hauts-de-Seine','93':'Seine-Saint-Denis','94':'Val-de-Marne',
 }
 
-interface BoampRecord {
-  idweb?: string
-  objet?: string
-  nomacheteur?: string
-  code_departement?: string[]
-  datelimitereponse?: string | null
-  type_marche_facette?: string[]
-  famille_libelle?: string
-  dateparution?: string
-  nature?: string
-  descripteur_libelle?: string
-}
+// Loose type — we don't control what BOAMP returns
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type BoampRecord = Record<string, any>
 
 interface BoampResponse {
   total_count: number
@@ -40,7 +31,6 @@ async function queryBoamp(
 
   const since = new Date(Date.now() - 21 * 86400000).toISOString().slice(0, 10)
   where.push(`dateparution >= "${since}"`)
-  where.push(`nature != "ATTRIBUTION"`)
 
   if (keywords.length > 0) {
     const kwClause = keywords
@@ -59,14 +49,25 @@ async function queryBoamp(
     where.push(`(${typeClause})`)
   }
 
-  const whereStr  = where.join(' AND ')
-  const selectStr = 'idweb,objet,nomacheteur,code_departement,datelimitereponse,type_marche_facette,famille_libelle,dateparution,nature,descripteur_libelle'
-  const finalUrl  = `${BOAMP_API}?where=${encodeURIComponent(whereStr).replace(/%25/g, '%')}&order_by=dateparution%20desc&limit=50&select=${selectStr}`
+  const whereStr = where.join(' AND ')
 
-  const res = await fetch(finalUrl, { headers: { Accept: 'application/json' }, cache: 'no-store' })
+  // NOTE: no `select=` param — let BOAMP return its default fields to avoid
+  // "Unknown field" errors that differ between dataset versions.
+  const finalUrl = (
+    `${BOAMP_API}`
+    + `?where=${encodeURIComponent(whereStr).replace(/%25/g, '%')}`
+    + `&order_by=dateparution%20desc`
+    + `&limit=50`
+  )
+
+  const res = await fetch(finalUrl, {
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
+  })
+
   if (!res.ok) {
     const body = await res.text().catch(() => '')
-    throw new Error(`BOAMP ${res.status}: ${body.slice(0, 300)}`)
+    throw new Error(`BOAMP ${res.status}: ${body.slice(0, 400)}`)
   }
 
   const json = await res.json() as BoampResponse
@@ -74,117 +75,147 @@ async function queryBoamp(
 }
 
 export async function POST() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: settings } = await supabase
-    .from('veille_settings').select('*').eq('user_id', user.id).single()
-  if (!settings) return NextResponse.json({ error: 'Aucun critère configuré' }, { status: 400 })
-
-  // Existing idweb already stored (any status) — skip duplicates
-  const { data: existingRows } = await supabase
-    .from('veille_results')
-    .select('idweb, name')
-    .eq('user_id', user.id)
-
-  const existingIdwebs = new Set((existingRows ?? []).map(r => r.idweb).filter(Boolean))
-  const existingNames  = new Set((existingRows ?? []).map(r => r.name.trim().toLowerCase()))
-
-  let records: BoampRecord[] = []
-  let fetchError: string | null = null
-
+  // Top-level guard: always return JSON, never crash the response stream
   try {
-    records = await queryBoamp(
-      settings.keywords     ?? [],
-      settings.regions      ?? [],
-      settings.types_marche ?? [],
-    )
-  } catch (err) {
-    fetchError = err instanceof Error ? err.message : 'Erreur BOAMP'
-  }
+    const supabase = await createClient()
+    const { data: authData } = await supabase.auth.getUser()
+    const user = authData?.user
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Create the run record
-  const { data: runRecord } = await supabase
-    .from('veille_runs')
-    .insert({
-      user_id: user.id, source: 'boamp',
-      total_found: records.length, imported: 0, skipped: 0, error: fetchError,
-    })
-    .select('id').single()
+    const { data: settings } = await supabase
+      .from('veille_settings').select('*').eq('user_id', user.id).single()
+    if (!settings) return NextResponse.json({ error: 'Aucun critère configuré' }, { status: 400 })
 
-  const runId = runRecord?.id ?? null
+    // Existing idweb/names — dedup
+    const { data: existingRows } = await supabase
+      .from('veille_results')
+      .select('idweb, name')
+      .eq('user_id', user.id)
 
-  let added = 0, skipped = 0
+    const existingIdwebs = new Set((existingRows ?? []).map((r: { idweb: string }) => r.idweb).filter(Boolean))
+    const existingNames  = new Set((existingRows ?? []).map((r: { name: string }) => r.name.trim().toLowerCase()))
 
-  if (!fetchError) {
-    for (const r of records) {
-      const idweb  = (r.idweb ?? '').trim() || null
-      const rawName = (r.objet ?? '').trim()
-      const name    = rawName.slice(0, 200) || 'Consultation sans titre'
+    let records: BoampRecord[] = []
+    let fetchError: string | null = null
 
-      // Deduplicate: by idweb first, then by name
-      if (idweb && existingIdwebs.has(idweb)) { skipped++; continue }
-      if (!idweb && existingNames.has(name.toLowerCase())) { skipped++; continue }
+    try {
+      records = await queryBoamp(
+        settings.keywords     ?? [],
+        settings.regions      ?? [],
+        settings.types_marche ?? [],
+      )
+    } catch (err) {
+      fetchError = err instanceof Error ? err.message : 'Erreur BOAMP inconnue'
+    }
 
-      const client = (r.nomacheteur ?? '').trim().slice(0, 150) || 'Acheteur inconnu'
-      const depCode = (r.code_departement ?? [])[0] ?? ''
-      const loc     = depCode ? (DEP_LABELS[depCode] ?? `Dép. ${depCode}`) : 'Non précisé'
-      const type    = (r.type_marche_facette ?? [])[0] ?? r.famille_libelle ?? 'Travaux'
-
-      let deadline: string | null = null
-      if (r.datelimitereponse) {
-        try { deadline = new Date(r.datelimitereponse).toISOString().slice(0, 10) } catch { /* */ }
-      }
-      let parution: string | null = null
-      if (r.dateparution) {
-        try { parution = new Date(r.dateparution).toISOString().slice(0, 10) } catch { /* */ }
-      }
-
-      // Build the direct BOAMP announcement URL
-      const sourceUrl = idweb ? `https://www.boamp.fr/avis/detail/${idweb}` : null
-
-      const description = r.descripteur_libelle?.trim() || null
-
-      const { error } = await supabase.from('veille_results').insert({
+    // Create the run record
+    const { data: runRecord } = await supabase
+      .from('veille_runs')
+      .insert({
         user_id: user.id,
-        run_id: runId,
-        idweb,
-        name,
-        client,
-        location: loc,
-        consultation_type: type,
-        offer_deadline: deadline,
-        dateparution: parution,
-        source_url: sourceUrl,
-        description,
-        montant_estime: null,
-        procedure_type: null,
-        status: 'pending',
+        total_found: records.length,
+        imported: 0,
+        skipped: 0,
+        error: fetchError,
       })
+      .select('id')
+      .single()
 
-      if (!error) {
-        added++
-        if (idweb) existingIdwebs.add(idweb)
-        existingNames.add(name.toLowerCase())
+    const runId = runRecord?.id ?? null
+
+    let added = 0, skipped = 0
+
+    if (!fetchError) {
+      for (const r of records) {
+        const idweb   = String(r.idweb ?? '').trim() || null
+        const rawName = String(r.objet ?? '').trim()
+        const name    = rawName.slice(0, 200) || 'Consultation sans titre'
+
+        if (idweb && existingIdwebs.has(idweb))              { skipped++; continue }
+        if (!idweb && existingNames.has(name.toLowerCase())) { skipped++; continue }
+
+        const client  = String(r.nomacheteur ?? '').trim().slice(0, 150) || 'Acheteur inconnu'
+        const depCode = Array.isArray(r.code_departement) ? (r.code_departement[0] ?? '') : String(r.code_departement ?? '')
+        const loc     = depCode ? (DEP_LABELS[depCode] ?? `Dép. ${depCode}`) : 'Non précisé'
+        const type    = Array.isArray(r.type_marche_facette)
+          ? (r.type_marche_facette[0] ?? r.famille_libelle ?? 'Travaux')
+          : String(r.famille_libelle ?? 'Travaux')
+
+        let deadline: string | null = null
+        if (r.datelimitereponse) {
+          try { deadline = new Date(String(r.datelimitereponse)).toISOString().slice(0, 10) } catch { /* */ }
+        }
+        let parution: string | null = null
+        if (r.dateparution) {
+          try { parution = new Date(String(r.dateparution)).toISOString().slice(0, 10) } catch { /* */ }
+        }
+
+        const sourceUrl   = idweb ? `https://www.boamp.fr/avis/detail/${idweb}` : null
+        const description = String(r.descripteur_libelle ?? '').trim() || null
+
+        // Insert — ignore column errors gracefully
+        const insertPayload: Record<string, unknown> = {
+          user_id: user.id,
+          run_id: runId,
+          idweb,
+          name,
+          client,
+          location: loc,
+          consultation_type: type,
+          offer_deadline: deadline,
+          dateparution: parution,
+          status: 'pending',
+        }
+
+        // Optionally include extended columns if migration 017 was applied
+        // (Supabase will silently reject the insert if the columns don't exist)
+        try {
+          const { error: insertErr } = await supabase
+            .from('veille_results')
+            .insert({ ...insertPayload, source_url: sourceUrl, description, montant_estime: null, procedure_type: null })
+
+          if (!insertErr) {
+            added++
+            if (idweb) existingIdwebs.add(idweb)
+            existingNames.add(name.toLowerCase())
+            continue
+          }
+          // Fall through to base insert if extended columns failed
+        } catch { /* */ }
+
+        // Fallback insert without extended columns
+        const { error: baseErr } = await supabase.from('veille_results').insert(insertPayload)
+        if (!baseErr) {
+          added++
+          if (idweb) existingIdwebs.add(idweb)
+          existingNames.add(name.toLowerCase())
+        }
+      }
+
+      if (runId) {
+        await supabase.from('veille_runs')
+          .update({ imported: added, skipped })
+          .eq('id', runId)
       }
     }
 
-    if (runId) {
-      await supabase.from('veille_runs')
-        .update({ imported: added, skipped })
-        .eq('id', runId)
-    }
+    await supabase.from('veille_settings')
+      .update({ last_run_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+
+    return NextResponse.json({
+      total_found: records.length,
+      added,
+      skipped,
+      error: fetchError,
+    })
+
+  } catch (fatal) {
+    // Absolute last resort — ensures the client always receives valid JSON
+    console.error('[veille/run] fatal:', fatal)
+    return NextResponse.json(
+      { error: fatal instanceof Error ? fatal.message : 'Erreur serveur inattendue' },
+      { status: 500 },
+    )
   }
-
-  await supabase.from('veille_settings')
-    .update({ last_run_at: new Date().toISOString() })
-    .eq('user_id', user.id)
-
-  return NextResponse.json({
-    total_found: records.length,
-    added,
-    skipped,
-    error: fetchError,
-  })
 }

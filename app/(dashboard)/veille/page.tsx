@@ -117,8 +117,8 @@ export default function VeillePage() {
     setRunning(true); setRunMsg(null)
     try {
       const r    = await fetch('/api/veille/run', { method: 'POST' })
-      const json = await r.json()
-      if (!r.ok) throw new Error(json.error ?? 'Erreur veille')
+      const json = await r.json().catch(() => ({ error: 'Réponse serveur invalide' }))
+      if (!r.ok || json.error) throw new Error(json.error ?? 'Erreur veille')
       const { total_found, added, skipped } = json
       setRunMsg({
         ok: true,
