@@ -104,10 +104,10 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       <div className="h-16 flex items-center justify-between px-4 border-b border-white/5 flex-shrink-0">
         <Link href="/accueil" onClick={onClose} className="flex flex-col gap-0.5 group">
           {/* Wordmark */}
-          <p className="text-[17px] font-extrabold text-white tracking-tight leading-none">
+          <p className="text-[22px] font-extrabold text-white tracking-tight leading-none">
             PILOT<span className="text-blue-400">+</span>
           </p>
-          <p className="text-[9px] text-white/30 font-semibold tracking-[0.18em] uppercase">
+          <p className="text-[9px] text-white/30 font-semibold tracking-[0.14em] uppercase whitespace-nowrap">
             Décidez · Exécutez · Gagnez
           </p>
         </Link>
