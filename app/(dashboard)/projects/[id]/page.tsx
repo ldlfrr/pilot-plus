@@ -13,6 +13,7 @@ import {
   Cpu, Target, Trash2, Pencil, Loader2, AlertCircle, CheckCircle,
   Download, Share2, FilePlus, Calendar, MapPin, Building, Hash,
   FileText, Users, ListChecks, Wrench, BarChart3, Layers,
+  Copy, X, ExternalLink, Link as LinkIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates } from '@/types'
@@ -47,7 +48,10 @@ export default function ProjectPage() {
   const [scoring, setScoring]     = useState(false)
   const [actionError, setActionError]     = useState<string | null>(null)
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
-  const [copyOk, setCopyOk] = useState(false)
+
+  const [shareLoading, setShareLoading] = useState(false)
+  const [shareUrl, setShareUrl]         = useState<string | null>(null)
+  const [copyOk, setCopyOk]             = useState(false)
 
   const fetchProject = useCallback(async () => {
     try {
@@ -105,22 +109,29 @@ export default function ProjectPage() {
   }
 
   async function handleShare() {
+    if (shareUrl) { setShareUrl(null); return }   // toggle off
+    setShareLoading(true)
     try {
-      const url = window.location.href
-      if (navigator.share) {
-        await navigator.share({ title: data?.project.name ?? 'PILOT+', url })
-      } else {
-        await navigator.clipboard.writeText(url)
-        setCopyOk(true)
-        setTimeout(() => setCopyOk(false), 2500)
-      }
-    } catch {
-      // user cancelled or not supported — ignore
-    }
+      const res = await fetch(`/api/projects/${id}/share`, { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erreur')
+      setShareUrl(json.url)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Impossible de créer le lien')
+    } finally { setShareLoading(false) }
+  }
+
+  async function copyShareUrl() {
+    if (!shareUrl) return
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setCopyOk(true)
+      setTimeout(() => setCopyOk(false), 2000)
+    } catch { /* clipboard blocked */ }
   }
 
   function handleExportPdf() {
-    window.print()
+    window.open(`/print/${id}`, '_blank')
   }
 
   async function handleDelete() {
@@ -208,15 +219,18 @@ export default function ProjectPage() {
             </button>
             <button
               onClick={handleShare}
+              disabled={shareLoading}
               className={cn(
                 'flex items-center gap-1.5 px-3 py-2 border text-xs font-medium rounded-lg transition-all',
-                copyOk
-                  ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
+                shareUrl
+                  ? 'bg-blue-500/20 border-blue-500/40 text-blue-400'
                   : 'bg-white/5 hover:bg-white/10 border-white/10 text-white/70 hover:text-white'
               )}
             >
-              {copyOk ? <CheckCircle size={13} /> : <Share2 size={13} />}
-              {copyOk ? 'Lien copié !' : 'Partager'}
+              {shareLoading
+                ? <Loader2 size={13} className="animate-spin" />
+                : shareUrl ? <LinkIcon size={13} /> : <Share2 size={13} />}
+              {shareUrl ? 'Masquer le lien' : 'Partager'}
             </button>
             <button
               onClick={handleAddDoc}
@@ -254,6 +268,42 @@ export default function ProjectPage() {
             </button>
           </div>
         </div>
+
+        {/* Share panel */}
+        {shareUrl && (
+          <div className="mb-3 flex items-center gap-2 bg-blue-950/30 border border-blue-500/30 rounded-lg px-3 py-2.5">
+            <LinkIcon size={13} className="text-blue-400 flex-shrink-0" />
+            <input
+              readOnly
+              value={shareUrl}
+              className="flex-1 bg-transparent text-xs text-white/60 outline-none min-w-0"
+              onFocus={e => e.target.select()}
+            />
+            <button
+              onClick={copyShareUrl}
+              title="Copier le lien"
+              className="flex items-center gap-1 px-2 py-1 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 text-xs transition-colors flex-shrink-0"
+            >
+              {copyOk ? <CheckCircle size={12} /> : <Copy size={12} />}
+              {copyOk ? 'Copié !' : 'Copier'}
+            </button>
+            <a
+              href={shareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Ouvrir dans un nouvel onglet"
+              className="p-1.5 text-white/30 hover:text-white/70 transition-colors flex-shrink-0"
+            >
+              <ExternalLink size={13} />
+            </a>
+            <button
+              onClick={() => setShareUrl(null)}
+              className="p-1.5 text-white/20 hover:text-white/50 transition-colors flex-shrink-0"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        )}
 
         {/* Feedback */}
         {actionError && (

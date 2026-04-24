@@ -25,6 +25,7 @@ export interface Project {
   offer_deadline: string | null
   status: ProjectStatus
   task_states: TaskStates | null
+  share_token?: string | null
   created_at: string
   updated_at: string
 }

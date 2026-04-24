@@ -58,30 +58,11 @@
 
 /* ── Print / Export PDF ─────────────────────────────────────────────────────── */
 @media print {
-  /* Force white background + black text for readability */
-  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
-  /* Hide everything except the project tab content */
-  aside,
-  nav,
-  [data-print-hide],
-  .md\\:ml-60 > .md\\:hidden {
-    display: none !important;
-  }
-
-  /* Remove sidebar margin */
-  main {
-    margin-left: 0 !important;
-  }
-
-  /* Hide top bar, action buttons, tab bar */
+  /* The print page (/print/[id]) is already a standalone white page.
+     For in-app printing fallback, hide chrome. */
   [data-print-hide] { display: none !important; }
-
-  body {
-    background: white !important;
-    color: #111 !important;
-  }
-
-  /* Page break hints */
-  .print-break-before { page-break-before: always; }
+  aside { display: none !important; }
+  main { margin-left: 0 !important; }
 }
