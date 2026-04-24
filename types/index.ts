@@ -203,13 +203,33 @@ export interface ScoringResult {
 // ─── Company criteria ─────────────────────────────────────────────────────────
 
 export interface CompanyCriteria {
+  // ── Profil entreprise ──────────────────────────────────────────────────────
+  raison_sociale?: string
+  siren?: string
+  site_web?: string
+  description_courte?: string
+  effectifs?: string
+  ca_annuel?: string
+  secteur_principal?: string
+  annee_creation?: string
+
+  // ── Périmètre & marchés ───────────────────────────────────────────────────
   zones_geo: string[]
   types_projets: string[]
+  secteurs_clients: string[]
+  marche_type?: 'public' | 'prive' | 'mixte'
+
+  // ── Capacités techniques ──────────────────────────────────────────────────
   puissance_min_kwc: number
   puissance_max_kwc: number
   capacite_mensuelle_kwc: number
+  budget_min_eur?: number
+  budget_max_eur?: number
+  nb_projets_simultanees?: number
+  delai_execution?: string
+
+  // ── Scoring Go/No Go ──────────────────────────────────────────────────────
   certifications: string[]
-  secteurs_clients: string[]
   rentabilite_min_pct: number
   poids_rentabilite: number
   poids_complexite: number
@@ -218,16 +238,30 @@ export interface CompanyCriteria {
   poids_charge: number
   points_forts: string[]
   notes: string
+  mots_cles_exclusion?: string[]
 }
 
 export const DEFAULT_CRITERIA: CompanyCriteria = {
+  raison_sociale: '',
+  siren: '',
+  site_web: '',
+  description_courte: '',
+  effectifs: '',
+  ca_annuel: '',
+  secteur_principal: '',
+  annee_creation: '',
   zones_geo: [],
   types_projets: [],
+  secteurs_clients: [],
+  marche_type: 'mixte',
   puissance_min_kwc: 50,
   puissance_max_kwc: 5000,
   capacite_mensuelle_kwc: 1000,
+  budget_min_eur: 0,
+  budget_max_eur: 0,
+  nb_projets_simultanees: 3,
+  delai_execution: '',
   certifications: [],
-  secteurs_clients: [],
   rentabilite_min_pct: 8,
   poids_rentabilite: 3,
   poids_complexite: 3,
@@ -236,6 +270,7 @@ export const DEFAULT_CRITERIA: CompanyCriteria = {
   poids_charge: 3,
   points_forts: [],
   notes: '',
+  mots_cles_exclusion: [],
 }
 
 // ─── Project with score (for rich lists) ─────────────────────────────────────

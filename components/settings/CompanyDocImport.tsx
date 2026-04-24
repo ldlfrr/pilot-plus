@@ -3,13 +3,22 @@
 import { useState, useRef } from 'react'
 import {
   Upload, FileText, Trash2, CheckCircle2, AlertCircle,
-  CloudUpload, Loader2, Info, FileCheck
+  CloudUpload, Loader2, Info, FileCheck, Sparkles, ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 interface CompanyDocImportProps {
   initialDocName: string | null
 }
+
+const TIPS = [
+  'Zones géographiques d\'intervention (régions, départements)',
+  'Types de projets maîtrisés et références récentes',
+  'Certifications détenues (RGE, QualiPV, Qualifelec…)',
+  'Capacités techniques et volumétrie mensuelle',
+  'Secteurs clients prioritaires et positionnement tarifaire',
+  'Points différenciants et arguments commerciaux clés',
+]
 
 export function CompanyDocImport({ initialDocName }: CompanyDocImportProps) {
   const [docName, setDocName]       = useState<string | null>(initialDocName)
@@ -83,64 +92,66 @@ export function CompanyDocImport({ initialDocName }: CompanyDocImportProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
-      {/* Info banner */}
-      <div className="flex gap-3 bg-indigo-50 border border-indigo-100 rounded-xl p-4">
-        <Info size={17} className="text-indigo-500 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-indigo-800 leading-relaxed">
-          <span className="font-semibold block mb-0.5">Comment ça fonctionne ?</span>
-          Importez un document Word ou PDF décrivant votre entreprise (capacités, zones d&apos;intervention,
-          certifications, stratégie commerciale…). Ce document sera lu par l&apos;IA à chaque scoring
-          Go/No Go pour évaluer l&apos;adéquation du projet avec votre profil — en remplacement du formulaire.
+      {/* How it works banner */}
+      <div className="flex gap-3 bg-blue-500/8 border border-blue-500/15 rounded-xl p-4">
+        <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <Sparkles size={14} className="text-blue-400" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-white/80 mb-1">Mode document — comment ça fonctionne ?</p>
+          <p className="text-xs text-white/45 leading-relaxed">
+            Importez un PDF ou Word décrivant votre entreprise (capacités, zones, certifications, stratégie…).
+            L&apos;IA lira ce document à chaque scoring Go/No Go pour évaluer l&apos;adéquation — en complément ou
+            en remplacement du formulaire.
+          </p>
         </div>
       </div>
 
-      {/* Current document */}
+      {/* Current document or drop zone */}
       {docName ? (
-        <div className="bg-white rounded-xl border border-emerald-200 p-5">
+        <div className="bg-white/4 border border-emerald-500/20 rounded-xl p-5">
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-emerald-50 rounded-xl flex-shrink-0">
-              <FileCheck size={22} className="text-emerald-600" />
+            <div className="w-11 h-11 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+              <FileCheck size={20} className="text-emerald-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-[10px] font-bold bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-wider">
                   Actif
                 </span>
-                <span className="text-xs text-slate-400">Utilisé pour le scoring IA</span>
+                <span className="text-xs text-white/30">Utilisé pour le scoring IA</span>
               </div>
-              <p className="text-sm font-semibold text-slate-900 truncate">{docName}</p>
+              <p className="text-sm font-semibold text-white/80 truncate">{docName}</p>
               {success && (
-                <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
-                  <CheckCircle2 size={12} />
-                  Document importé avec succès
+                <p className="text-xs text-emerald-400 mt-1.5 flex items-center gap-1.5">
+                  <CheckCircle2 size={11} />
+                  Document importé et extrait avec succès
                 </p>
               )}
             </div>
             <button
               onClick={handleDelete}
-              className="flex-shrink-0 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              className="flex-shrink-0 p-2 text-white/25 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
               title="Supprimer le document"
             >
-              <Trash2 size={16} />
+              <Trash2 size={15} />
             </button>
           </div>
 
-          {/* Replace option */}
-          <div className="mt-4 pt-4 border-t border-slate-100">
+          <div className="mt-4 pt-4 border-t border-white/6">
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors"
+              className="flex items-center gap-2 text-xs text-white/35 hover:text-blue-400 transition-colors"
             >
-              <Upload size={14} />
+              <Upload size={12} />
               Remplacer par un autre document
             </button>
           </div>
         </div>
       ) : (
-        /* Drop zone */
         <div
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
           onDragLeave={() => setIsDragging(false)}
@@ -149,41 +160,41 @@ export function CompanyDocImport({ initialDocName }: CompanyDocImportProps) {
           className={cn(
             'relative flex flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed p-12 text-center cursor-pointer transition-all',
             isDragging
-              ? 'border-blue-400 bg-blue-50'
-              : 'border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/50',
-            uploading && 'pointer-events-none opacity-70'
+              ? 'border-blue-500/50 bg-blue-500/8'
+              : 'border-white/10 bg-white/2 hover:border-blue-500/30 hover:bg-blue-500/5',
+            uploading && 'pointer-events-none opacity-60'
           )}
         >
           {uploading ? (
             <>
-              <div className="p-4 bg-blue-100 rounded-full">
-                <Loader2 size={28} className="text-blue-600 animate-spin" />
+              <div className="w-16 h-16 rounded-2xl bg-blue-500/15 flex items-center justify-center">
+                <Loader2 size={28} className="text-blue-400 animate-spin" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-700">Extraction en cours…</p>
-                <p className="text-xs text-slate-400 mt-1">Lecture du document, veuillez patienter</p>
+                <p className="text-sm font-semibold text-white/70">Extraction en cours…</p>
+                <p className="text-xs text-white/30 mt-1">Lecture du document par l&apos;IA, veuillez patienter</p>
               </div>
             </>
           ) : (
             <>
               <div className={cn(
-                'p-4 rounded-full transition-colors',
-                isDragging ? 'bg-blue-100' : 'bg-slate-100'
+                'w-16 h-16 rounded-2xl flex items-center justify-center transition-all',
+                isDragging ? 'bg-blue-500/20' : 'bg-white/5'
               )}>
                 <CloudUpload size={28} className={cn(
                   'transition-colors',
-                  isDragging ? 'text-blue-600' : 'text-slate-400'
+                  isDragging ? 'text-blue-400' : 'text-white/25'
                 )} />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-700">
-                  {isDragging ? 'Déposez le fichier ici' : 'Glissez-déposez ou cliquez pour importer'}
+                <p className="text-sm font-semibold text-white/70">
+                  {isDragging ? 'Déposez le fichier ici' : 'Glissez-déposez votre document'}
                 </p>
-                <p className="text-xs text-slate-400 mt-1">PDF ou Word (.docx) — max 20 Mo</p>
+                <p className="text-xs text-white/30 mt-1">ou cliquez pour parcourir — PDF ou Word (.docx) — max 20 Mo</p>
               </div>
-              <div className="flex gap-3 mt-1">
+              <div className="flex gap-2 mt-1">
                 {['PDF', 'DOCX', 'DOC'].map((fmt) => (
-                  <span key={fmt} className="text-xs bg-white border border-slate-200 text-slate-500 font-medium px-2.5 py-1 rounded-md">
+                  <span key={fmt} className="text-[10px] font-bold bg-white/5 border border-white/10 text-white/35 px-2.5 py-1 rounded-md tracking-wider">
                     {fmt}
                   </span>
                 ))}
@@ -195,32 +206,37 @@ export function CompanyDocImport({ initialDocName }: CompanyDocImportProps) {
 
       {/* Error */}
       {error && (
-        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4">
-          <AlertCircle size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="flex items-start gap-3 bg-red-500/8 border border-red-500/20 rounded-xl p-4">
+          <AlertCircle size={15} className="text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-400">{error}</p>
         </div>
       )}
 
-      {/* Tips */}
-      <div className="bg-slate-50 rounded-xl border border-slate-200 p-5">
-        <p className="text-xs font-semibold text-slate-600 mb-3 uppercase tracking-wide">
-          Conseils pour un document efficace
-        </p>
+      {/* Tips card */}
+      <div className="bg-white/3 border border-white/6 rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <ShieldCheck size={14} className="text-white/30" />
+          <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
+            Conseils pour un document efficace
+          </p>
+        </div>
         <ul className="space-y-2.5">
-          {[
-            'Zones géographiques d\'intervention (régions, départements)',
-            'Types de projets maîtrisés et références récentes',
-            'Certifications détenues (RGE, QualiPV, Qualifelec…)',
-            'Capacités techniques et volumétrie mensuelle',
-            'Secteurs clients prioritaires et positionnement tarifaire',
-            'Points différenciants et arguments commerciaux clés',
-          ].map((tip) => (
-            <li key={tip} className="flex items-start gap-2 text-xs text-slate-500">
-              <FileText size={12} className="text-slate-300 flex-shrink-0 mt-0.5" />
+          {TIPS.map((tip) => (
+            <li key={tip} className="flex items-start gap-2.5 text-xs text-white/45 leading-relaxed">
+              <div className="w-1 h-1 rounded-full bg-blue-500/50 flex-shrink-0 mt-1.5" />
               {tip}
             </li>
           ))}
         </ul>
+      </div>
+
+      {/* Privacy note */}
+      <div className="flex items-start gap-2.5 px-1">
+        <Info size={12} className="text-white/20 flex-shrink-0 mt-0.5" />
+        <p className="text-[10px] text-white/20 leading-relaxed">
+          Votre document est stocké chiffré sur nos serveurs européens et n&apos;est utilisé que pour
+          générer vos scores Go/No Go personnalisés. Il n&apos;est jamais partagé.
+        </p>
       </div>
 
       <input
