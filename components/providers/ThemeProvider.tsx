@@ -11,8 +11,17 @@ import React, {
 export type Theme = 'dark' | 'pilot' | 'midnight' | 'slate' | 'forest' | 'aurora' | 'dusk' | 'light'
 
 const VALID_THEMES: Theme[] = ['dark', 'pilot', 'midnight', 'slate', 'forest', 'aurora', 'dusk', 'light']
-
 const STORAGE_KEY = 'pilot-theme'
+const DEFAULT_THEME: Theme = 'dark'
+
+function readLocalTheme(): Theme {
+  try {
+    const t = localStorage.getItem(STORAGE_KEY) as Theme | null
+    return t && VALID_THEMES.includes(t) ? t : DEFAULT_THEME
+  } catch {
+    return DEFAULT_THEME
+  }
+}
 
 function applyTheme(theme: Theme) {
   if (typeof document !== 'undefined') {
@@ -28,42 +37,33 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'dark',
+  theme: DEFAULT_THEME,
   setTheme: () => undefined,
 })
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark')
+  // Initialise from localStorage immediately so React state matches what
+  // the inline <script> already applied to the DOM.
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return DEFAULT_THEME
+    return readLocalTheme()
+  })
 
-  // On first mount: read from localStorage, fall back to 'dark', then sync
-  // with server profile.
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Theme | null
-    const initial: Theme = stored && VALID_THEMES.includes(stored) ? stored : 'dark'
-    setThemeState(initial)
-    applyTheme(initial)
+    // 1. Read localStorage — this is the definitive source of truth.
+    const local = readLocalTheme()
+    setThemeState(local)
+    applyTheme(local)
 
-    // Async: fetch actual saved theme from server and reconcile
-    fetch('/api/user/profile')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: unknown) => {
-        if (
-          data &&
-          typeof data === 'object' &&
-          'theme' in data &&
-          (data as Record<string, unknown>).theme !== initial
-        ) {
-          const serverTheme = (data as Record<string, unknown>).theme as Theme
-          if (VALID_THEMES.includes(serverTheme)) {
-            setThemeState(serverTheme)
-            localStorage.setItem(STORAGE_KEY, serverTheme)
-            applyTheme(serverTheme)
-          }
-        }
-      })
-      .catch(() => undefined)
+    // 2. Push local theme to server so it's available on other devices.
+    //    We do NOT read from server and override local — localStorage wins.
+    fetch('/api/user/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ theme: local }),
+    }).catch(() => undefined)
   }, [])
 
   const setTheme = useCallback((t: Theme) => {
@@ -71,7 +71,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(STORAGE_KEY, t)
     applyTheme(t)
 
-    // Persist to server (fire-and-forget)
+    // Persist to server (fire-and-forget — localStorage is already updated)
     fetch('/api/user/profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
