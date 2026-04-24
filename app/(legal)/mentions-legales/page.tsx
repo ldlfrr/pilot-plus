@@ -16,7 +16,7 @@ export default function MentionsLegalesPage() {
       <section className="mb-10">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">1. Éditeur du site</h2>
         <div className="bg-gray-50 rounded-xl p-6 text-sm text-gray-700 space-y-1">
-          <p><strong>Raison sociale :</strong> L2endigital</p>
+          <p><strong>Raison sociale :</strong> Pilot Plus</p>
           <p><strong>Forme juridique :</strong> <span className="text-amber-600">[À compléter : SAS / SARL / Auto-entrepreneur…]</span></p>
           <p><strong>Capital social :</strong> <span className="text-amber-600">[À compléter]</span></p>
           <p><strong>SIRET :</strong> <span className="text-amber-600">[À compléter]</span></p>
@@ -31,7 +31,7 @@ export default function MentionsLegalesPage() {
       <section className="mb-10">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">2. Directeur de la publication</h2>
         <p className="text-sm text-gray-700">
-          Le directeur de la publication est le représentant légal de la société L2endigital.
+          Le directeur de la publication est le représentant légal de la société Pilot Plus.
           <br />
           Contact : contact@pilotplus.app
         </p>
@@ -60,9 +60,9 @@ export default function MentionsLegalesPage() {
         <h2 className="text-xl font-semibold text-gray-800 mb-4">4. Propriété intellectuelle</h2>
         <p className="text-sm text-gray-700 leading-relaxed">
           L'ensemble du contenu du site pilotplus.app (textes, graphismes, logos, icônes, sons, logiciels) est la propriété exclusive
-          de L2endigital ou de ses partenaires et est protégé par les lois françaises et internationales relatives à la propriété
+          de Pilot Plus ou de ses partenaires et est protégé par les lois françaises et internationales relatives à la propriété
           intellectuelle. Toute reproduction, distribution, modification, adaptation, retransmission ou publication, même partielle,
-          de ces différents éléments est strictement interdite sans l'accord exprès et écrit de L2endigital.
+          de ces différents éléments est strictement interdite sans l'accord exprès et écrit de Pilot Plus.
         </p>
       </section>
 
@@ -71,13 +71,13 @@ export default function MentionsLegalesPage() {
         <h2 className="text-xl font-semibold text-gray-800 mb-4">5. Limitation de responsabilité</h2>
         <p className="text-sm text-gray-700 leading-relaxed">
           Les informations contenues sur ce site sont aussi précises que possible et le site est régulièrement mis à jour.
-          Cependant, L2endigital ne peut garantir l'exactitude, la complétude et l'actualité des informations diffusées.
-          L2endigital décline toute responsabilité pour tout dommage, direct ou indirect, quel qu'en soit la nature, résultant
+          Cependant, Pilot Plus ne peut garantir l'exactitude, la complétude et l'actualité des informations diffusées.
+          Pilot Plus décline toute responsabilité pour tout dommage, direct ou indirect, quel qu'en soit la nature, résultant
           de l'utilisation du site pilotplus.app.
         </p>
         <p className="text-sm text-gray-700 leading-relaxed mt-3">
           Les analyses et scores générés par l'intelligence artificielle de PILOT+ sont fournis à titre indicatif uniquement
-          et ne sauraient remplacer le jugement professionnel de l'utilisateur. L2endigital ne saurait être tenu responsable
+          et ne sauraient remplacer le jugement professionnel de l'utilisateur. Pilot Plus ne saurait être tenu responsable
           des décisions commerciales prises sur la base de ces analyses.
         </p>
       </section>

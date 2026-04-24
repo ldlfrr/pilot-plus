@@ -459,7 +459,7 @@ function LandingPage() {
               <Link href="/cgu"                           className="text-xs text-white/30 hover:text-white/60 transition-colors">CGU</Link>
               <Link href="/cgv"                           className="text-xs text-white/30 hover:text-white/60 transition-colors">CGV</Link>
             </div>
-            <p className="text-xs text-white/20">© {new Date().getFullYear()} L2endigital · PILOT+</p>
+            <p className="text-xs text-white/20">© {new Date().getFullYear()} Pilot Plus · PILOT+</p>
           </div>
         </div>
       </footer>

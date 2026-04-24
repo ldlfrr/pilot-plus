@@ -18,7 +18,7 @@ export default function CGUPage() {
         <p className="text-sm text-gray-700 leading-relaxed">
           Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation du service PILOT+,
           plateforme SaaS d'analyse de dossiers de consultation d'entreprises (DCE) et d'aide à la décision Go/No Go par
-          intelligence artificielle, accessible à l'adresse <strong>pilotplus.app</strong>, édité par la société L2endigital.
+          intelligence artificielle, accessible à l'adresse <strong>pilotplus.app</strong>, édité par la société Pilot Plus.
         </p>
         <p className="text-sm text-gray-700 leading-relaxed mt-3">
           Toute utilisation du service implique l'acceptation pleine et entière des présentes CGU. Si vous n'acceptez pas
@@ -56,7 +56,7 @@ export default function CGUPage() {
             sous son compte.
           </p>
           <p className="leading-relaxed">
-            En cas de perte ou de compromission de ses identifiants, l'utilisateur doit en informer L2endigital sans délai
+            En cas de perte ou de compromission de ses identifiants, l'utilisateur doit en informer Pilot Plus sans délai
             à l'adresse <a href="mailto:contact@pilotplus.app" className="text-blue-600 hover:underline">contact@pilotplus.app</a>.
           </p>
         </div>
@@ -70,9 +70,9 @@ export default function CGUPage() {
           <li>Utiliser le service conformément à sa destination et à la législation applicable</li>
           <li>Ne pas tenter de contourner les systèmes de sécurité ou d'accéder à des données non autorisées</li>
           <li>Ne pas transmettre de contenu illicite, diffamatoire, portant atteinte aux droits de tiers</li>
-          <li>Ne pas utiliser le service pour des activités concurrentes à L2endigital sans autorisation écrite préalable</li>
+          <li>Ne pas utiliser le service pour des activités concurrentes à Pilot Plus sans autorisation écrite préalable</li>
           <li>Ne pas procéder à une ingénierie inverse, décompiler ou désassembler tout ou partie du service</li>
-          <li>Respecter les droits de propriété intellectuelle de L2endigital et des tiers</li>
+          <li>Respecter les droits de propriété intellectuelle de Pilot Plus et des tiers</li>
         </ul>
       </section>
 
@@ -80,12 +80,12 @@ export default function CGUPage() {
       <section className="mb-10">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">5. Propriété intellectuelle</h2>
         <p className="text-sm text-gray-700 leading-relaxed mb-3">
-          L2endigital est et demeure titulaire de l'ensemble des droits de propriété intellectuelle sur le service PILOT+,
+          Pilot Plus est et demeure titulaire de l'ensemble des droits de propriété intellectuelle sur le service PILOT+,
           son interface, ses algorithmes, sa documentation et ses marques. L'accès au service ne confère à l'utilisateur
           aucun droit de propriété sur ces éléments.
         </p>
         <p className="text-sm text-gray-700 leading-relaxed">
-          L'utilisateur reste propriétaire de ses données (projets, documents, analyses). Il accorde à L2endigital une
+          L'utilisateur reste propriétaire de ses données (projets, documents, analyses). Il accorde à Pilot Plus une
           licence limitée, non exclusive, permettant uniquement de fournir le service tel que décrit.
         </p>
       </section>
@@ -98,7 +98,7 @@ export default function CGUPage() {
           <p>
             Les scores, recommandations Go/No Go et synthèses générés par l'IA de PILOT+ sont fournis à titre indicatif
             uniquement. Ils constituent une aide à la décision et ne remplacent pas le jugement professionnel de l'utilisateur.
-            L2endigital ne saurait être tenu responsable des décisions commerciales prises sur la base de ces analyses.
+            Pilot Plus ne saurait être tenu responsable des décisions commerciales prises sur la base de ces analyses.
           </p>
           <p className="mt-3">
             L'utilisateur est seul responsable de l'évaluation finale de la pertinence de répondre à un appel d'offres.
@@ -110,12 +110,12 @@ export default function CGUPage() {
       <section className="mb-10">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">7. Disponibilité du service</h2>
         <p className="text-sm text-gray-700 leading-relaxed">
-          L2endigital s'efforce d'assurer la disponibilité du service 24h/24 et 7j/7. Cependant, des interruptions peuvent
-          survenir pour maintenance, mise à jour ou en cas de force majeure. L2endigital ne pourra être tenu responsable
+          Pilot Plus s'efforce d'assurer la disponibilité du service 24h/24 et 7j/7. Cependant, des interruptions peuvent
+          survenir pour maintenance, mise à jour ou en cas de force majeure. Pilot Plus ne pourra être tenu responsable
           d'une quelconque indisponibilité temporaire du service.
         </p>
         <p className="text-sm text-gray-700 leading-relaxed mt-3">
-          L2endigital se réserve le droit de faire évoluer, modifier ou interrompre tout ou partie du service à tout moment,
+          Pilot Plus se réserve le droit de faire évoluer, modifier ou interrompre tout ou partie du service à tout moment,
           avec un préavis raisonnable sauf urgence technique ou sécuritaire.
         </p>
       </section>
@@ -124,9 +124,9 @@ export default function CGUPage() {
       <section className="mb-10">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">8. Limitation de responsabilité</h2>
         <p className="text-sm text-gray-700 leading-relaxed">
-          Dans toute la mesure permise par la loi, la responsabilité de L2endigital au titre du présent contrat est limitée
+          Dans toute la mesure permise par la loi, la responsabilité de Pilot Plus au titre du présent contrat est limitée
           aux sommes effectivement payées par l'utilisateur au cours des 12 derniers mois précédant le fait générateur du litige.
-          L2endigital ne saurait être tenu responsable des dommages indirects, pertes de données, pertes de chiffre d'affaires
+          Pilot Plus ne saurait être tenu responsable des dommages indirects, pertes de données, pertes de chiffre d'affaires
           ou préjudices commerciaux de quelque nature que ce soit.
         </p>
       </section>
@@ -135,7 +135,7 @@ export default function CGUPage() {
       <section className="mb-10">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">9. Suspension et résiliation du compte</h2>
         <p className="text-sm text-gray-700 leading-relaxed mb-3">
-          L2endigital se réserve le droit de suspendre ou de résilier l'accès d'un utilisateur sans préavis en cas de :
+          Pilot Plus se réserve le droit de suspendre ou de résilier l'accès d'un utilisateur sans préavis en cas de :
         </p>
         <ul className="space-y-1 text-sm text-gray-700 list-disc list-inside">
           <li>Violation des présentes CGU</li>
@@ -154,7 +154,7 @@ export default function CGUPage() {
       <section className="mb-10">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">10. Modifications des CGU</h2>
         <p className="text-sm text-gray-700 leading-relaxed">
-          L2endigital se réserve le droit de modifier les présentes CGU à tout moment. Les utilisateurs seront informés
+          Pilot Plus se réserve le droit de modifier les présentes CGU à tout moment. Les utilisateurs seront informés
           par e-mail des modifications substantielles au moins 15 jours avant leur entrée en vigueur.
           La poursuite de l'utilisation du service après cette date vaut acceptation des nouvelles conditions.
         </p>

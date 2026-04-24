@@ -17,7 +17,7 @@ export default function CGVPage() {
       <section className="mb-10">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">1. Objet et champ d&apos;application</h2>
         <p className="text-sm text-gray-700 leading-relaxed">
-          Les présentes Conditions Générales de Vente (CGV) régissent les relations contractuelles entre la société L2endigital,
+          Les présentes Conditions Générales de Vente (CGV) régissent les relations contractuelles entre la société Pilot Plus,
           éditrice du service PILOT+, et tout client professionnel souscrivant à un abonnement payant.
         </p>
         <p className="text-sm text-gray-700 leading-relaxed mt-3">
@@ -72,7 +72,7 @@ export default function CGVPage() {
         </div>
 
         <p className="text-xs text-gray-500">
-          L2endigital se réserve le droit de modifier ses tarifs à tout moment. Les nouveaux tarifs s'appliquent
+          Pilot Plus se réserve le droit de modifier ses tarifs à tout moment. Les nouveaux tarifs s'appliquent
           à la prochaine période de facturation, après information préalable du client par e-mail (préavis de 30 jours).
         </p>
       </section>
@@ -96,7 +96,7 @@ export default function CGVPage() {
             La date de facturation correspond à la date de souscription initiale.
           </p>
           <p className="leading-relaxed">
-            En cas d'échec de paiement, L2endigital procédera à des relances automatiques. Sans régularisation sous 7 jours,
+            En cas d'échec de paiement, Pilot Plus procédera à des relances automatiques. Sans régularisation sous 7 jours,
             l'accès au service pourra être suspendu jusqu'au paiement.
           </p>
           <p className="leading-relaxed">
@@ -121,8 +121,8 @@ export default function CGVPage() {
             Aucun remboursement pro-rata n'est effectué pour la période en cours.
           </p>
           <p className="leading-relaxed">
-            <strong>Résiliation par L2endigital :</strong> En cas de violation des CGU ou de non-paiement persistant,
-            L2endigital peut résilier l'abonnement avec un préavis de 7 jours (sauf faute grave, résiliation immédiate).
+            <strong>Résiliation par Pilot Plus :</strong> En cas de violation des CGU ou de non-paiement persistant,
+            Pilot Plus peut résilier l'abonnement avec un préavis de 7 jours (sauf faute grave, résiliation immédiate).
           </p>
           <p className="leading-relaxed">
             <strong>Après résiliation :</strong> L'accès au service est maintenu jusqu'à la fin de la période payée.
@@ -141,9 +141,9 @@ export default function CGVPage() {
           n'est accordé pour les périodes déjà facturées et consommées.
         </p>
         <p className="text-sm text-gray-700 leading-relaxed mt-3">
-          Toutefois, en cas de dysfonctionnement majeur imputable à L2endigital rendant le service inutilisable pendant plus
+          Toutefois, en cas de dysfonctionnement majeur imputable à Pilot Plus rendant le service inutilisable pendant plus
           de 48 heures consécutives, un avoir ou remboursement proportionnel à la durée d'indisponibilité pourra être accordé,
-          sur demande, à la discrétion de L2endigital.
+          sur demande, à la discrétion de Pilot Plus.
         </p>
       </section>
 
@@ -162,7 +162,7 @@ export default function CGVPage() {
         <h2 className="text-xl font-semibold text-gray-800 mb-4">8. Sécurité des paiements</h2>
         <p className="text-sm text-gray-700 leading-relaxed">
           Les paiements sont entièrement gérés par <strong>Stripe</strong> (Stripe, Inc. / Stripe Payments Europe Ltd.),
-          prestataire de services de paiement certifié PCI-DSS niveau 1. L2endigital ne stocke jamais vos données de carte
+          prestataire de services de paiement certifié PCI-DSS niveau 1. Pilot Plus ne stocke jamais vos données de carte
           bancaire sur ses serveurs.
         </p>
       </section>
@@ -171,7 +171,7 @@ export default function CGVPage() {
       <section className="mb-10">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">9. Force majeure</h2>
         <p className="text-sm text-gray-700 leading-relaxed">
-          L2endigital ne saurait être tenu responsable de tout manquement à ses obligations contractuelles en cas de
+          Pilot Plus ne saurait être tenu responsable de tout manquement à ses obligations contractuelles en cas de
           survenance d'un événement de force majeure au sens de l'article 1218 du Code civil (catastrophe naturelle,
           coupure d'électricité, panne des infrastructures tierces, cyberattaque massive, etc.).
         </p>

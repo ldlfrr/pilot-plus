@@ -15,7 +15,7 @@ export default function PolitiqueConfidentialitePage() {
 
       {/* Intro */}
       <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-10 text-sm text-blue-900 leading-relaxed">
-        L2endigital accorde une importance fondamentale à la protection de vos données personnelles. Cette politique explique
+        Pilot Plus accorde une importance fondamentale à la protection de vos données personnelles. Cette politique explique
         quelles données nous collectons, pourquoi, comment nous les utilisons et quels sont vos droits.
       </div>
 
@@ -23,7 +23,7 @@ export default function PolitiqueConfidentialitePage() {
       <section className="mb-10">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">1. Responsable du traitement</h2>
         <div className="bg-gray-50 rounded-xl p-5 text-sm text-gray-700 space-y-1">
-          <p><strong>Société :</strong> L2endigital</p>
+          <p><strong>Société :</strong> Pilot Plus</p>
           <p><strong>SIRET :</strong> <span className="text-amber-600">[À compléter]</span></p>
           <p><strong>Adresse :</strong> <span className="text-amber-600">[À compléter]</span></p>
           <p><strong>Contact DPO / données :</strong> <a href="mailto:privacy@pilotplus.app" className="text-blue-600 hover:underline">privacy@pilotplus.app</a></p>
@@ -120,7 +120,7 @@ export default function PolitiqueConfidentialitePage() {
         <h2 className="text-xl font-semibold text-gray-800 mb-4">4. Sous-traitants et destinataires</h2>
         <p className="text-sm text-gray-600 mb-4">
           Vos données peuvent être transmises aux sous-traitants suivants, dans le strict cadre de la fourniture du service.
-          L2endigital s'assure que ces partenaires offrent des garanties suffisantes au titre du RGPD.
+          Pilot Plus s'assure que ces partenaires offrent des garanties suffisantes au titre du RGPD.
         </p>
         <div className="grid gap-3">
           {[
@@ -256,7 +256,7 @@ export default function PolitiqueConfidentialitePage() {
       <section className="mb-10">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">8. Sécurité</h2>
         <p className="text-sm text-gray-700 leading-relaxed">
-          L2endigital met en œuvre des mesures techniques et organisationnelles appropriées pour protéger vos données
+          Pilot Plus met en œuvre des mesures techniques et organisationnelles appropriées pour protéger vos données
           contre tout accès non autorisé, perte, destruction ou altération, notamment :
         </p>
         <ul className="mt-3 space-y-1 text-sm text-gray-700 list-disc list-inside">
