@@ -245,8 +245,8 @@ export default function VeillePage() {
       <div className="flex-1 flex overflow-hidden">
 
         {/* ══ LEFT SIDEBAR ════════════════════════════════════════════════ */}
-        <aside className="hidden lg:flex flex-col w-72 xl:w-80 flex-shrink-0 border-r border-white/5 overflow-y-auto">
-          <div className="p-5 space-y-6">
+        <aside className="hidden lg:flex flex-col w-[340px] xl:w-[380px] flex-shrink-0 border-r border-white/5 overflow-y-auto">
+          <div className="p-6 space-y-7">
 
             {/* Info banner */}
             <div className="flex items-start gap-2.5 p-3.5 bg-blue-500/6 border border-blue-500/12 rounded-xl">
@@ -271,12 +271,12 @@ export default function VeillePage() {
 
                 {/* Current keywords */}
                 {settings.keywords.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-3">
+                  <div className="flex flex-wrap gap-2 mb-3">
                     {settings.keywords.map(kw => (
-                      <span key={kw} className="group flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/12 border border-blue-500/20 text-[11px] text-blue-300 font-medium">
+                      <span key={kw} className="group flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/12 border border-blue-500/20 text-xs text-blue-300 font-medium">
                         {kw}
-                        <button onClick={() => removeKeyword(kw)} className="text-blue-400/40 hover:text-red-400 transition-colors ml-0.5">
-                          <X size={10} />
+                        <button onClick={() => removeKeyword(kw)} className="text-blue-400/40 hover:text-red-400 transition-colors">
+                          <X size={11} />
                         </button>
                       </span>
                     ))}
@@ -305,10 +305,10 @@ export default function VeillePage() {
 
                 {/* Quick-add suggestions */}
                 {QUICK_KW.filter(s => !settings.keywords.includes(s)).length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2.5">
+                  <div className="flex flex-wrap gap-1.5 mt-3">
                     {QUICK_KW.filter(s => !settings.keywords.includes(s)).map(s => (
                       <button key={s} onClick={() => save({ keywords: [...settings.keywords, s] })}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-white/4 border border-white/7 text-white/30 hover:text-white/55 hover:bg-white/6 hover:border-white/12 transition-all">
+                        className="text-[11px] px-2.5 py-1 rounded-lg bg-white/4 border border-white/8 text-white/35 hover:text-white/60 hover:bg-white/7 hover:border-white/14 transition-all">
                         + {s}
                       </button>
                     ))}
@@ -336,13 +336,13 @@ export default function VeillePage() {
                   )}
                 </div>
 
-                {/* Active region pills */}
+                {/* Active region pills — compact horizontal scroll */}
                 {settings.regions.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-3">
+                  <div className="flex flex-wrap gap-1.5 mb-3 max-h-24 overflow-y-auto pr-1">
                     {settings.regions.map(code => {
                       const reg = REGIONS_FR.find(r => r.code === code)
                       return reg ? (
-                        <span key={code} className="flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-violet-500/12 border border-violet-500/20 text-[10px] text-violet-300/80 font-medium">
+                        <span key={code} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-500/12 border border-violet-500/20 text-[11px] text-violet-300/80 font-medium whitespace-nowrap">
                           {reg.label}
                           <button onClick={() => toggleRegion(code)} className="text-violet-400/40 hover:text-red-400 ml-0.5 transition-colors"><X size={9} /></button>
                         </span>
@@ -351,20 +351,21 @@ export default function VeillePage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-0.5">
+                {/* Department grid — 3 columns */}
+                <div className="grid grid-cols-3 gap-1">
                   {displayedDeps.map(({ code, label }) => {
                     const active = settings.regions.includes(code)
                     return (
                       <button key={code} onClick={() => toggleRegion(code)}
                         className={cn(
-                          'flex items-center gap-1.5 px-2 py-1.5 rounded-md text-left transition-all text-[11px]',
+                          'flex items-center gap-1 px-2 py-1.5 rounded-lg text-left transition-all text-[11px]',
                           active
                             ? 'bg-violet-500/15 border border-violet-500/25 text-violet-300'
-                            : 'text-white/30 hover:text-white/60 hover:bg-white/4',
+                            : 'text-white/30 hover:text-white/60 hover:bg-white/4 border border-transparent',
                         )}
                       >
-                        <span className="font-mono text-[9px] text-white/15 w-4 flex-shrink-0">{code}</span>
-                        <span className="truncate">{label}</span>
+                        <span className="font-mono text-[9px] text-white/15 w-3.5 flex-shrink-0">{code}</span>
+                        <span className="truncate text-[10px]">{label}</span>
                       </button>
                     )
                   })}
@@ -394,16 +395,16 @@ export default function VeillePage() {
                   <span className="text-xs font-semibold text-white/80">Type de marché</span>
                   {settings.types_marche.length === 0 && <span className="ml-auto text-[10px] text-white/20">Tous</span>}
                 </div>
-                <div className="flex gap-1.5 flex-wrap">
+                <div className="flex gap-2 flex-wrap">
                   {TYPES_MARCHE.map(t => {
                     const active = settings.types_marche.includes(t)
                     return (
                       <button key={t} onClick={() => toggleType(t)}
                         className={cn(
-                          'px-3 py-1.5 rounded-lg text-[11px] font-medium border transition-all',
+                          'px-3.5 py-2 rounded-xl text-xs font-medium border transition-all',
                           active
                             ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-                            : 'bg-white/4 border-white/8 text-white/35 hover:border-white/15 hover:text-white/60',
+                            : 'bg-white/4 border-white/8 text-white/40 hover:border-white/15 hover:text-white/65',
                         )}
                       >{t}</button>
                     )

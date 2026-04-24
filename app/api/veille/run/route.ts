@@ -24,8 +24,6 @@ interface BoampRecord {
   dateparution?: string
   nature?: string
   descripteur_libelle?: string
-  procedure?: string
-  gestion?: string
 }
 
 interface BoampResponse {
@@ -62,7 +60,7 @@ async function queryBoamp(
   }
 
   const whereStr  = where.join(' AND ')
-  const selectStr = 'idweb,objet,nomacheteur,code_departement,datelimitereponse,type_marche_facette,famille_libelle,dateparution,nature,descripteur_libelle,procedure,gestion'
+  const selectStr = 'idweb,objet,nomacheteur,code_departement,datelimitereponse,type_marche_facette,famille_libelle,dateparution,nature,descripteur_libelle'
   const finalUrl  = `${BOAMP_API}?where=${encodeURIComponent(whereStr).replace(/%25/g, '%')}&order_by=dateparution%20desc&limit=50&select=${selectStr}`
 
   const res = await fetch(finalUrl, { headers: { Accept: 'application/json' }, cache: 'no-store' })
@@ -146,12 +144,7 @@ export async function POST() {
       // Build the direct BOAMP announcement URL
       const sourceUrl = idweb ? `https://www.boamp.fr/avis/detail/${idweb}` : null
 
-      // Build description from available fields
-      const descParts: string[] = []
-      if (r.descripteur_libelle) descParts.push(r.descripteur_libelle)
-      if (r.procedure)            descParts.push(`Procédure : ${r.procedure}`)
-      if (r.gestion)              descParts.push(`Gestion : ${r.gestion}`)
-      const description = descParts.join(' — ') || null
+      const description = r.descripteur_libelle?.trim() || null
 
       const { error } = await supabase.from('veille_results').insert({
         user_id: user.id,
@@ -166,7 +159,7 @@ export async function POST() {
         source_url: sourceUrl,
         description,
         montant_estime: null,
-        procedure_type: r.procedure ?? null,
+        procedure_type: null,
         status: 'pending',
       })
 
