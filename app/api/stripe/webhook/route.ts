@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { stripe, tierFromPriceId } from '@/lib/stripe'
+import { getStripe, tierFromPriceId } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
 import type Stripe from 'stripe'
 
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(body, sig, secret)
+    event = getStripe().webhooks.constructEvent(body, sig, secret)
   } catch (err) {
     console.error('[webhook] signature failed:', err)
     return NextResponse.json({ error: 'Webhook signature invalid' }, { status: 400 })
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
       const invoice = event.data.object as Stripe.Invoice
       const subId   = (invoice as Stripe.Invoice & { subscription?: string }).subscription
       if (subId) {
-        const sub  = await stripe.subscriptions.retrieve(subId)
+        const sub  = await getStripe().subscriptions.retrieve(subId)
         const uid  = sub.metadata?.supabase_uid
         const item = sub.items.data[0]
         const tier = item ? tierFromPriceId(item.price.id) : null

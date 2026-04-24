@@ -9,6 +9,8 @@ import {
 } from 'lucide-react'
 import type { ProjectWithScore, GoNoGoVerdict } from '@/types'
 import { cn } from '@/lib/utils/cn'
+import { UserAvatarLink } from '@/components/layout/UserAvatarLink'
+import { NotificationBell } from '@/components/layout/NotificationBell'
 
 export const metadata: Metadata = { title: 'Accueil — PILOT+' }
 
@@ -54,7 +56,7 @@ async function getAccueilData(userId: string) {
   const thisMonth = new Date(); thisMonth.setDate(1); thisMonth.setHours(0,0,0,0)
   const goThisMonth = scores.filter(s => s.verdict === 'GO' && new Date(s.created_at) >= thisMonth).length
 
-  // ── Upcoming deadlines (next 30 days) ──────────────────────────────────────
+  // ── Upcoming deadlines (next 60 days) ──────────────────────────────────────
   const now = Date.now()
   const upcoming = projects
     .filter(p => p.offer_deadline && p.outcome === 'pending')
@@ -65,7 +67,7 @@ async function getAccueilData(userId: string) {
         ? { total_score: scoreMap.get(p.id)!.total_score as number, verdict: scoreMap.get(p.id)!.verdict as GoNoGoVerdict }
         : null,
     }))
-    .filter(p => p.daysLeft >= 0 && p.daysLeft <= 30)
+    .filter(p => p.daysLeft >= 0 && p.daysLeft <= 60)
     .sort((a, b) => a.daysLeft - b.daysLeft)
     .slice(0, 10)
 
@@ -99,8 +101,9 @@ export default async function AccueilPage() {
             {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
-        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold">
-          {(userName ?? user.email ?? '?')[0].toUpperCase()}
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <UserAvatarLink />
         </div>
       </div>
 
@@ -180,8 +183,7 @@ export default async function AccueilPage() {
         </div>
 
         {/* ── Deadlines reminder ──────────────────────────────────────────── */}
-        {upcoming.length > 0 && (
-          <div className="space-y-3">
+        <div className="space-y-3">
 
             {/* Alert banner — urgent (≤ 3 days) */}
             {urgentCount > 0 && (
@@ -229,9 +231,11 @@ export default async function AccueilPage() {
                 <div className="flex items-center gap-2">
                   <Calendar size={14} className="text-amber-400" />
                   <span className="text-sm font-semibold text-white">Prochaines échéances</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-bold tabular-nums">
-                    {upcoming.length}
-                  </span>
+                  {upcoming.length > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-bold tabular-nums">
+                      {upcoming.length}
+                    </span>
+                  )}
                 </div>
                 <Link href="/dashboard"
                   className="flex items-center gap-1 text-xs text-white/40 hover:text-white/70 transition-colors">
@@ -239,87 +243,97 @@ export default async function AccueilPage() {
                 </Link>
               </div>
 
-              <div className="divide-y divide-white/4">
-                {upcoming.map(p => {
-                  const isUrgent  = p.daysLeft <= 3
-                  const isWarning = p.daysLeft <= 7
-                  const isSoon    = p.daysLeft <= 14
+              {upcoming.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+                  <Calendar size={28} className="text-white/15 mb-3" />
+                  <p className="text-sm text-white/40">Aucune échéance dans les 60 prochains jours</p>
+                  <p className="text-xs text-white/20 mt-1">Ajoutez une date limite à vos projets en cours</p>
+                  <Link href="/projects" className="mt-4 text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors">
+                    Gérer mes projets →
+                  </Link>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/4">
+                  {upcoming.map(p => {
+                    const isUrgent  = p.daysLeft <= 3
+                    const isWarning = p.daysLeft <= 7
+                    const isSoon    = p.daysLeft <= 14
 
-                  const badgeColor = isUrgent  ? 'bg-red-500/20 text-red-400 border-red-500/20'
-                                   : isWarning ? 'bg-amber-500/20 text-amber-400 border-amber-500/20'
-                                   : isSoon    ? 'bg-blue-500/15 text-blue-400 border-blue-500/15'
-                                   :             'bg-white/5 text-white/40 border-white/8'
+                    const badgeColor = isUrgent  ? 'bg-red-500/20 text-red-400 border-red-500/20'
+                                     : isWarning ? 'bg-amber-500/20 text-amber-400 border-amber-500/20'
+                                     : isSoon    ? 'bg-blue-500/15 text-blue-400 border-blue-500/15'
+                                     :             'bg-white/5 text-white/40 border-white/8'
 
-                  const verdictColors: Record<GoNoGoVerdict, string> = {
-                    GO:        'bg-emerald-500/15 text-emerald-400',
-                    A_ETUDIER: 'bg-amber-500/15 text-amber-400',
-                    NO_GO:     'bg-red-500/15 text-red-400',
-                  }
-                  const verdictLabels: Record<GoNoGoVerdict, string> = {
-                    GO: 'GO', A_ETUDIER: '~', NO_GO: 'NG',
-                  }
+                    const verdictColors: Record<GoNoGoVerdict, string> = {
+                      GO:        'bg-emerald-500/15 text-emerald-400',
+                      A_ETUDIER: 'bg-amber-500/15 text-amber-400',
+                      NO_GO:     'bg-red-500/15 text-red-400',
+                    }
+                    const verdictLabels: Record<GoNoGoVerdict, string> = {
+                      GO: 'GO', A_ETUDIER: '~', NO_GO: 'NG',
+                    }
 
-                  return (
-                    <Link
-                      key={p.id}
-                      href={`/projects/${p.id}`}
-                      className={cn(
-                        'flex items-center gap-4 px-4 py-3 hover:bg-white/3 transition-colors group',
-                        isUrgent && 'bg-red-500/3',
-                      )}
-                    >
-                      {/* Days badge */}
-                      <span className={cn(
-                        'inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-extrabold tabular-nums flex-shrink-0 w-14 justify-center',
-                        badgeColor,
-                      )}>
-                        {isUrgent && <Flame size={9} />}
-                        {p.daysLeft === 0 ? 'Auj.' : `${p.daysLeft}j`}
-                      </span>
-
-                      {/* Name + client */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white/80 group-hover:text-white truncate transition-colors leading-none">
-                          {p.name}
-                        </p>
-                        <p className="text-[11px] text-white/35 mt-0.5 flex items-center gap-2">
-                          <span className="flex items-center gap-1">
-                            <Building size={9} />{p.client}
-                          </span>
-                          <span className="hidden sm:flex items-center gap-1">
-                            <MapPin size={9} />{p.location}
-                          </span>
-                        </p>
-                      </div>
-
-                      {/* Deadline date */}
-                      <span className="text-xs text-white/40 hidden sm:block flex-shrink-0 font-medium">
-                        {new Date(p.offer_deadline!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                      </span>
-
-                      {/* Score / verdict */}
-                      <div className="flex-shrink-0 w-12 text-center">
-                        {p.scoreInfo ? (
-                          <span className={cn(
-                            'inline-block px-1.5 py-0.5 rounded text-[10px] font-bold',
-                            verdictColors[p.scoreInfo.verdict as GoNoGoVerdict],
-                          )}>
-                            {verdictLabels[p.scoreInfo.verdict as GoNoGoVerdict]}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-white/20">—</span>
+                    return (
+                      <Link
+                        key={p.id}
+                        href={`/projects/${p.id}`}
+                        className={cn(
+                          'flex items-center gap-4 px-4 py-3 hover:bg-white/3 transition-colors group',
+                          isUrgent && 'bg-red-500/3',
                         )}
-                      </div>
+                      >
+                        {/* Days badge */}
+                        <span className={cn(
+                          'inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-extrabold tabular-nums flex-shrink-0 w-14 justify-center',
+                          badgeColor,
+                        )}>
+                          {isUrgent && <Flame size={9} />}
+                          {p.daysLeft === 0 ? 'Auj.' : `${p.daysLeft}j`}
+                        </span>
 
-                      <ArrowRight size={13} className="text-white/15 group-hover:text-white/40 transition-colors flex-shrink-0" />
-                    </Link>
-                  )
-                })}
-              </div>
+                        {/* Name + client */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white/80 group-hover:text-white truncate transition-colors leading-none">
+                            {p.name}
+                          </p>
+                          <p className="text-[11px] text-white/35 mt-0.5 flex items-center gap-2">
+                            <span className="flex items-center gap-1">
+                              <Building size={9} />{p.client}
+                            </span>
+                            <span className="hidden sm:flex items-center gap-1">
+                              <MapPin size={9} />{p.location}
+                            </span>
+                          </p>
+                        </div>
+
+                        {/* Deadline date */}
+                        <span className="text-xs text-white/40 hidden sm:block flex-shrink-0 font-medium">
+                          {new Date(p.offer_deadline!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                        </span>
+
+                        {/* Score / verdict */}
+                        <div className="flex-shrink-0 w-12 text-center">
+                          {p.scoreInfo ? (
+                            <span className={cn(
+                              'inline-block px-1.5 py-0.5 rounded text-[10px] font-bold',
+                              verdictColors[p.scoreInfo.verdict as GoNoGoVerdict],
+                            )}>
+                              {verdictLabels[p.scoreInfo.verdict as GoNoGoVerdict]}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-white/20">—</span>
+                          )}
+                        </div>
+
+                        <ArrowRight size={13} className="text-white/15 group-hover:text-white/40 transition-colors flex-shrink-0" />
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
-          </div>
-        )}
+        </div>
 
         {/* ── Recent projects ──────────────────────────────────────────────── */}
         <div>
