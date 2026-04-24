@@ -297,6 +297,17 @@ export default function ProjectPage() {
             {latestAnalysis?.result?.ref_ao && latestAnalysis.result.ref_ao !== 'NON PRÉCISÉ' && (
               <span className="flex items-center gap-1.5"><Hash size={12} />Réf : {latestAnalysis.result.ref_ao}</span>
             )}
+            {(project as Project & { source_url?: string }).source_url && (
+              <a
+                href={(project as Project & { source_url?: string }).source_url!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition-all font-medium"
+              >
+                <ExternalLink size={11} />
+                Voir l&apos;annonce BOAMP
+              </a>
+            )}
           </div>
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-wrap">

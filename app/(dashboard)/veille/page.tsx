@@ -522,7 +522,24 @@ export default function VeillePage() {
                                     <span className="flex items-center gap-1 text-[11px] text-white/40">
                                       <Tag size={10} className="text-white/20" />{result.consultation_type}
                                     </span>
+                                    {result.procedure_type && (
+                                      <span className="flex items-center gap-1 text-[11px] text-white/35">
+                                        <span className="text-white/15">·</span>{result.procedure_type}
+                                      </span>
+                                    )}
+                                    {result.montant_estime && result.montant_estime !== '0' && (
+                                      <span className="flex items-center gap-1 text-[11px] text-violet-300/70">
+                                        ~{Number(result.montant_estime).toLocaleString('fr-FR')} €
+                                      </span>
+                                    )}
                                   </div>
+
+                                  {/* Description */}
+                                  {result.description && (
+                                    <p className="text-[11px] text-white/40 leading-relaxed line-clamp-2 border-l-2 border-white/8 pl-2">
+                                      {result.description}
+                                    </p>
+                                  )}
 
                                   {/* Deadline + ref */}
                                   <div className="flex items-center gap-3 flex-wrap">

@@ -36,6 +36,9 @@ export async function POST(
       return NextResponse.json({ ok: true, project_id: result.project_id })
     }
 
+    const sourceUrl = result.source_url
+      ?? (result.idweb ? `https://www.boamp.fr/avis/detail/${result.idweb}` : null)
+
     const { data: project, error } = await supabase
       .from('projects')
       .insert({
@@ -47,6 +50,7 @@ export async function POST(
         offer_deadline: result.offer_deadline,
         status: 'draft',
         outcome: 'pending',
+        source_url: sourceUrl,
       })
       .select('id')
       .single()

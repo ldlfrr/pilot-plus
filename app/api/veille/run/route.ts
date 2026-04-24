@@ -23,6 +23,10 @@ interface BoampRecord {
   famille_libelle?: string
   dateparution?: string
   nature?: string
+  descripteur_libelle?: string
+  montant?: string | number | null
+  procedure?: string
+  gestion?: string
 }
 
 interface BoampResponse {
@@ -59,7 +63,7 @@ async function queryBoamp(
   }
 
   const whereStr  = where.join(' AND ')
-  const selectStr = 'idweb,objet,nomacheteur,code_departement,datelimitereponse,type_marche_facette,famille_libelle,dateparution,nature'
+  const selectStr = 'idweb,objet,nomacheteur,code_departement,datelimitereponse,type_marche_facette,famille_libelle,dateparution,nature,descripteur_libelle,montant,procedure,gestion'
   const finalUrl  = `${BOAMP_API}?where=${encodeURIComponent(whereStr).replace(/%25/g, '%')}&order_by=dateparution%20desc&limit=50&select=${selectStr}`
 
   const res = await fetch(finalUrl, { headers: { Accept: 'application/json' }, cache: 'no-store' })
@@ -140,6 +144,18 @@ export async function POST() {
         try { parution = new Date(r.dateparution).toISOString().slice(0, 10) } catch { /* */ }
       }
 
+      // Build the direct BOAMP announcement URL
+      const sourceUrl = idweb ? `https://www.boamp.fr/avis/detail/${idweb}` : null
+
+      // Build description from available fields
+      const descParts: string[] = []
+      if (r.descripteur_libelle) descParts.push(r.descripteur_libelle)
+      if (r.procedure)            descParts.push(`Procédure : ${r.procedure}`)
+      if (r.gestion)              descParts.push(`Gestion : ${r.gestion}`)
+      const description = descParts.join(' — ') || null
+
+      const montantEstime = r.montant != null ? String(r.montant) : null
+
       const { error } = await supabase.from('veille_results').insert({
         user_id: user.id,
         run_id: runId,
@@ -150,6 +166,10 @@ export async function POST() {
         consultation_type: type,
         offer_deadline: deadline,
         dateparution: parution,
+        source_url: sourceUrl,
+        description,
+        montant_estime: montantEstime,
+        procedure_type: r.procedure ?? null,
         status: 'pending',
       })
 
