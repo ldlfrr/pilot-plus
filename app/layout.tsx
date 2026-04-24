@@ -16,6 +16,14 @@ export const metadata: Metadata = {
     template: '%s | PILOT+',
   },
   description: 'Copilot IA d\'analyse DCE & décision Go/No Go',
+  icons: {
+    icon: [
+      { url: '/favicon/favblanc.png', media: '(prefers-color-scheme: light)' },
+      { url: '/favicon/favnoir.png',  media: '(prefers-color-scheme: dark)' },
+    ],
+    shortcut: '/favicon/favblanc.png',
+    apple: '/favicon/favblanc.png',
+  },
 }
 
 export default function RootLayout({
