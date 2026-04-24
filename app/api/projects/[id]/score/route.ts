@@ -7,7 +7,7 @@ import { getAnthropicClient, SCORING_MODEL } from '@/lib/ai/client'
 import { buildScoringSystemPrompt, buildScoringUserPrompt } from '@/lib/ai/prompts'
 import { getMockScore } from '@/lib/openai/mock'
 import type { ScoringResult, CompanyCriteria } from '@/types'
-import { TIER_LIMITS } from '@/app/api/user/limits/route'
+import { getUserTier } from '@/lib/subscription'
 
 const DEMO_MODE = process.env.DEMO_MODE === 'true'
 
@@ -45,45 +45,15 @@ async function handleScore(params: Params['params']) {
   }
 
   // ── Subscription tier check ─────────────────────────────────────────────────
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('subscription_tier')
-    .eq('id', user.id)
-    .single()
+  const tier = await getUserTier(supabase, user.id)
+  console.log(`[score] user=${user.id} tier=${tier}`)
 
-  const tier: string = (profile as { subscription_tier?: string })?.subscription_tier ?? 'free'
-
-  // Free tier cannot score at all
   if (tier === 'free') {
     return NextResponse.json({
       error: 'Le scoring Go/No Go est disponible à partir du plan Basic (49€/mois).',
-      code: 'LIMIT_REACHED',
+      code:        'LIMIT_REACHED',
       upgrade_url: '/subscription',
     }, { status: 402 })
-  }
-
-  // Paid tier: check analysis count limit
-  const limit = TIER_LIMITS[tier] ?? 1
-  if (limit !== null) {
-    const { data: userProjects } = await supabase
-      .from('projects')
-      .select('id')
-      .eq('user_id', user.id)
-
-    const projectIds = [...new Set([...(userProjects?.map(p => p.id) ?? []), id])]
-
-    const { count: totalAnalyses } = await supabase
-      .from('project_analyses')
-      .select('id', { count: 'exact', head: true })
-      .in('project_id', projectIds)
-
-    if ((totalAnalyses ?? limit) > limit) {
-      return NextResponse.json({
-        error: `Limite de ${limit} analyses atteinte. Passez au plan supérieur.`,
-        code: 'LIMIT_REACHED',
-        upgrade_url: '/subscription',
-      }, { status: 402 })
-    }
   }
   // ────────────────────────────────────────────────────────────────────────────
 
