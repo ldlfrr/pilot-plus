@@ -4,7 +4,7 @@ export const maxDuration = 60
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getAnthropicClient, SCORING_MODEL } from '@/lib/ai/client'
-import { buildScoringSystemPrompt, buildScoringUserPrompt } from '@/lib/ai/prompts'
+import { buildScoringSystemPrompt, buildScoringUserPrompt, type ScoringContext } from '@/lib/ai/prompts'
 import { getMockScore } from '@/lib/openai/mock'
 import type { ScoringResult, CompanyCriteria } from '@/types'
 import { getUserTier } from '@/lib/subscription'
@@ -73,18 +73,28 @@ async function handleScore(params: Params['params']) {
     )
   }
 
-  // Load company criteria (silently ignore if table missing)
-  let criteria: CompanyCriteria | null = null
+  // Load company settings (criteria or imported document)
+  let scoringContext: ScoringContext = { mode: 'form', criteria: null }
   try {
     const { data: settingsRow } = await supabase
       .from('company_settings')
-      .select('criteria')
+      .select('criteria, settings_mode, company_document_text')
       .eq('user_id', user.id)
       .single()
-    criteria = (settingsRow?.criteria as CompanyCriteria) ?? null
+
+    if (settingsRow?.settings_mode === 'document' && settingsRow?.company_document_text) {
+      scoringContext = { mode: 'document', documentText: settingsRow.company_document_text }
+    } else {
+      scoringContext = {
+        mode: 'form',
+        criteria: (settingsRow?.criteria as CompanyCriteria) ?? null,
+      }
+    }
   } catch {
-    // Table might not exist yet — scoring still works without criteria
+    // Table might not exist yet — scoring still works without company profile
   }
+
+  const criteria = scoringContext.mode === 'form' ? scoringContext.criteria : null
 
   let scoringResult: ScoringResult
 
@@ -103,7 +113,7 @@ async function handleScore(params: Params['params']) {
         temperature: 0.2,
         system: buildScoringSystemPrompt(),
         messages: [
-          { role: 'user', content: buildScoringUserPrompt(analysis.result, criteria) },
+          { role: 'user', content: buildScoringUserPrompt(analysis.result, scoringContext) },
         ],
       })
 
@@ -170,7 +180,12 @@ async function handleScore(params: Params['params']) {
   await supabase.from('projects').update({ status: 'scored' }).eq('id', id)
 
   return NextResponse.json(
-    { score, criteria_used: !!criteria, demo: DEMO_MODE },
+    {
+      score,
+      criteria_used: scoringContext.mode === 'form' && !!criteria,
+      company_doc_used: scoringContext.mode === 'document',
+      demo: DEMO_MODE,
+    },
     { status: 201 }
   )
 }

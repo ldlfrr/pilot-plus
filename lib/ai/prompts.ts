@@ -1,5 +1,10 @@
 import type { AnalysisResult, CompanyCriteria } from '@/types'
 
+// ─── Scoring context types ────────────────────────────────────────────────────
+export type ScoringContext =
+  | { mode: 'form';     criteria: CompanyCriteria | null }
+  | { mode: 'document'; documentText: string }
+
 // ─── Analysis system prompt ───────────────────────────────────────────────────
 
 export const ANALYSIS_SYSTEM_PROMPT = `Tu es un expert en analyse de Dossiers de Consultation des Entreprises (DCE) dans le secteur des énergies renouvelables et du photovoltaïque.
@@ -86,15 +91,40 @@ Tu retournes UNIQUEMENT du JSON valide, sans aucun texte autour.`
 
 export function buildScoringUserPrompt(
   analysis: AnalysisResult,
-  criteria: CompanyCriteria | null
+  criteriaOrContext: CompanyCriteria | null | ScoringContext
 ): string {
-  const criteriaBlock = criteria
-    ? buildCriteriaContext(criteria)
-    : `Aucun profil entreprise configuré — utilise des critères standards de l'industrie photovoltaïque.`
+  // Support both legacy call (criteria | null) and new ScoringContext union
+  let criteriaBlock: string
+  let poidsBlock: string
+  let criteria: CompanyCriteria | null = null
 
-  const poidsBlock = criteria
-    ? buildPoidsContext(criteria)
-    : `Pondérations : égales (1x) sur tous les critères.`
+  if (
+    criteriaOrContext !== null &&
+    typeof criteriaOrContext === 'object' &&
+    'mode' in criteriaOrContext
+  ) {
+    const ctx = criteriaOrContext as ScoringContext
+    if (ctx.mode === 'document') {
+      criteriaBlock = `[DOCUMENT D'ENTREPRISE IMPORTÉ]\n${ctx.documentText}`
+      poidsBlock = `Pondérations : égales (1x) sur tous les critères (pas de pondérations personnalisées dans ce mode).`
+    } else {
+      criteria = ctx.criteria
+      criteriaBlock = criteria
+        ? buildCriteriaContext(criteria)
+        : `Aucun profil entreprise configuré — utilise des critères standards de l'industrie photovoltaïque.`
+      poidsBlock = criteria
+        ? buildPoidsContext(criteria)
+        : `Pondérations : égales (1x) sur tous les critères.`
+    }
+  } else {
+    criteria = criteriaOrContext as CompanyCriteria | null
+    criteriaBlock = criteria
+      ? buildCriteriaContext(criteria)
+      : `Aucun profil entreprise configuré — utilise des critères standards de l'industrie photovoltaïque.`
+    poidsBlock = criteria
+      ? buildPoidsContext(criteria)
+      : `Pondérations : égales (1x) sur tous les critères.`
+  }
 
   return `## PROFIL ENTREPRISE
 ${criteriaBlock}
