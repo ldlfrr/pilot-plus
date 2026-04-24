@@ -6,11 +6,16 @@ export type GoNoGoVerdict = 'GO' | 'A_ETUDIER' | 'NO_GO'
 
 // ─── Database row types ───────────────────────────────────────────────────────
 
+export type SubscriptionTier = 'free' | 'basic' | 'pro' | 'enterprise' | 'lifetime'
+
 export interface Profile {
   id: string
   full_name: string | null
   company: string | null
   avatar_url: string | null
+  subscription_tier: SubscriptionTier
+  subscription_started_at: string | null
+  subscription_expires_at: string | null
   created_at: string
   updated_at: string
 }
