@@ -102,20 +102,14 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
       {/* ── Logo ──────────────────────────────────────────────────────────── */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-white/5 flex-shrink-0">
-        <Link href="/accueil" onClick={onClose} className="flex items-center gap-2.5 group">
-          {/* Icon mark */}
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-600/30 group-hover:shadow-blue-500/40 transition-shadow">
-            <span className="text-white text-[11px] font-black tracking-tighter select-none">P+</span>
-          </div>
+        <Link href="/accueil" onClick={onClose} className="flex flex-col gap-0.5 group">
           {/* Wordmark */}
-          <div className="leading-none">
-            <p className="text-[13px] font-extrabold text-white tracking-tight leading-none">
-              PILOT<span className="text-blue-400">+</span>
-            </p>
-            <p className="text-[8.5px] text-white/25 font-medium tracking-wider mt-0.5 uppercase">
-              Décidez · Exécutez · Gagnez
-            </p>
-          </div>
+          <p className="text-[17px] font-extrabold text-white tracking-tight leading-none">
+            PILOT<span className="text-blue-400">+</span>
+          </p>
+          <p className="text-[9px] text-white/30 font-semibold tracking-[0.18em] uppercase">
+            Décidez · Exécutez · Gagnez
+          </p>
         </Link>
         {/* Bell on desktop */}
         <div className="hidden md:block">
