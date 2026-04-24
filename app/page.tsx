@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import Image from 'next/image'
 import {
   ArrowRight, FileSearch, Target, BarChart3,
   Zap, Shield, Clock, Radio, CheckCircle,
@@ -46,8 +45,13 @@ function LandingPage() {
       {/* ── Navbar ──────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 border-b border-white/5" style={{ background: 'rgba(5,9,26,0.85)', backdropFilter: 'blur(20px)' }}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="relative h-8 w-28">
-            <Image src="/logo/pilot-plus.png" alt="PILOT+" fill className="object-contain object-left brightness-0 invert" priority />
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-600/30">
+              <span className="text-white text-[11px] font-black tracking-tighter select-none">P+</span>
+            </div>
+            <span className="text-[15px] font-extrabold text-white tracking-tight">
+              PILOT<span className="text-blue-400">+</span>
+            </span>
           </div>
           <nav className="hidden md:flex items-center gap-8">
             {[
@@ -447,8 +451,13 @@ function LandingPage() {
       <footer className="border-t border-white/5 py-8 px-6">
         <div className="max-w-6xl mx-auto space-y-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="relative h-7 w-24">
-              <Image src="/logo/pilot-plus.png" alt="PILOT+" fill className="object-contain object-left brightness-0 invert opacity-50" />
+            <div className="flex items-center gap-2 opacity-40">
+              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-[9px] font-black tracking-tighter select-none">P+</span>
+              </div>
+              <span className="text-sm font-extrabold text-white tracking-tight">
+                PILOT<span className="text-blue-400">+</span>
+              </span>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-6">
               <Link href="/login"  className="text-xs text-white/30 hover:text-white/60 transition-colors">Connexion</Link>

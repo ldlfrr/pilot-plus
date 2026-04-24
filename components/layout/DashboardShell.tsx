@@ -40,7 +40,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           >
             <Menu size={20} />
           </button>
-          <span className="text-sm font-bold text-white">PILOT+</span>
+          {/* Logo mobile */}
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-[9px] font-black tracking-tighter select-none">P+</span>
+            </div>
+            <span className="text-sm font-extrabold text-white tracking-tight">
+              PILOT<span className="text-blue-400">+</span>
+            </span>
+          </div>
           <div className="ml-auto">
             <NotificationBell />
           </div>

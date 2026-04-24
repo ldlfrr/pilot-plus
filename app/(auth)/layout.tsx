@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import { Zap, Target, TrendingUp, Shield, CheckCircle, BarChart3, Radio } from 'lucide-react'
 
 const FEATURES = [
@@ -41,10 +40,15 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         {/* Logo */}
         <div className="relative z-10">
-          <div className="relative h-9 w-32 mb-1">
-            <Image src="/logo/pilot-plus.png" alt="PILOT+" fill className="object-contain object-left brightness-0 invert" priority />
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-600/30">
+              <span className="text-white text-[12px] font-black tracking-tighter select-none">P+</span>
+            </div>
+            <span className="text-xl font-extrabold text-white tracking-tight">
+              PILOT<span className="text-blue-400">+</span>
+            </span>
           </div>
-          <p className="text-[10px] font-bold tracking-[0.25em] uppercase" style={{ color: 'rgba(96,165,250,0.55)' }}>
+          <p className="text-[10px] font-bold tracking-[0.25em] uppercase pl-0.5" style={{ color: 'rgba(96,165,250,0.55)' }}>
             Copilot IA · Analyse DCE
           </p>
         </div>
@@ -145,8 +149,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         {/* Mobile logo */}
         <div className="relative z-10 mb-8 lg:hidden flex flex-col items-center">
-          <div className="relative h-8 w-28 mb-2">
-            <Image src="/logo/pilot-plus.png" alt="PILOT+" fill className="object-contain brightness-0 invert" priority />
+          <div className="flex items-center gap-2.5 mb-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-600/30">
+              <span className="text-white text-[11px] font-black tracking-tighter select-none">P+</span>
+            </div>
+            <span className="text-lg font-extrabold text-white tracking-tight">
+              PILOT<span className="text-blue-400">+</span>
+            </span>
           </div>
           <p className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ color: 'rgba(96,165,250,0.55)' }}>
             Copilot IA · Analyse DCE
