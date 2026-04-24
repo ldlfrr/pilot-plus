@@ -379,7 +379,8 @@ export function SyntheseCorpTab({
 }) {
   const [data, setData]           = useState<SyntheseData>(EMPTY)
   const [saving, setSaving]       = useState(false)
-  const [exporting, setExporting] = useState(false)
+  const [exporting, setExporting]       = useState(false)
+  const [exportingPdf, setExportingPdf] = useState(false)
   const [saved, setSaved]         = useState(false)
   const [error, setError]         = useState<string | null>(null)
   const [filled, setFilled]       = useState(false)
@@ -457,6 +458,25 @@ export function SyntheseCorpTab({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur export')
     } finally { setExporting(false) }
+  }
+
+  async function handleExportPdf() {
+    setExportingPdf(true); setError(null)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/synthese/export-pdf`, { method: 'POST' })
+      if (!res.ok) {
+        const j = await res.json()
+        throw new Error(j.error ?? 'Erreur export PDF')
+      }
+      const blob = await res.blob()
+      const cd   = res.headers.get('Content-Disposition') ?? ''
+      const name = cd.match(/filename="([^"]+)"/)?.[1] ?? 'Synthese.pdf'
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a'); a.href = url; a.download = name; a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur export PDF')
+    } finally { setExportingPdf(false) }
   }
 
   return (
@@ -740,6 +760,7 @@ export function SyntheseCorpTab({
           </span>
         )}
 
+        {/* Save */}
         <button
           type="button"
           onClick={handleSave}
@@ -750,14 +771,27 @@ export function SyntheseCorpTab({
           {saving ? 'Sauvegarde...' : 'Sauvegarder'}
         </button>
 
+        {/* Word export (secondary — requires uploaded template) */}
         <button
           type="button"
           onClick={handleExport}
           disabled={exporting}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-40"
+          title="Nécessite un template Word chargé"
+          className="flex items-center gap-2 px-4 py-2 bg-white/8 hover:bg-white/12 border border-white/10 text-white/70 text-sm font-semibold rounded-xl transition-all disabled:opacity-40"
         >
-          {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+          {exporting ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
           {exporting ? 'Génération...' : 'Exporter Word'}
+        </button>
+
+        {/* PDF export (primary — always available) */}
+        <button
+          type="button"
+          onClick={handleExportPdf}
+          disabled={exportingPdf}
+          className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-40 shadow-lg shadow-blue-900/40"
+        >
+          {exportingPdf ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+          {exportingPdf ? 'Génération PDF...' : 'Télécharger PDF'}
         </button>
       </div>
     </div>
