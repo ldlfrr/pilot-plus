@@ -2,7 +2,7 @@ export const runtime = 'nodejs'
 export const maxDuration = 30
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -27,8 +27,9 @@ export async function POST(req: Request, { params }: Params) {
 
   if (!synthese) return NextResponse.json({ error: 'Aucune synthèse trouvée' }, { status: 404 })
 
-  // Check for custom template
-  const { data: settingsRow } = await supabase
+  // Check for custom template (service role to bypass RLS on settings)
+  const admin = await createServiceClient()
+  const { data: settingsRow } = await admin
     .from('company_settings')
     .select('synthese_template_path')
     .eq('user_id', user.id)
@@ -42,7 +43,7 @@ export async function POST(req: Request, { params }: Params) {
     )
   }
 
-  const { data: fileData, error: storageError } = await supabase.storage
+  const { data: fileData, error: storageError } = await admin.storage
     .from('synthese-templates')
     .download(settingsRow.synthese_template_path)
 

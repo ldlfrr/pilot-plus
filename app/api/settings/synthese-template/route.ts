@@ -2,7 +2,7 @@ export const runtime = 'nodejs'
 export const maxDuration = 30
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 /** GET — returns current custom template name (if any) */
 export async function GET() {
@@ -10,7 +10,8 @@ export async function GET() {
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { data } = await supabase
+  const admin = await createServiceClient()
+  const { data } = await admin
     .from('company_settings')
     .select('synthese_template_path, synthese_template_name')
     .eq('user_id', user.id)
@@ -39,10 +40,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Fichier trop volumineux (max 20 Mo)' }, { status: 413 })
   }
 
+  const admin = await createServiceClient()
+
   const buffer = Buffer.from(await file.arrayBuffer())
   const storagePath = `${user.id}/synthese-template.docx`
 
-  const { error: storageError } = await supabase.storage
+  const { error: storageError } = await admin.storage
     .from('synthese-templates')
     .upload(storagePath, buffer, {
       contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -51,7 +54,7 @@ export async function POST(request: Request) {
 
   if (storageError) return NextResponse.json({ error: storageError.message }, { status: 500 })
 
-  const { error: upsertError } = await supabase
+  const { error: upsertError } = await admin
     .from('company_settings')
     .upsert(
       { user_id: user.id, synthese_template_path: storagePath, synthese_template_name: file.name },
@@ -63,16 +66,17 @@ export async function POST(request: Request) {
   return NextResponse.json({ template_name: file.name }, { status: 201 })
 }
 
-/** DELETE — remove custom template, revert to default SOGETREL template */
+/** DELETE — remove custom template */
 export async function DELETE() {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
+  const admin = await createServiceClient()
   const storagePath = `${user.id}/synthese-template.docx`
-  await supabase.storage.from('synthese-templates').remove([storagePath])
+  await admin.storage.from('synthese-templates').remove([storagePath])
 
-  await supabase
+  await admin
     .from('company_settings')
     .upsert(
       { user_id: user.id, synthese_template_path: null, synthese_template_name: null },
