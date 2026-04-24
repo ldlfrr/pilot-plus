@@ -13,10 +13,11 @@ import {
   Cpu, Target, Trash2, Pencil, Loader2, AlertCircle, CheckCircle,
   Download, Share2, FilePlus, Calendar, MapPin, Building, Hash,
   FileText, Users, ListChecks, Wrench, BarChart3, Layers,
-  Copy, X, ExternalLink, Link as LinkIcon,
+  Copy, X, ExternalLink, Link as LinkIcon, Lock, ArrowRight,
 } from 'lucide-react'
+import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
-import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates } from '@/types'
+import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates, SubscriptionTier } from '@/types'
 
 type Tab = 'synthese' | 'besoin' | 'pieces' | 'specificites' | 'gonogo' | 'actions' | 'documents'
 
@@ -53,6 +54,9 @@ export default function ProjectPage() {
   const [shareUrl, setShareUrl]         = useState<string | null>(null)
   const [copyOk, setCopyOk]             = useState(false)
 
+  interface UserLimits { tier: SubscriptionTier; analyses_used: number; analyses_limit: number | null }
+  const [userLimits, setUserLimits] = useState<UserLimits | null>(null)
+
   const fetchProject = useCallback(async () => {
     try {
       const res = await fetch(`/api/projects/${id}`)
@@ -66,7 +70,10 @@ export default function ProjectPage() {
     }
   }, [id])
 
-  useEffect(() => { fetchProject() }, [fetchProject])
+  useEffect(() => {
+    fetchProject()
+    fetch('/api/user/limits').then(r => r.json()).then(setUserLimits).catch(() => {})
+  }, [fetchProject])
 
   async function callApi(url: string) {
     const res  = await fetch(url, { method: 'POST' })
@@ -165,6 +172,16 @@ export default function ProjectPage() {
   const verdictCfg = verdict ? VERDICT_CFG[verdict] : null
   const taskStates: TaskStates = (project.task_states as TaskStates) ?? EMPTY_TASK_STATES
 
+  // ── Freemium limits ──────────────────────────────────────────────────────────
+  const isFree = userLimits?.tier === 'free'
+  const analysesLimitReached = isFree &&
+    userLimits !== null &&
+    (userLimits.analyses_limit !== null) &&
+    (userLimits.analyses_used >= userLimits.analyses_limit)
+  const FREE_LOCKED_TABS: Tab[] = ['besoin', 'pieces', 'specificites', 'gonogo', 'actions']
+  const isTabLocked = (tabId: Tab) => isFree && FREE_LOCKED_TABS.includes(tabId)
+  // ────────────────────────────────────────────────────────────────────────────
+
   const TABS: { id: Tab; label: string; icon: typeof FileText }[] = [
     { id: 'synthese',     label: 'Synthèse',        icon: FileText },
     { id: 'besoin',       label: 'Besoin client',   icon: Users },
@@ -238,22 +255,44 @@ export default function ProjectPage() {
             >
               <FilePlus size={13} />Ajouter doc
             </button>
-            <button
-              onClick={handleAnalyze}
-              disabled={analyzing || files.filter(f => f.extraction_status === 'done').length === 0}
-              className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
-            >
-              {analyzing ? <Loader2 size={13} className="animate-spin" /> : <Cpu size={13} />}
-              {analyzing ? 'Analyse...' : 'Analyser'}
-            </button>
-            <button
-              onClick={handleScore}
-              disabled={scoring || analyses.length === 0}
-              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
-            >
-              {scoring ? <Loader2 size={13} className="animate-spin" /> : <Target size={13} />}
-              {scoring ? 'Scoring...' : 'Scorer'}
-            </button>
+            {analysesLimitReached ? (
+              <Link
+                href="/subscription"
+                className="flex items-center gap-1.5 px-3 py-2 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-semibold rounded-lg hover:bg-amber-500/25 transition-colors"
+              >
+                <Lock size={13} />
+                Limite atteinte — Upgrader
+              </Link>
+            ) : (
+              <button
+                onClick={handleAnalyze}
+                disabled={analyzing || files.filter(f => f.extraction_status === 'done').length === 0}
+                className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
+              >
+                {analyzing ? <Loader2 size={13} className="animate-spin" /> : <Cpu size={13} />}
+                {analyzing ? 'Analyse...' : 'Analyser'}
+              </button>
+            )}
+            {isFree ? (
+              <Link
+                href="/subscription"
+                className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 text-white/30 text-xs font-semibold rounded-lg cursor-not-allowed"
+                onClick={e => e.preventDefault()}
+                title="Disponible à partir du plan Basic"
+              >
+                <Lock size={13} />
+                Scorer
+              </Link>
+            ) : (
+              <button
+                onClick={handleScore}
+                disabled={scoring || analyses.length === 0}
+                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
+              >
+                {scoring ? <Loader2 size={13} className="animate-spin" /> : <Target size={13} />}
+                {scoring ? 'Scoring...' : 'Scorer'}
+              </button>
+            )}
             <button
               onClick={() => router.push(`/projects/${id}/edit`)}
               className="p-2 text-white/30 hover:text-white border border-white/10 rounded-lg hover:bg-white/5 transition-all"
@@ -319,21 +358,26 @@ export default function ProjectPage() {
 
         {/* Tabs */}
         <div className="flex gap-0.5 -mb-px overflow-x-auto scrollbar-hide">
-          {TABS.map(({ id: tabId, label, icon: Icon }) => (
-            <button
-              key={tabId}
-              onClick={() => setActiveTab(tabId)}
-              className={cn(
-                'flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap',
-                activeTab === tabId
-                  ? 'border-blue-500 text-blue-400'
-                  : 'border-transparent text-white/40 hover:text-white/70'
-              )}
-            >
-              <Icon size={13} />
-              {label}
-            </button>
-          ))}
+          {TABS.map(({ id: tabId, label, icon: Icon }) => {
+            const locked = isTabLocked(tabId)
+            return (
+              <button
+                key={tabId}
+                onClick={() => setActiveTab(tabId)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap',
+                  locked
+                    ? 'border-transparent text-white/20 hover:text-white/30'
+                    : activeTab === tabId
+                      ? 'border-blue-500 text-blue-400'
+                      : 'border-transparent text-white/40 hover:text-white/70'
+                )}
+              >
+                {locked ? <Lock size={11} className="flex-shrink-0" /> : <Icon size={13} className="flex-shrink-0" />}
+                {label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -347,42 +391,52 @@ export default function ProjectPage() {
         </div>
 
         <div style={{ display: activeTab === 'besoin' ? 'block' : 'none' }} className="p-4 md:p-6">
-          {latestAnalysis
-            ? <BesoinClientTab result={latestAnalysis.result} />
-            : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />}
+          {isFree ? <UpgradePrompt tabName="Besoin client" /> : (
+            latestAnalysis
+              ? <BesoinClientTab result={latestAnalysis.result} />
+              : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />
+          )}
         </div>
 
         <div style={{ display: activeTab === 'pieces' ? 'block' : 'none' }} className="p-4 md:p-6">
-          {latestAnalysis
-            ? <PiecesTab result={latestAnalysis.result} projectId={id} initialStates={taskStates} />
-            : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />}
+          {isFree ? <UpgradePrompt tabName="Pièces à fournir" /> : (
+            latestAnalysis
+              ? <PiecesTab result={latestAnalysis.result} projectId={id} initialStates={taskStates} />
+              : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />
+          )}
         </div>
 
         <div style={{ display: activeTab === 'specificites' ? 'block' : 'none' }} className="p-4 md:p-6">
-          {latestAnalysis
-            ? <SpecificitesTab result={latestAnalysis.result} />
-            : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />}
+          {isFree ? <UpgradePrompt tabName="Spécificités techniques" /> : (
+            latestAnalysis
+              ? <SpecificitesTab result={latestAnalysis.result} />
+              : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />
+          )}
         </div>
 
         <div style={{ display: activeTab === 'gonogo' ? 'block' : 'none' }} className="p-4 md:p-6">
-          {score
-            ? <ScoreDisplay score={score} />
-            : (
-              <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-10 text-center">
-                <Target size={28} className="mx-auto text-white/20 mb-3" />
-                <p className="text-white/50 text-sm">
-                  {analyses.length === 0
-                    ? 'Lancez d\'abord l\'analyse IA, puis cliquez sur Scorer.'
-                    : 'Cliquez sur "Scorer" pour calculer le Go/No Go.'}
-                </p>
-              </div>
-            )}
+          {isFree ? <UpgradePrompt tabName="Score Go / No Go" /> : (
+            score
+              ? <ScoreDisplay score={score} />
+              : (
+                <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-10 text-center">
+                  <Target size={28} className="mx-auto text-white/20 mb-3" />
+                  <p className="text-white/50 text-sm">
+                    {analyses.length === 0
+                      ? 'Lancez d\'abord l\'analyse IA, puis cliquez sur Scorer.'
+                      : 'Cliquez sur "Scorer" pour calculer le Go/No Go.'}
+                  </p>
+                </div>
+              )
+          )}
         </div>
 
         <div style={{ display: activeTab === 'actions' ? 'block' : 'none' }} className="p-4 md:p-6">
-          {latestAnalysis
-            ? <ActionsTab result={latestAnalysis.result} projectId={id} initialStates={taskStates} />
-            : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />}
+          {isFree ? <UpgradePrompt tabName="Actions recommandées" /> : (
+            latestAnalysis
+              ? <ActionsTab result={latestAnalysis.result} projectId={id} initialStates={taskStates} />
+              : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />
+          )}
         </div>
 
         <div style={{ display: activeTab === 'documents' ? 'block' : 'none' }} className="p-4 md:p-6 max-w-2xl">
@@ -393,6 +447,33 @@ export default function ProjectPage() {
           />
         </div>
 
+      </div>
+    </div>
+  )
+}
+
+function UpgradePrompt({ tabName }: { tabName: string }) {
+  return (
+    <div className="max-w-md mx-auto mt-8">
+      <div className="bg-[#1a1d2e] border border-white/8 rounded-2xl p-8 text-center">
+        <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-4">
+          <Lock size={20} className="text-amber-400" />
+        </div>
+        <h3 className="text-white font-semibold mb-1">{tabName}</h3>
+        <p className="text-white/50 text-sm mb-1">
+          Cette section est disponible à partir du plan <strong className="text-white/70">Basic</strong>.
+        </p>
+        <p className="text-white/30 text-xs mb-6">
+          Le plan gratuit inclut 1 analyse et l&apos;accès à l&apos;onglet Synthèse uniquement.
+        </p>
+        <Link
+          href="/subscription"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors"
+        >
+          Voir les offres
+          <ArrowRight size={14} />
+        </Link>
+        <p className="text-white/20 text-xs mt-3">À partir de 49€/mois · Sans engagement</p>
       </div>
     </div>
   )

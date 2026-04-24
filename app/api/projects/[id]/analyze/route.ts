@@ -8,6 +8,7 @@ import { ANALYSIS_SYSTEM_PROMPT, buildAnalysisUserPrompt } from '@/lib/ai/prompt
 import { getMockAnalysis } from '@/lib/openai/mock'
 import { truncateText } from '@/lib/utils/extract'
 import type { AnalysisResult } from '@/types'
+import { TIER_LIMITS } from '@/app/api/user/limits/route'
 
 const DEMO_MODE = process.env.DEMO_MODE === 'true'
 
@@ -43,6 +44,44 @@ async function handleAnalyze(params: Params['params']) {
   if (!project) {
     return NextResponse.json({ error: 'Projet introuvable' }, { status: 404 })
   }
+
+  // ── Subscription tier check ─────────────────────────────────────────────────
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('subscription_tier')
+    .eq('id', user.id)
+    .single()
+
+  const tier: string = (profile as { subscription_tier?: string })?.subscription_tier ?? 'free'
+  const limit = TIER_LIMITS[tier] ?? 1
+
+  if (limit !== null) {
+    const { data: userProjects } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('user_id', user.id)
+
+    const projectIds = userProjects?.map(p => p.id) ?? []
+
+    if (projectIds.length > 0) {
+      const { count: totalAnalyses } = await supabase
+        .from('project_analyses')
+        .select('id', { count: 'exact', head: true })
+        .in('project_id', projectIds)
+
+      if ((totalAnalyses ?? 0) >= limit) {
+        return NextResponse.json({
+          error: tier === 'free'
+            ? `Plan gratuit : 1 analyse incluse. Passez au plan Basic (49€/mois) pour continuer.`
+            : `Limite de ${limit} analyses atteinte pour votre plan ${tier}. Passez au plan supérieur.`,
+          code: 'LIMIT_REACHED',
+          tier,
+          upgrade_url: '/subscription',
+        }, { status: 402 })
+      }
+    }
+  }
+  // ────────────────────────────────────────────────────────────────────────────
 
   const { count } = await supabase
     .from('project_analyses')
