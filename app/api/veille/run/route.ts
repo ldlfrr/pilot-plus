@@ -24,7 +24,6 @@ interface BoampRecord {
   dateparution?: string
   nature?: string
   descripteur_libelle?: string
-  montant?: string | number | null
   procedure?: string
   gestion?: string
 }
@@ -63,7 +62,7 @@ async function queryBoamp(
   }
 
   const whereStr  = where.join(' AND ')
-  const selectStr = 'idweb,objet,nomacheteur,code_departement,datelimitereponse,type_marche_facette,famille_libelle,dateparution,nature,descripteur_libelle,montant,procedure,gestion'
+  const selectStr = 'idweb,objet,nomacheteur,code_departement,datelimitereponse,type_marche_facette,famille_libelle,dateparution,nature,descripteur_libelle,procedure,gestion'
   const finalUrl  = `${BOAMP_API}?where=${encodeURIComponent(whereStr).replace(/%25/g, '%')}&order_by=dateparution%20desc&limit=50&select=${selectStr}`
 
   const res = await fetch(finalUrl, { headers: { Accept: 'application/json' }, cache: 'no-store' })
@@ -154,8 +153,6 @@ export async function POST() {
       if (r.gestion)              descParts.push(`Gestion : ${r.gestion}`)
       const description = descParts.join(' — ') || null
 
-      const montantEstime = r.montant != null ? String(r.montant) : null
-
       const { error } = await supabase.from('veille_results').insert({
         user_id: user.id,
         run_id: runId,
@@ -168,7 +165,7 @@ export async function POST() {
         dateparution: parution,
         source_url: sourceUrl,
         description,
-        montant_estime: montantEstime,
+        montant_estime: null,
         procedure_type: r.procedure ?? null,
         status: 'pending',
       })
