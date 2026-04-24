@@ -25,6 +25,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr" suppressHydrationWarning className={inter.variable}>
+      <head>
+        {/* Synchronous theme injection — runs before React hydrates, prevents white flash */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('pilot-theme');var v=['dark','pilot','midnight','slate','forest','aurora','dusk','light'];document.documentElement.setAttribute('data-theme',(t&&v.indexOf(t)!==-1)?t:'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}})();` }} />
+      </head>
       <body className={`${inter.className} antialiased`} suppressHydrationWarning>
         <ThemeProvider>{children}</ThemeProvider>
       </body>

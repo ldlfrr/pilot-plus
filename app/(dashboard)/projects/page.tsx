@@ -12,6 +12,7 @@ const STATUS_FILTERS = [
   { value: 'draft',    label: 'Brouillons' },
   { value: 'analyzed', label: 'Analysés' },
   { value: 'scored',   label: 'Scorés' },
+  { value: 'closed',   label: 'Clôturés' },
 ] as const
 
 interface PageProps {
@@ -25,7 +26,11 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
   if (!user) return null
 
   let query = supabase.from('projects').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
-  if (status && status !== 'all') query = query.eq('status', status)
+  if (status === 'closed') {
+    query = query.neq('outcome', 'pending')
+  } else if (status && status !== 'all') {
+    query = query.eq('status', status)
+  }
 
   const { data: projects } = await query
   const allProjects = projects ?? []
