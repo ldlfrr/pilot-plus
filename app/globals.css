@@ -56,6 +56,24 @@
   --radius: 0.5rem;
 }
 
+/* ── Browser autofill override ───────────────────────────────────────────
+   Chrome/Safari force a white background on autofilled inputs via the
+   -webkit-autofill pseudo-class. The only reliable fix is an inset box-shadow
+   that covers the UA background, plus an explicit text fill color.        */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-base) inset !important;
+  box-shadow:         0 0 0 1000px var(--bg-base) inset !important;
+  -webkit-text-fill-color: #f1f5f9 !important;
+  caret-color: #f1f5f9;
+  /* Delay the transition so the override wins over Chrome's own animation */
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    THEMES
 ══════════════════════════════════════════════════════════════════════════ */
