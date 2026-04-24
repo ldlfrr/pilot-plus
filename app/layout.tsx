@@ -17,12 +17,9 @@ export const metadata: Metadata = {
   },
   description: 'Copilot IA d\'analyse DCE & décision Go/No Go',
   icons: {
-    icon: [
-      { url: '/favicon/favblanc.png', media: '(prefers-color-scheme: light)' },
-      { url: '/favicon/favnoir.png',  media: '(prefers-color-scheme: dark)' },
-    ],
-    shortcut: '/favicon/favblanc.png',
-    apple: '/favicon/favblanc.png',
+    icon: '/favicon/Favicon.png',
+    shortcut: '/favicon/Favicon.png',
+    apple: '/favicon/Favicon.png',
   },
 }
 
