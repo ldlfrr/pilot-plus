@@ -52,6 +52,7 @@ export async function POST(_req: Request, { params }: Params) {
     .limit(1)
     .single()
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfBuffer = await renderToBuffer(
     React.createElement(SynthesePDFDocument, {
       synthese:          synthese ?? {},
@@ -60,7 +61,7 @@ export async function POST(_req: Request, { params }: Params) {
       analysisPoints:    (analysis?.points_cles as string[]) ?? [],
       analysisVigilance: (analysis?.points_vigilance as string[]) ?? (analysis?.risques as string[]) ?? [],
       analysisResume:    (analysis?.resume_executif as string) ?? (analysis?.contexte as string) ?? undefined,
-    })
+    }) as any
   )
 
   const projectName = (synthese?.nom_projet_synthese || project.name || 'synthese').replace(/[^a-zA-Z0-9-_]/g, '_')
