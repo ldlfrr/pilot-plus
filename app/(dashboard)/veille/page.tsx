@@ -7,7 +7,7 @@ import {
   Clock, Zap, Filter, RotateCcw, Info,
   ExternalLink, MapPin, Tag, Building2, PackagePlus,
   Trash2, ChevronDown, ChevronUp, CheckCircle2, ArrowUpRight,
-  CalendarDays, Inbox, ChevronRight,
+  CalendarDays, Inbox, ChevronRight, CheckSquare, Square,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { NotificationBell } from '@/components/layout/NotificationBell'
@@ -71,7 +71,8 @@ export default function VeillePage() {
   const [groups, setGroups]             = useState<VeilleRunGroup[]>([])
   const [feedLoading, setFeedLoading]   = useState(true)
   const [collapsed, setCollapsed]       = useState<Set<string>>(new Set())
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [actionLoading, setActionLoading]   = useState<string | null>(null)
+  const [deletingGroup, setDeletingGroup]   = useState<string | null>(null)
 
   // ── Loaders ────────────────────────────────────────────────────────────────
 
@@ -164,6 +165,18 @@ export default function VeillePage() {
   const toggleGroup = (id: string) =>
     setCollapsed(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next })
 
+  async function deleteGroup(groupId: string, e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!confirm('Supprimer cette veille et toutes ses annonces ?')) return
+    setDeletingGroup(groupId)
+    try {
+      await fetch(`/api/veille/history/${groupId}`, { method: 'DELETE' })
+      setGroups(prev => prev.filter(g => g.id !== groupId))
+    } finally {
+      setDeletingGroup(null)
+    }
+  }
+
   // ── Derived ────────────────────────────────────────────────────────────────
 
   const totalPending  = groups.reduce((s, g) => s + g.results.filter(r => r.status === 'pending').length, 0)
@@ -245,7 +258,7 @@ export default function VeillePage() {
       <div className="flex-1 flex overflow-hidden">
 
         {/* ══ LEFT SIDEBAR ════════════════════════════════════════════════ */}
-        <aside className="hidden lg:flex flex-col w-[340px] xl:w-[380px] flex-shrink-0 border-r border-white/5 overflow-y-auto">
+        <aside className="hidden lg:flex flex-col w-[420px] xl:w-[460px] flex-shrink-0 border-r border-white/5 overflow-y-auto">
           <div className="p-6 space-y-7">
 
             {/* Info banner */}
@@ -327,13 +340,29 @@ export default function VeillePage() {
                     <Filter size={11} className="text-violet-400" />
                   </div>
                   <span className="text-xs font-semibold text-white/80">Départements</span>
-                  {settings.regions.length > 0 ? (
-                    <button onClick={() => save({ regions: [] })} className="ml-auto flex items-center gap-0.5 text-[10px] text-white/25 hover:text-red-400/70 transition-colors">
-                      <RotateCcw size={9} />Effacer
-                    </button>
-                  ) : (
-                    <span className="ml-auto text-[10px] text-white/20">Tous</span>
-                  )}
+                  <div className="ml-auto flex items-center gap-2">
+                    {/* Select all / deselect all */}
+                    {settings.regions.length === REGIONS_FR.length ? (
+                      <button
+                        onClick={() => save({ regions: [] })}
+                        className="flex items-center gap-1 text-[10px] text-violet-400/70 hover:text-violet-300 transition-colors font-medium"
+                      >
+                        <CheckSquare size={10} />Désélectionner tout
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => save({ regions: REGIONS_FR.map(r => r.code) })}
+                        className="flex items-center gap-1 text-[10px] text-white/30 hover:text-violet-300 transition-colors font-medium"
+                      >
+                        <Square size={10} />Tout
+                      </button>
+                    )}
+                    {settings.regions.length > 0 && settings.regions.length < REGIONS_FR.length && (
+                      <button onClick={() => save({ regions: [] })} className="flex items-center gap-0.5 text-[10px] text-white/20 hover:text-red-400/70 transition-colors">
+                        <RotateCcw size={9} />Effacer
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Active region pills — compact horizontal scroll */}
@@ -475,44 +504,60 @@ export default function VeillePage() {
                     style={{ background: 'rgba(255,255,255,0.02)' }}
                   >
                     {/* ── Group header ── */}
-                    <button
-                      onClick={() => toggleGroup(group.id)}
-                      className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/2 transition-colors text-left"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-white/4 border border-white/6 flex items-center justify-center flex-shrink-0">
-                        <CalendarDays size={14} className="text-white/30" />
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-xs font-semibold text-white/75 capitalize">{dateLabel}</p>
-                          <span className="text-[11px] text-white/25">{timeLabel}</span>
+                    <div className="flex items-center">
+                      <button
+                        onClick={() => toggleGroup(group.id)}
+                        className="flex-1 flex items-center gap-3 px-5 py-4 hover:bg-white/2 transition-colors text-left min-w-0"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-white/4 border border-white/6 flex items-center justify-center flex-shrink-0">
+                          <CalendarDays size={14} className="text-white/30" />
                         </div>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="text-[10px] text-white/25">
-                            {group.total_found} annonce{group.total_found !== 1 ? 's' : ''} analysée{group.total_found !== 1 ? 's' : ''}
-                          </span>
-                          {pending > 0 && (
-                            <span className="text-[10px] font-bold text-amber-300 bg-amber-500/12 border border-amber-500/20 px-1.5 py-0.5 rounded-md">
-                              {pending} en attente
-                            </span>
-                          )}
-                          {imported > 0 && (
-                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/15 px-1.5 py-0.5 rounded-md">
-                              {imported} ajouté{imported !== 1 ? 's' : ''}
-                            </span>
-                          )}
-                          {group.error && (
-                            <span className="text-[10px] text-red-400 bg-red-500/10 border border-red-500/15 px-1.5 py-0.5 rounded-md">Erreur API</span>
-                          )}
-                        </div>
-                      </div>
 
-                      <ChevronRight size={14} className={cn(
-                        'text-white/20 flex-shrink-0 transition-transform duration-150',
-                        !isCollapsed && 'rotate-90',
-                      )} />
-                    </button>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-xs font-semibold text-white/75 capitalize">{dateLabel}</p>
+                            <span className="text-[11px] text-white/25">{timeLabel}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="text-[10px] text-white/25">
+                              {group.total_found} annonce{group.total_found !== 1 ? 's' : ''} analysée{group.total_found !== 1 ? 's' : ''}
+                            </span>
+                            {pending > 0 && (
+                              <span className="text-[10px] font-bold text-amber-300 bg-amber-500/12 border border-amber-500/20 px-1.5 py-0.5 rounded-md">
+                                {pending} en attente
+                              </span>
+                            )}
+                            {imported > 0 && (
+                              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/15 px-1.5 py-0.5 rounded-md">
+                                {imported} ajouté{imported !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {group.error && (
+                              <span className="text-[10px] text-red-400 bg-red-500/10 border border-red-500/15 px-1.5 py-0.5 rounded-md">Erreur API</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <ChevronRight size={14} className={cn(
+                          'text-white/20 flex-shrink-0 transition-transform duration-150 mr-1',
+                          !isCollapsed && 'rotate-90',
+                        )} />
+                      </button>
+
+                      {/* Delete group button */}
+                      <button
+                        onClick={(e) => deleteGroup(group.id, e)}
+                        disabled={deletingGroup === group.id}
+                        title="Supprimer cette veille"
+                        className="flex-shrink-0 flex items-center gap-1.5 mr-4 px-2.5 py-1.5 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/15 transition-all text-[10px] font-medium disabled:opacity-40"
+                      >
+                        {deletingGroup === group.id
+                          ? <Loader2 size={12} className="animate-spin" />
+                          : <Trash2 size={12} />
+                        }
+                        <span className="hidden xl:inline">Supprimer</span>
+                      </button>
+                    </div>
 
                     {/* ── Error detail ── */}
                     {!isCollapsed && group.error && (
