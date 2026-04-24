@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Sidebar } from './Sidebar'
+import { NotificationBell } from './NotificationBell'
 import { Menu } from 'lucide-react'
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -27,7 +28,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main content */}
-      <main className="flex-1 md:ml-60 flex flex-col min-h-0 overflow-y-auto w-full">
+      <main className="flex-1 md:ml-60 flex flex-col min-h-0 overflow-y-auto w-full relative">
 
         {/* Mobile top bar */}
         <div data-print-hide className="md:hidden h-12 flex items-center gap-3 px-4 bg-[var(--bg-surface)] border-b border-white/5 flex-shrink-0">
@@ -38,6 +39,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <Menu size={20} />
           </button>
           <span className="text-sm font-bold text-white">PILOT+</span>
+          <div className="ml-auto">
+            <NotificationBell />
+          </div>
+        </div>
+
+        {/* Desktop notification bell — top right */}
+        <div data-print-hide className="hidden md:flex absolute top-3 right-4 z-10">
+          <NotificationBell />
         </div>
 
         {children}

@@ -13,6 +13,7 @@ import {
   LogOut,
   User,
   CreditCard,
+  Radio,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { href: '/projects/new', label: 'Nouveau projet',   icon: PlusCircle },
   { href: '/projects',     label: 'Mes projets',      icon: FolderOpen },
   { href: '/dashboard',    label: 'Dashboard',        icon: BarChart3 },
+  { href: '/veille',       label: 'Veille BOAMP',     icon: Radio },
   { href: '/settings',     label: 'Mon entreprise',   icon: Building2 },
 ]
 
@@ -49,6 +51,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   function isActive(href: string) {
     if (href === '/accueil')   return pathname === '/accueil'
     if (href === '/dashboard') return pathname === '/dashboard'
+    if (href === '/veille')    return pathname.startsWith('/veille')
     return pathname.startsWith(href)
   }
 
