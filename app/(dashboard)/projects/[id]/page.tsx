@@ -16,11 +16,11 @@ import {
   Download, Share2, FilePlus, Calendar, MapPin, Building, Hash,
   FileText, Users, ListChecks, Wrench, BarChart3, Layers,
   Copy, X, ExternalLink, Link as LinkIcon, Lock, ArrowRight,
-  ClipboardList, Map,
+  ClipboardList, Map, Trophy, XCircle, Flag, TrendingUp,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
-import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates, SubscriptionTier } from '@/types'
+import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates, SubscriptionTier, ProjectOutcome } from '@/types'
 
 type Tab = 'synthese' | 'corp' | 'map' | 'besoin' | 'pieces' | 'specificites' | 'gonogo' | 'actions' | 'documents'
 
@@ -56,6 +56,13 @@ export default function ProjectPage() {
   const [shareLoading, setShareLoading] = useState(false)
   const [shareUrl, setShareUrl]         = useState<string | null>(null)
   const [copyOk, setCopyOk]             = useState(false)
+
+  // ── Clôture panel ────────────────────────────────────────────────────────────
+  const [cloturePanelOpen, setCloturePanelOpen] = useState(false)
+  const [cloturingOutcome, setCloturingOutcome] = useState<Exclude<ProjectOutcome, 'pending'>>('won')
+  const [cloturingLossReason, setCloturingLossReason] = useState('')
+  const [cloturingCa, setCloturingCa]   = useState('')
+  const [cloturing, setCloturing]       = useState(false)
 
   interface UserLimits { tier: SubscriptionTier; analyses_used: number; analyses_limit: number | null }
   const [userLimits, setUserLimits] = useState<UserLimits | null>(null)
@@ -154,6 +161,33 @@ export default function ProjectPage() {
     if (!confirm('Supprimer ce projet ? Action irréversible.')) return
     const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' })
     if (res.ok) router.push('/projects')
+  }
+
+  async function handleCloture() {
+    setCloturing(true); setActionError(null); setActionSuccess(null)
+    try {
+      const body: Record<string, unknown> = { outcome: cloturingOutcome }
+      if (cloturingOutcome === 'lost' && cloturingLossReason.trim()) body.loss_reason = cloturingLossReason.trim()
+      if (cloturingOutcome === 'won'  && cloturingCa.trim()) body.ca_amount = parseFloat(cloturingCa.replace(',', '.'))
+      const res  = await fetch(`/api/projects/${id}/outcome`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        throw new Error((json.error as string) ?? 'Erreur clôture')
+      }
+      await fetchProject()
+      setCloturePanelOpen(false)
+      setActionSuccess(
+        cloturingOutcome === 'won'  ? '🏆 Projet marqué comme Gagné !' :
+        cloturingOutcome === 'lost' ? 'Projet marqué comme Perdu.' :
+                                     'Projet abandonné.'
+      )
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Erreur')
+    } finally { setCloturing(false) }
   }
 
   if (loading) {
@@ -331,6 +365,32 @@ export default function ProjectPage() {
                 {scoring ? 'Scoring...' : 'Scorer'}
               </button>
             )}
+            {/* Clôturer button — only if still pending */}
+            {project.outcome === 'pending' ? (
+              <button
+                onClick={() => setCloturePanelOpen(v => !v)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-2 border text-xs font-medium rounded-lg transition-all',
+                  cloturePanelOpen
+                    ? 'bg-violet-500/20 border-violet-500/40 text-violet-300'
+                    : 'bg-white/5 hover:bg-white/10 border-white/10 text-white/70 hover:text-white'
+                )}
+              >
+                <Flag size={13} />Clôturer
+              </button>
+            ) : (
+              /* outcome badge */
+              <span className={cn(
+                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold',
+                project.outcome === 'won'       && 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400',
+                project.outcome === 'lost'      && 'bg-red-500/15 border-red-500/30 text-red-400',
+                project.outcome === 'abandoned' && 'bg-white/5 border-white/15 text-white/40',
+              )}>
+                {project.outcome === 'won'       && <><Trophy size={12} />Gagné</>}
+                {project.outcome === 'lost'      && <><XCircle size={12} />Perdu</>}
+                {project.outcome === 'abandoned' && <><X size={12} />Abandonné</>}
+              </span>
+            )}
             <button
               onClick={() => router.push(`/projects/${id}/edit`)}
               className="p-2 text-white/30 hover:text-white border border-white/10 rounded-lg hover:bg-white/5 transition-all"
@@ -345,6 +405,100 @@ export default function ProjectPage() {
             </button>
           </div>
         </div>
+
+        {/* Clôture panel */}
+        {cloturePanelOpen && project.outcome === 'pending' && (
+          <div className="mb-3 bg-[var(--bg-card)] border border-white/10 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-white/80 flex items-center gap-2">
+                <Flag size={14} className="text-violet-400" />Clôturer le projet
+              </span>
+              <button onClick={() => setCloturePanelOpen(false)} className="p-1 text-white/30 hover:text-white/60 transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Outcome selector */}
+            <div className="flex gap-2 mb-3">
+              {([
+                { value: 'won',       label: 'Gagné',     icon: Trophy,   color: 'emerald' },
+                { value: 'lost',      label: 'Perdu',     icon: XCircle,  color: 'red'     },
+                { value: 'abandoned', label: 'Abandonné', icon: X,        color: 'white'   },
+              ] as const).map(({ value, label, icon: Icon, color }) => (
+                <button
+                  key={value}
+                  onClick={() => setCloturingOutcome(value)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all flex-1 justify-center',
+                    cloturingOutcome === value
+                      ? color === 'emerald' ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                        : color === 'red'   ? 'bg-red-500/20 border-red-500/50 text-red-300'
+                        :                    'bg-white/15 border-white/30 text-white/80'
+                      : 'bg-white/4 border-white/8 text-white/40 hover:text-white/60 hover:border-white/15'
+                  )}
+                >
+                  <Icon size={12} />{label}
+                </button>
+              ))}
+            </div>
+
+            {/* Conditional fields */}
+            {cloturingOutcome === 'won' && (
+              <div className="mb-3">
+                <label className="text-xs text-white/40 mb-1 block">CA remporté (€) — optionnel</label>
+                <div className="relative">
+                  <TrendingUp size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="ex : 125000"
+                    value={cloturingCa}
+                    onChange={e => setCloturingCa(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-emerald-500/50"
+                  />
+                </div>
+              </div>
+            )}
+            {cloturingOutcome === 'lost' && (
+              <div className="mb-3">
+                <label className="text-xs text-white/40 mb-1 block">Raison de la perte — optionnel</label>
+                <select
+                  value={cloturingLossReason}
+                  onChange={e => setCloturingLossReason(e.target.value)}
+                  className="w-full bg-[var(--bg-base)] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/70 outline-none focus:border-red-500/50"
+                >
+                  <option value="">Choisir une raison...</option>
+                  <option value="Prix trop élevé">Prix trop élevé</option>
+                  <option value="Offre insuffisante">Offre insuffisante</option>
+                  <option value="Concurrent mieux positionné">Concurrent mieux positionné</option>
+                  <option value="Délai non respecté">Délai non respecté</option>
+                  <option value="Hors périmètre technique">Hors périmètre technique</option>
+                  <option value="Client non convaincu">Client non convaincu</option>
+                  <option value="Projet annulé">Projet annulé</option>
+                  <option value="Manque de références">Manque de références</option>
+                  <option value="Autre">Autre</option>
+                </select>
+              </div>
+            )}
+
+            <button
+              onClick={handleCloture}
+              disabled={cloturing}
+              className={cn(
+                'w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all',
+                cloturingOutcome === 'won'
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                  : cloturingOutcome === 'lost'
+                  ? 'bg-red-600 hover:bg-red-500 text-white'
+                  : 'bg-white/10 hover:bg-white/15 text-white/70',
+                cloturing && 'opacity-60 cursor-not-allowed'
+              )}
+            >
+              {cloturing ? <Loader2 size={14} className="animate-spin" /> : <Flag size={14} />}
+              {cloturing ? 'Enregistrement...' : 'Confirmer la clôture'}
+            </button>
+          </div>
+        )}
 
         {/* Share panel */}
         {shareUrl && (

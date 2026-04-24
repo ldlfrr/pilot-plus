@@ -1,6 +1,7 @@
 // ─── Domain types ────────────────────────────────────────────────────────────
 
-export type ProjectStatus = 'draft' | 'analyzed' | 'scored'
+export type ProjectStatus  = 'draft' | 'analyzed' | 'scored'
+export type ProjectOutcome = 'pending' | 'won' | 'lost' | 'abandoned'
 export type ExtractionStatus = 'pending' | 'done' | 'error'
 export type GoNoGoVerdict = 'GO' | 'A_ETUDIER' | 'NO_GO'
 
@@ -29,6 +30,10 @@ export interface Project {
   location: string
   offer_deadline: string | null
   status: ProjectStatus
+  outcome: ProjectOutcome
+  loss_reason: string | null
+  ca_amount: number | null
+  closed_at: string | null
   task_states: TaskStates | null
   share_token?: string | null
   created_at: string
