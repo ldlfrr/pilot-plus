@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Sidebar } from './Sidebar'
 import { NotificationBell } from './NotificationBell'
 import { Menu } from 'lucide-react'
@@ -46,6 +47,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {children}
+
+        {/* Legal footer */}
+        <footer data-print-hide className="flex-shrink-0 border-t border-white/4 px-4 md:px-6 py-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-1">
+          <p className="text-[10px] text-white/15">© {new Date().getFullYear()} L2endigital</p>
+          <Link href="/mentions-legales"             target="_blank" className="text-[10px] text-white/20 hover:text-white/50 transition-colors">Mentions légales</Link>
+          <Link href="/politique-de-confidentialite" target="_blank" className="text-[10px] text-white/20 hover:text-white/50 transition-colors">Confidentialité</Link>
+          <Link href="/cgu"                          target="_blank" className="text-[10px] text-white/20 hover:text-white/50 transition-colors">CGU</Link>
+          <Link href="/cgv"                          target="_blank" className="text-[10px] text-white/20 hover:text-white/50 transition-colors">CGV</Link>
+        </footer>
       </main>
     </div>
   )

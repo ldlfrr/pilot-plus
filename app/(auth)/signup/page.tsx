@@ -197,13 +197,13 @@ export default function SignupPage() {
         {/* Terms */}
         <p className="text-[11px] text-white/25 leading-relaxed">
           En créant un compte, vous acceptez nos{' '}
-          <span className="text-white/45 underline-offset-2 underline cursor-pointer hover:text-white/70 transition-colors">
+          <Link href="/cgu" target="_blank" className="text-white/45 underline-offset-2 underline hover:text-white/70 transition-colors">
             Conditions d&apos;utilisation
-          </span>{' '}
+          </Link>{' '}
           et notre{' '}
-          <span className="text-white/45 underline-offset-2 underline cursor-pointer hover:text-white/70 transition-colors">
+          <Link href="/politique-de-confidentialite" target="_blank" className="text-white/45 underline-offset-2 underline hover:text-white/70 transition-colors">
             Politique de confidentialité
-          </span>.
+          </Link>.
         </p>
 
         {/* Submit */}

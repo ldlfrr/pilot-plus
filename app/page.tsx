@@ -445,15 +445,22 @@ function LandingPage() {
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
       <footer className="border-t border-white/5 py-8 px-6">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="relative h-7 w-24">
-            <Image src="/logo/pilot-plus.png" alt="PILOT+" fill className="object-contain object-left brightness-0 invert opacity-50" />
+        <div className="max-w-6xl mx-auto space-y-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="relative h-7 w-24">
+              <Image src="/logo/pilot-plus.png" alt="PILOT+" fill className="object-contain object-left brightness-0 invert opacity-50" />
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-6">
+              <Link href="/login"  className="text-xs text-white/30 hover:text-white/60 transition-colors">Connexion</Link>
+              <Link href="/signup" className="text-xs text-white/30 hover:text-white/60 transition-colors">Inscription</Link>
+              <span className="text-white/10">|</span>
+              <Link href="/mentions-legales"              className="text-xs text-white/30 hover:text-white/60 transition-colors">Mentions légales</Link>
+              <Link href="/politique-de-confidentialite"  className="text-xs text-white/30 hover:text-white/60 transition-colors">Confidentialité</Link>
+              <Link href="/cgu"                           className="text-xs text-white/30 hover:text-white/60 transition-colors">CGU</Link>
+              <Link href="/cgv"                           className="text-xs text-white/30 hover:text-white/60 transition-colors">CGV</Link>
+            </div>
+            <p className="text-xs text-white/20">© {new Date().getFullYear()} L2endigital · PILOT+</p>
           </div>
-          <div className="flex items-center gap-6">
-            <Link href="/login"  className="text-xs text-white/30 hover:text-white/60 transition-colors">Connexion</Link>
-            <Link href="/signup" className="text-xs text-white/30 hover:text-white/60 transition-colors">Inscription</Link>
-          </div>
-          <p className="text-xs text-white/20">© {new Date().getFullYear()} PILOT+ · Tous droits réservés</p>
         </div>
       </footer>
 
