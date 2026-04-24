@@ -29,6 +29,8 @@ export async function GET() {
     avatar_url: profile?.avatar_url ?? null,
     theme: (profile as Record<string, unknown>)?.theme ?? 'dark',
     subscription_tier: profile?.subscription_tier ?? 'free',
+    created_at: user.created_at ?? null,
+    provider: (user.app_metadata?.provider as string) ?? 'email',
   })
 }
 
