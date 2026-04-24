@@ -52,42 +52,52 @@
 
   /* Instant, smooth interactive feedback on every element */
   button, a {
-    transition: color 120ms ease, background-color 120ms ease,
-                border-color 120ms ease, opacity 120ms ease,
-                box-shadow 120ms ease, transform 120ms ease;
+    transition: color 80ms ease, background-color 80ms ease,
+                border-color 80ms ease, opacity 80ms ease,
+                box-shadow 80ms ease, transform 80ms ease;
+    will-change: background-color, color, opacity;
   }
 
   button:active:not(:disabled) {
     transform: scale(0.97);
+    transition-duration: 60ms;
   }
 
   /* Smooth all Tailwind transitions too */
-  .transition-all { transition-duration: 120ms !important; }
-  .transition-colors { transition-duration: 100ms !important; }
+  .transition-all    { transition-duration: 80ms !important; }
+  .transition-colors { transition-duration: 60ms !important; }
+
+  /* Tab buttons: only fade text color, no border animation → instant underline */
+  [data-tab-btn] {
+    transition: color 60ms ease !important;
+    border-bottom-width: 2px;
+  }
+  [data-tab-btn][data-active="true"]  { border-bottom-color: rgb(59 130 246); }
+  [data-tab-btn][data-active="false"] { border-bottom-color: transparent; }
 }
 
 @layer utilities {
   /* ── Animations ──────────────────────────────────────────────────────── */
   .animate-fade-in {
-    animation: fade-in 0.18s ease-out both;
+    animation: fade-in 0.10s ease-out both;
   }
   .animate-slide-up {
-    animation: slide-up 0.2s ease-out both;
+    animation: slide-up 0.12s ease-out both;
   }
   .animate-scale-in {
-    animation: scale-in 0.15s ease-out both;
+    animation: scale-in 0.08s ease-out both;
   }
 
   @keyframes fade-in {
-    from { opacity: 0; transform: translateY(4px); }
+    from { opacity: 0; transform: translateY(3px); }
     to   { opacity: 1; transform: translateY(0); }
   }
   @keyframes slide-up {
-    from { opacity: 0; transform: translateY(12px); }
+    from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
   }
   @keyframes scale-in {
-    from { opacity: 0; transform: scale(0.96); }
+    from { opacity: 0; transform: scale(0.97); }
     to   { opacity: 1; transform: scale(1); }
   }
 

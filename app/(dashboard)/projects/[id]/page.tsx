@@ -158,8 +158,35 @@ export default function ProjectPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center flex-1 h-full">
-        <Loader2 size={24} className="animate-spin text-blue-400" />
+      <div className="flex flex-col min-h-0 animate-pulse">
+        <div className="bg-[#13161e] border-b border-white/5 px-4 md:px-6 py-4 flex-shrink-0">
+          <div className="flex flex-col gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="h-6 w-56 bg-white/8 rounded-lg" />
+              <div className="h-5 w-16 bg-white/5 rounded-full" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-3.5 w-24 bg-white/5 rounded" />
+              <div className="h-3.5 w-20 bg-white/5 rounded" />
+            </div>
+            <div className="flex items-center gap-2">
+              {[24, 20, 20, 20, 20, 7, 7].map((w, i) => (
+                <div key={i} className="h-7 bg-white/5 rounded-lg" style={{ width: w * 4 }} />
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-0.5">
+            {[80, 64, 48, 96, 112, 88, 72, 72, 80].map((w, i) => (
+              <div key={i} className="h-9 bg-white/5 rounded-sm" style={{ width: w }} />
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 p-4 md:p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map(i => <div key={i} className="h-28 bg-white/4 rounded-xl border border-white/6" />)}
+          </div>
+          <div className="h-48 bg-white/4 rounded-xl border border-white/6" />
+        </div>
       </div>
     )
   }
@@ -387,14 +414,16 @@ export default function ProjectPage() {
             return (
               <button
                 key={tabId}
-                onClick={() => setActiveTab(tabId)}
+                data-tab-btn
+                data-active={(!locked && activeTab === tabId).toString()}
+                onClick={() => !locked && setActiveTab(tabId)}
                 className={cn(
-                  'flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap',
+                  'flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap',
                   locked
-                    ? 'border-transparent text-white/20 hover:text-white/30'
+                    ? 'text-white/20 hover:text-white/30 cursor-default'
                     : activeTab === tabId
-                      ? 'border-blue-500 text-blue-400'
-                      : 'border-transparent text-white/40 hover:text-white/70'
+                      ? 'text-blue-400'
+                      : 'text-white/40 hover:text-white/70'
                 )}
               >
                 {locked ? <Lock size={11} className="flex-shrink-0" /> : <Icon size={13} className="flex-shrink-0" />}
