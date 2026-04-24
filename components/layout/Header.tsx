@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
+import { NotificationBell } from './NotificationBell'
 
 interface HeaderProps {
   title: string
@@ -20,11 +22,19 @@ export async function Header({ title, description, action }: HeaderProps) {
           <p className="text-xs text-white/40 mt-0.5 truncate">{description}</p>
         )}
       </div>
-      <div className="flex items-center gap-3 flex-shrink-0">
+      <div className="flex items-center gap-2 flex-shrink-0">
         {action}
-        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold">
-          {initial}
+        {/* Bell only on desktop (mobile has its own top bar) */}
+        <div className="hidden md:block">
+          <NotificationBell />
         </div>
+        <Link
+          href="/account"
+          title="Mon compte"
+          className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 flex items-center justify-center text-white text-sm font-bold transition-colors"
+        >
+          {initial}
+        </Link>
       </div>
     </header>
   )

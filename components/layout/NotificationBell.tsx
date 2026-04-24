@@ -1,22 +1,46 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Bell, Flame, AlertTriangle, Clock, X, Calendar } from 'lucide-react'
+import { Bell, Flame, AlertTriangle, Clock, X, Calendar, CheckCheck } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { DeadlineNotification } from '@/app/api/notifications/route'
 
+const LS_KEY = 'pilot_dismissed_notifs'
+
+function getDismissed(): Set<string> {
+  if (typeof window === 'undefined') return new Set()
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    return new Set(raw ? JSON.parse(raw) : [])
+  } catch {
+    return new Set()
+  }
+}
+
+function saveDismissed(ids: Set<string>) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify([...ids]))
+  } catch {}
+}
+
+function notifKey(n: DeadlineNotification) {
+  return `${n.projectId}_${n.deadline}`
+}
+
 export function NotificationBell() {
-  const [notifications, setNotifications] = useState<DeadlineNotification[]>([])
+  const [all, setAll] = useState<DeadlineNotification[]>([])
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [open, setOpen] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    setDismissed(getDismissed())
     fetch('/api/notifications')
       .then(r => r.json())
       .then(d => {
-        setNotifications(d.notifications ?? [])
+        setAll(d.notifications ?? [])
         setLoaded(true)
       })
       .catch(() => setLoaded(true))
@@ -30,6 +54,24 @@ export function NotificationBell() {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  const notifications = all.filter(n => !dismissed.has(notifKey(n)))
+
+  const dismiss = useCallback((n: DeadlineNotification, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const next = new Set(dismissed)
+    next.add(notifKey(n))
+    setDismissed(next)
+    saveDismissed(next)
+  }, [dismissed])
+
+  const dismissAll = useCallback(() => {
+    const next = new Set(dismissed)
+    all.forEach(n => next.add(notifKey(n)))
+    setDismissed(next)
+    saveDismissed(next)
+  }, [all, dismissed])
 
   const critical = notifications.filter(n => n.urgency === 'critical').length
   const count = notifications.length
@@ -81,9 +123,21 @@ export function NotificationBell() {
                 </span>
               )}
             </div>
-            <button onClick={() => setOpen(false)} className="p-1 text-white/25 hover:text-white/60 transition-colors">
-              <X size={13} />
-            </button>
+            <div className="flex items-center gap-1">
+              {count > 0 && (
+                <button
+                  onClick={dismissAll}
+                  title="Tout effacer"
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] text-white/30 hover:text-white/60 hover:bg-white/6 transition-colors font-medium"
+                >
+                  <CheckCheck size={11} />
+                  Tout effacer
+                </button>
+              )}
+              <button onClick={() => setOpen(false)} className="p-1 text-white/25 hover:text-white/60 transition-colors">
+                <X size={13} />
+              </button>
+            </div>
           </div>
 
           {/* List */}
@@ -100,36 +154,45 @@ export function NotificationBell() {
             ) : (
               <div className="divide-y divide-white/4">
                 {notifications.map(n => (
-                  <Link
-                    key={n.id}
-                    href={`/projects/${n.projectId}`}
-                    onClick={() => setOpen(false)}
-                    className={cn(
-                      'flex items-start gap-3 px-4 py-3 hover:bg-white/4 transition-colors border-l-2',
-                      urgencyBg(n.urgency),
-                    )}
-                  >
-                    <div className="mt-0.5">{urgencyIcon(n.urgency)}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white/80 font-medium truncate leading-tight">
-                        {n.projectName}
-                      </p>
-                      <p className="text-xs text-white/35 mt-0.5 truncate">{n.client}</p>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className={cn(
-                          'text-[10px] font-extrabold px-1.5 py-0.5 rounded-md tabular-nums',
-                          n.urgency === 'critical' ? 'bg-red-500/20 text-red-300'
-                          : n.urgency === 'high'   ? 'bg-amber-500/20 text-amber-300'
-                          :                          'bg-blue-500/15 text-blue-300',
-                        )}>
-                          {n.daysLeft === 0 ? "Aujourd'hui !" : `J-${n.daysLeft}`}
-                        </span>
-                        <span className="text-[10px] text-white/30">
-                          {new Date(n.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                        </span>
+                  <div key={notifKey(n)} className="relative group">
+                    <Link
+                      href={`/projects/${n.projectId}`}
+                      onClick={() => setOpen(false)}
+                      className={cn(
+                        'flex items-start gap-3 px-4 py-3 pr-8 hover:bg-white/4 transition-colors border-l-2',
+                        urgencyBg(n.urgency),
+                      )}
+                    >
+                      <div className="mt-0.5">{urgencyIcon(n.urgency)}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white/80 font-medium truncate leading-tight">
+                          {n.projectName}
+                        </p>
+                        <p className="text-xs text-white/35 mt-0.5 truncate">{n.client}</p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className={cn(
+                            'text-[10px] font-extrabold px-1.5 py-0.5 rounded-md tabular-nums',
+                            n.urgency === 'critical' ? 'bg-red-500/20 text-red-300'
+                            : n.urgency === 'high'   ? 'bg-amber-500/20 text-amber-300'
+                            :                          'bg-blue-500/15 text-blue-300',
+                          )}>
+                            {n.daysLeft === 0 ? "Aujourd'hui !" : `J-${n.daysLeft}`}
+                          </span>
+                          <span className="text-[10px] text-white/30">
+                            {new Date(n.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </Link>
+                    </Link>
+                    {/* Per-notification dismiss button */}
+                    <button
+                      onClick={(e) => dismiss(n, e)}
+                      title="Ignorer"
+                      className="absolute top-2.5 right-2.5 p-1 rounded-md text-white/0 group-hover:text-white/30 hover:!text-white/70 hover:bg-white/8 transition-all"
+                    >
+                      <X size={11} />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}

@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar'
 import { NotificationBell } from './NotificationBell'
 import { Menu } from 'lucide-react'
 
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -42,11 +43,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <div className="ml-auto">
             <NotificationBell />
           </div>
-        </div>
-
-        {/* Desktop notification bell — top right */}
-        <div data-print-hide className="hidden md:flex absolute top-3 right-4 z-10">
-          <NotificationBell />
         </div>
 
         {children}
