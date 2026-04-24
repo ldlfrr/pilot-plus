@@ -8,7 +8,7 @@ export async function GET() {
   if (authError || !user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
   const tier          = await getUserTier(supabase, user.id)
-  const limit         = TIER_LIMITS[tier] ?? 1
+  const limit         = tier in TIER_LIMITS ? TIER_LIMITS[tier] : 1
   const analysesUsed  = await countUserAnalyses(supabase)
 
   return NextResponse.json({ tier, analyses_used: analysesUsed, analyses_limit: limit })

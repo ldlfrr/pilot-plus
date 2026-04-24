@@ -47,7 +47,7 @@ async function handleAnalyze(params: Params['params']) {
 
   // ── Subscription limit check ────────────────────────────────────────────────
   const tier  = await getUserTier(supabase, user.id)
-  const limit = TIER_LIMITS[tier] ?? 1
+  const limit = tier in TIER_LIMITS ? TIER_LIMITS[tier] : 1
 
   console.log(`[analyze] user=${user.id} tier=${tier} limit=${limit}`)
 
