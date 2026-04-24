@@ -69,7 +69,7 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
     <div className="flex flex-col min-h-0 animate-fade-in">
 
       {/* Header */}
-      <div className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center justify-between px-6 flex-shrink-0">
+      <div className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center justify-between px-4 md:px-6 flex-shrink-0">
         <div>
           <h1 className="text-base font-semibold text-white">Mes projets</h1>
           <p className="text-xs text-white/40 mt-0.5">{filtered.length} projet{filtered.length !== 1 ? 's' : ''}</p>
@@ -83,7 +83,7 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
         </Link>
       </div>
 
-      <div className="flex-1 p-6 space-y-4 overflow-y-auto">
+      <div className="flex-1 p-4 md:p-6 space-y-4 overflow-y-auto">
         {/* Filters */}
         <div className="flex items-center gap-2 flex-wrap">
           {STATUS_FILTERS.map(({ value, label }) => (

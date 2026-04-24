@@ -310,7 +310,7 @@ export default function ProjectPage() {
             )}
           </div>
           {/* Action buttons */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
             <button
               onClick={handleExportPdf}
               className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-xs font-medium rounded-lg transition-all"

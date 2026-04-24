@@ -120,7 +120,7 @@ export default async function AccueilPage() {
         </div>
 
         {/* ── Quick actions ───────────────────────────────────────────────── */}
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3">
           {[
             { href: '/projects/new', icon: Upload,     label: 'Importer un DCE',  color: 'bg-blue-600 hover:bg-blue-500' },
             { href: '/projects/new', icon: PlusCircle, label: 'Créer un projet',  color: 'bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] border border-white/10' },
@@ -130,7 +130,7 @@ export default async function AccueilPage() {
             <Link
               key={label}
               href={href}
-              className={cn('flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-colors', color)}
+              className={cn('flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-colors', color)}
             >
               <Icon size={15} />
               {label}
@@ -139,7 +139,7 @@ export default async function AccueilPage() {
         </div>
 
         {/* ── KPI cards ───────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <KpiCard
             label="PROJETS"
             value={stats.total}

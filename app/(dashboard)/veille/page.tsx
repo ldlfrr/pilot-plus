@@ -73,6 +73,7 @@ export default function VeillePage() {
   const [collapsed, setCollapsed]       = useState<Set<string>>(new Set())
   const [actionLoading, setActionLoading]   = useState<string | null>(null)
   const [deletingGroup, setDeletingGroup]   = useState<string | null>(null)
+  const [showMobileCriteria, setShowMobileCriteria] = useState(false)
 
   // ── Loaders ────────────────────────────────────────────────────────────────
 
@@ -219,6 +220,14 @@ export default function VeillePage() {
               {totalPending} en attente
             </span>
           )}
+          {/* Critères button — mobile/tablet only */}
+          <button
+            onClick={() => setShowMobileCriteria(true)}
+            className="lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 border border-white/8 text-white/50 hover:text-white hover:bg-white/10 text-xs font-medium transition-all"
+          >
+            <Filter size={13} />
+            <span className="hidden sm:inline">Critères</span>
+          </button>
           <button
             onClick={runVeille}
             disabled={running || settings.keywords.length === 0}
@@ -257,9 +266,36 @@ export default function VeillePage() {
       {/* ── Split layout ──────────────────────────────────────────────────── */}
       <div className="flex-1 flex overflow-hidden">
 
+        {/* Mobile backdrop */}
+        {showMobileCriteria && (
+          <div
+            className="fixed inset-0 bg-black/70 z-30 lg:hidden"
+            onClick={() => setShowMobileCriteria(false)}
+          />
+        )}
+
         {/* ══ LEFT SIDEBAR ════════════════════════════════════════════════ */}
-        <aside className="hidden lg:flex flex-col w-[420px] xl:w-[460px] flex-shrink-0 border-r border-white/5 overflow-y-auto">
-          <div className="p-6 space-y-7">
+        <aside className={cn(
+          'flex flex-col flex-shrink-0 border-r border-white/5 overflow-y-auto',
+          // Desktop: static sidebar
+          'lg:static lg:w-[420px] xl:w-[460px] lg:z-auto lg:translate-x-0',
+          // Mobile: slide-in drawer
+          'fixed inset-y-0 left-0 z-40 w-[88vw] max-w-sm bg-[var(--bg-surface)]',
+          'transition-transform duration-300 ease-in-out',
+          showMobileCriteria ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+        )}>
+          {/* Mobile drawer header */}
+          <div className="lg:hidden flex items-center justify-between px-5 py-4 border-b border-white/8 flex-shrink-0">
+            <span className="text-sm font-semibold text-white">Critères de veille</span>
+            <button
+              onClick={() => setShowMobileCriteria(false)}
+              className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="p-5 space-y-6 overflow-y-auto flex-1">
 
             {/* Info banner */}
             <div className="flex items-start gap-2.5 p-3.5 bg-blue-500/6 border border-blue-500/12 rounded-xl">
@@ -451,6 +487,16 @@ export default function VeillePage() {
                 </p>
               </div>
             )}
+          </div>
+
+          {/* Mobile: Apply button */}
+          <div className="lg:hidden p-4 border-t border-white/8 flex-shrink-0">
+            <button
+              onClick={() => setShowMobileCriteria(false)}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              Appliquer les critères
+            </button>
           </div>
         </aside>
 

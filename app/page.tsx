@@ -70,7 +70,7 @@ function LandingPage() {
       </header>
 
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
-      <section className="relative pt-24 pb-32 px-6 overflow-hidden">
+      <section className="relative pt-16 sm:pt-24 pb-20 sm:pb-32 px-4 sm:px-6 overflow-hidden">
         <GlowOrbs />
         <GridBg />
 
@@ -124,20 +124,20 @@ function LandingPage() {
                 </div>
               </div>
               {/* Fake content */}
-              <div className="p-5 grid grid-cols-3 gap-3">
+              <div className="p-3 sm:p-5 grid grid-cols-3 gap-2 sm:gap-3">
                 {[
                   { label: 'Score Go/No Go', value: '84/100', color: 'text-emerald-400', badge: 'GO', badgeColor: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
                   { label: 'Projets actifs', value: '12', color: 'text-blue-400', badge: 'En cours', badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
                   { label: 'Taux de réussite', value: '68%', color: 'text-violet-400', badge: '+12%', badgeColor: 'bg-violet-500/20 text-violet-400 border-violet-500/30' },
                 ].map(({ label, value, color, badge, badgeColor }) => (
-                  <div key={label} className="bg-white/3 border border-white/6 rounded-xl p-4">
-                    <p className="text-[10px] text-white/35 mb-1">{label}</p>
-                    <p className={`text-2xl font-extrabold ${color} mb-2`}>{value}</p>
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${badgeColor}`}>{badge}</span>
+                  <div key={label} className="bg-white/3 border border-white/6 rounded-xl p-2.5 sm:p-4">
+                    <p className="text-[9px] sm:text-[10px] text-white/35 mb-1 truncate">{label}</p>
+                    <p className={`text-lg sm:text-2xl font-extrabold ${color} mb-1.5`}>{value}</p>
+                    <span className={`text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${badgeColor}`}>{badge}</span>
                   </div>
                 ))}
               </div>
-              <div className="px-5 pb-5 grid grid-cols-2 gap-3">
+              <div className="px-3 pb-3 sm:px-5 sm:pb-5 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                 {[
                   { label: 'Analyse IA générée', sub: 'Mission de maîtrise d\'œuvre — Isère', dot: 'bg-emerald-400' },
                   { label: 'Veille BOAMP active', sub: '7 nouvelles annonces trouvées', dot: 'bg-blue-400' },
@@ -158,7 +158,7 @@ function LandingPage() {
 
       {/* ── Stats strip ─────────────────────────────────────────────────────── */}
       <section className="py-10 border-y border-white/5 bg-white/[0.02]">
-        <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
           {[
             { value: '< 30s',  label: 'Analyse complète d\'un DCE' },
             { value: '5',      label: 'Critères Go/No Go pondérables' },
@@ -174,7 +174,7 @@ function LandingPage() {
       </section>
 
       {/* ── Features ────────────────────────────────────────────────────────── */}
-      <section id="features" className="py-24 px-6 relative overflow-hidden">
+      <section id="features" className="py-16 sm:py-24 px-4 sm:px-6 relative overflow-hidden">
         <GlowOrbs />
         <div className="relative z-10 max-w-6xl mx-auto">
           <div className="text-center mb-16">
@@ -267,7 +267,7 @@ function LandingPage() {
       </section>
 
       {/* ── How it works ────────────────────────────────────────────────────── */}
-      <section id="process" className="py-24 px-6 border-t border-white/5">
+      <section id="process" className="py-16 sm:py-24 px-4 sm:px-6 border-t border-white/5">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <p className="text-xs font-semibold text-blue-400 tracking-widest uppercase mb-3">Comment ça marche</p>
@@ -299,7 +299,7 @@ function LandingPage() {
       </section>
 
       {/* ── Trust / social proof ────────────────────────────────────────────── */}
-      <section className="py-16 px-6 border-t border-white/5 bg-white/[0.015]">
+      <section className="py-12 sm:py-16 px-4 sm:px-6 border-t border-white/5 bg-white/[0.015]">
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
@@ -322,7 +322,7 @@ function LandingPage() {
       </section>
 
       {/* ── Pricing teaser ──────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-24 px-6 relative overflow-hidden border-t border-white/5">
+      <section id="pricing" className="py-16 sm:py-24 px-4 sm:px-6 relative overflow-hidden border-t border-white/5">
         <GlowOrbs />
         <div className="relative z-10 max-w-4xl mx-auto">
           <div className="text-center mb-14">
@@ -400,7 +400,7 @@ function LandingPage() {
       </section>
 
       {/* ── Testimonial ─────────────────────────────────────────────────────── */}
-      <section className="py-16 px-6 border-t border-white/5">
+      <section className="py-12 sm:py-16 px-4 sm:px-6 border-t border-white/5">
         <div className="max-w-3xl mx-auto text-center">
           <div className="flex justify-center gap-1 mb-6">
             {[1,2,3,4,5].map(i => (
@@ -422,7 +422,7 @@ function LandingPage() {
       </section>
 
       {/* ── Final CTA ───────────────────────────────────────────────────────── */}
-      <section className="py-24 px-6 relative overflow-hidden border-t border-white/5">
+      <section className="py-16 sm:py-24 px-4 sm:px-6 relative overflow-hidden border-t border-white/5">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-600/5 to-transparent pointer-events-none" />
         <GlowOrbs />
         <div className="relative z-10 max-w-2xl mx-auto text-center">

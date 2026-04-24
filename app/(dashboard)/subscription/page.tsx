@@ -116,7 +116,7 @@ export default async function SubscriptionPage({
     <div className="flex flex-col min-h-0 bg-[var(--bg-base)]">
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
-      <div className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center px-6 flex-shrink-0">
+      <div className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center px-4 md:px-6 flex-shrink-0">
         <div>
           <h1 className="text-base font-semibold text-white">Mon abonnement</h1>
           <p className="text-xs text-white/35">Gérez votre formule PILOT+</p>

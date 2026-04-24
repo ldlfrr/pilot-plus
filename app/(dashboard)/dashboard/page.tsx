@@ -282,7 +282,7 @@ export default async function DashboardPage() {
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
 
         {/* ── Row 1 : 8 KPI cards ──────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
           <KpiCard label="Importés"  value={summary.total}     icon={Layers}     iconColor="text-white/40"  accent="text-white"         />
           <KpiCard label="Analysés"  value={summary.analyzed}  icon={Zap}        iconColor="text-blue-400"  accent="text-blue-400"      glow="bg-blue-500" />
           <KpiCard label="Scorés"    value={summary.scored}    icon={Target}     iconColor="text-violet-400" accent="text-violet-400"   glow="bg-violet-500" />
@@ -316,18 +316,59 @@ export default async function DashboardPage() {
             </Link>
           </div>
 
-          {upcoming.length > 0 ? (
-            <div className="overflow-x-auto">
+          {upcoming.length > 0 ? (<>
+            {/* ── Mobile / tablet: card layout ── */}
+            <div className="md:hidden divide-y divide-white/4">
+              {upcoming.map(p => {
+                const isUrgent  = p.daysLeft <= 3
+                const isWarning = p.daysLeft <= 7
+                const isSoon    = p.daysLeft <= 14
+                const urgencyColor = isUrgent  ? 'bg-red-500/20 text-red-400 border-red-500/20'
+                                   : isWarning ? 'bg-amber-500/20 text-amber-400 border-amber-500/20'
+                                   : isSoon    ? 'bg-blue-500/15 text-blue-400 border-blue-500/15'
+                                   :             'bg-white/5 text-white/40 border-white/8'
+                const verdictMap: Record<GoNoGoVerdict, { label: string; color: string }> = {
+                  GO:        { label: 'GO',    color: 'bg-emerald-500/15 text-emerald-400' },
+                  A_ETUDIER: { label: '~',     color: 'bg-amber-500/15 text-amber-400'    },
+                  NO_GO:     { label: 'NO GO', color: 'bg-red-500/15 text-red-400'        },
+                }
+                return (
+                  <Link key={p.id} href={`/projects/${p.id}`}
+                    className={cn('flex items-center gap-3 px-4 py-3 hover:bg-white/3 transition-colors', isUrgent && 'bg-red-500/3')}>
+                    <span className={cn('inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-extrabold tabular-nums flex-shrink-0 w-12 justify-center', urgencyColor)}>
+                      {isUrgent && <Flame size={9} />}
+                      {p.daysLeft === 0 ? 'Auj.' : `${p.daysLeft}j`}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white/80 truncate">{p.name}</p>
+                      <p className="text-[11px] text-white/35 flex items-center gap-1.5 mt-0.5">
+                        <Building size={9} /><span className="truncate">{p.client}</span>
+                        <span className="text-white/15">·</span>
+                        {new Date(p.offer_deadline!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                      </p>
+                    </div>
+                    {p.scoreInfo && (
+                      <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0', verdictMap[p.scoreInfo.verdict].color)}>
+                        {verdictMap[p.scoreInfo.verdict].label}
+                      </span>
+                    )}
+                    <ArrowRight size={13} className="text-white/20 flex-shrink-0" />
+                  </Link>
+                )
+              })}
+            </div>
+
+            {/* ── Desktop: table layout ── */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-white/5">
                     <th className="text-left px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30 w-16">Urgence</th>
                     <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30">Projet</th>
-                    <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30 hidden md:table-cell">Client</th>
-                    <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30 hidden lg:table-cell">Localisation</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30 hidden lg:table-cell">Client</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30 hidden xl:table-cell">Localisation</th>
                     <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30">Échéance</th>
-                    <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30 hidden sm:table-cell">Statut</th>
-                    <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30 hidden sm:table-cell">Score</th>
+                    <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30">Score</th>
                     <th className="w-10" />
                   </tr>
                 </thead>
@@ -336,107 +377,58 @@ export default async function DashboardPage() {
                     const isUrgent  = p.daysLeft <= 3
                     const isWarning = p.daysLeft <= 7
                     const isSoon    = p.daysLeft <= 14
-
                     const urgencyColor = isUrgent  ? 'bg-red-500/20 text-red-400 border-red-500/20'
                                        : isWarning ? 'bg-amber-500/20 text-amber-400 border-amber-500/20'
                                        : isSoon    ? 'bg-blue-500/15 text-blue-400 border-blue-500/15'
                                        :             'bg-white/5 text-white/40 border-white/8'
-
-                    const statusMap = {
-                      draft:    { label: 'Importé',  color: 'bg-white/5 text-white/40' },
-                      analyzed: { label: 'Analysé',  color: 'bg-blue-500/15 text-blue-400' },
-                      scored:   { label: 'Scoré',    color: 'bg-violet-500/15 text-violet-400' },
-                    }
-                    const status = statusMap[p.status as keyof typeof statusMap]
-
                     const verdictMap: Record<GoNoGoVerdict, { label: string; color: string }> = {
                       GO:        { label: 'GO',       color: 'bg-emerald-500/15 text-emerald-400' },
                       A_ETUDIER: { label: '~ Étudier',color: 'bg-amber-500/15 text-amber-400'    },
                       NO_GO:     { label: 'NO GO',    color: 'bg-red-500/15 text-red-400'         },
                     }
-
                     return (
-                      <tr key={p.id}
-                        className={cn(
-                          'group hover:bg-white/3 transition-colors',
-                          isUrgent && 'bg-red-500/3',
-                        )}>
-
-                        {/* Urgency badge */}
+                      <tr key={p.id} className={cn('group hover:bg-white/3 transition-colors', isUrgent && 'bg-red-500/3')}>
                         <td className="px-5 py-3.5">
-                          <span className={cn(
-                            'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-extrabold tabular-nums',
-                            urgencyColor,
-                          )}>
+                          <span className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-extrabold tabular-nums', urgencyColor)}>
                             {isUrgent && <Flame size={10} />}
                             {p.daysLeft === 0 ? "Auj." : `${p.daysLeft}j`}
                           </span>
                         </td>
-
-                        {/* Projet name */}
                         <td className="px-4 py-3.5 max-w-[200px]">
-                          <Link href={`/projects/${p.id}`}
-                            className="font-medium text-white/80 group-hover:text-white truncate block leading-tight transition-colors hover:text-blue-300">
+                          <Link href={`/projects/${p.id}`} className="font-medium text-white/80 group-hover:text-white truncate block leading-tight transition-colors hover:text-blue-300">
                             {p.name}
                           </Link>
-                          {p.consultation_type && (
-                            <span className="text-[11px] text-white/30 truncate block mt-0.5">{p.consultation_type}</span>
-                          )}
+                          {p.consultation_type && <span className="text-[11px] text-white/30 truncate block mt-0.5">{p.consultation_type}</span>}
                         </td>
-
-                        {/* Client */}
-                        <td className="px-4 py-3.5 hidden md:table-cell">
+                        <td className="px-4 py-3.5 hidden lg:table-cell">
                           <span className="flex items-center gap-1.5 text-white/50 text-xs">
                             <Building size={11} className="flex-shrink-0 text-white/25" />
                             <span className="truncate max-w-[120px]">{p.client}</span>
                           </span>
                         </td>
-
-                        {/* Location */}
-                        <td className="px-4 py-3.5 hidden lg:table-cell">
+                        <td className="px-4 py-3.5 hidden xl:table-cell">
                           <span className="flex items-center gap-1.5 text-white/40 text-xs">
                             <MapPin size={11} className="flex-shrink-0 text-white/20" />
                             <span className="truncate max-w-[120px]">{p.location}</span>
                           </span>
                         </td>
-
-                        {/* Deadline */}
                         <td className="px-4 py-3.5">
                           <span className="text-xs text-white/60 font-medium whitespace-nowrap">
-                            {new Date(p.offer_deadline!).toLocaleDateString('fr-FR', {
-                              weekday: 'short', day: 'numeric', month: 'short',
-                            })}
+                            {new Date(p.offer_deadline!).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
                           </span>
                         </td>
-
-                        {/* Status */}
-                        <td className="px-4 py-3.5 hidden sm:table-cell text-center">
-                          <span className={cn('inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold', status.color)}>
-                            {status.label}
-                          </span>
-                        </td>
-
-                        {/* Score / Verdict */}
-                        <td className="px-4 py-3.5 hidden sm:table-cell text-center">
+                        <td className="px-4 py-3.5 text-center">
                           {p.scoreInfo ? (
                             <div className="flex flex-col items-center gap-1">
-                              <span className={cn(
-                                'inline-block px-2 py-0.5 rounded-full text-[10px] font-bold',
-                                verdictMap[p.scoreInfo.verdict].color,
-                              )}>
+                              <span className={cn('inline-block px-2 py-0.5 rounded-full text-[10px] font-bold', verdictMap[p.scoreInfo.verdict].color)}>
                                 {verdictMap[p.scoreInfo.verdict].label}
                               </span>
                               <span className="text-[10px] text-white/30 tabular-nums">{p.scoreInfo.total_score}/100</span>
                             </div>
-                          ) : (
-                            <span className="text-[10px] text-white/20">—</span>
-                          )}
+                          ) : <span className="text-[10px] text-white/20">—</span>}
                         </td>
-
-                        {/* Arrow */}
                         <td className="pr-4 py-3.5 text-right">
-                          <Link href={`/projects/${p.id}`}
-                            className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/4 hover:bg-blue-500/20 text-white/20 hover:text-blue-400 transition-all group-hover:text-white/40">
+                          <Link href={`/projects/${p.id}`} className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/4 hover:bg-blue-500/20 text-white/20 hover:text-blue-400 transition-all">
                             <ArrowRight size={12} />
                           </Link>
                         </td>
@@ -446,7 +438,7 @@ export default async function DashboardPage() {
                 </tbody>
               </table>
             </div>
-          ) : (
+          </>) : (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center">
                 <Calendar size={20} className="text-amber-400/40" />
