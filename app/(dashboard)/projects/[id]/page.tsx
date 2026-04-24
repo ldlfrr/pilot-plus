@@ -413,7 +413,7 @@ export default function ProjectPage() {
         </div>
 
         <div style={{ display: activeTab === 'corp' ? 'block' : 'none' }} className="p-4 md:p-6">
-          <SyntheseCorpTab projectId={id} />
+          <SyntheseCorpTab projectId={id} analysisResult={latestAnalysis?.result ?? null} />
         </div>
 
         <div style={{ display: activeTab === 'besoin' ? 'block' : 'none' }} className="p-4 md:p-6">

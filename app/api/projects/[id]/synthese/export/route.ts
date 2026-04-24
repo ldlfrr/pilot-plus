@@ -3,8 +3,6 @@ export const maxDuration = 30
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import fs from 'fs'
-import path from 'path'
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -36,27 +34,26 @@ export async function POST(req: Request, { params }: Params) {
     .eq('user_id', user.id)
     .single()
 
-  let templateBuffer: Buffer
-
-  if (settingsRow?.synthese_template_path) {
-    // Load custom template from Supabase storage
-    const { data: fileData, error: storageError } = await supabase.storage
-      .from('synthese-templates')
-      .download(settingsRow.synthese_template_path)
-
-    if (storageError || !fileData) {
-      // Fall back to default template
-      templateBuffer = fs.readFileSync(
-        path.join(process.cwd(), 'public', 'templates', 'sogetrel-template.docx')
-      )
-    } else {
-      templateBuffer = Buffer.from(await fileData.arrayBuffer())
-    }
-  } else {
-    templateBuffer = fs.readFileSync(
-      path.join(process.cwd(), 'public', 'templates', 'sogetrel-template.docx')
+  // Require a custom template — no default fallback
+  if (!settingsRow?.synthese_template_path) {
+    return NextResponse.json(
+      { error: 'Aucun template chargé. Uploadez votre fichier .docx dans le panneau "Template Word".' },
+      { status: 400 }
     )
   }
+
+  const { data: fileData, error: storageError } = await supabase.storage
+    .from('synthese-templates')
+    .download(settingsRow.synthese_template_path)
+
+  if (storageError || !fileData) {
+    return NextResponse.json(
+      { error: 'Impossible de récupérer le template. Rechargez-le dans les paramètres.' },
+      { status: 500 }
+    )
+  }
+
+  const templateBuffer = Buffer.from(await fileData.arrayBuffer())
 
   // Build the replacement values
   const typeAccord    = (synthese.type_accord    || []) as string[]

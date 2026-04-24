@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   Save, Download, ChevronDown, ChevronUp, Upload, X, FileText,
-  Loader2, CheckCircle, AlertCircle, Building2,
+  Loader2, CheckCircle, AlertCircle, Building2, Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import type { AnalysisResult } from '@/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -282,21 +283,31 @@ function TemplatePanel() {
   }
 
   async function remove() {
-    if (!confirm('Revenir au template SOGETREL par défaut ?')) return
+    if (!confirm('Supprimer ce template ?')) return
     await fetch('/api/settings/synthese-template', { method: 'DELETE' })
     setTemplateName(null)
-    setMsg({ ok: true, text: 'Template supprimé — template SOGETREL par défaut actif' })
+    setMsg({ ok: true, text: 'Template supprimé' })
   }
 
   return (
-    <div className="bg-[#1a1d2e] border border-white/8 rounded-xl p-5 space-y-3">
+    <div className={cn(
+      'border rounded-xl p-5 space-y-3',
+      templateName
+        ? 'bg-violet-950/20 border-violet-500/30'
+        : 'bg-amber-950/20 border-amber-500/30',
+    )}>
       <div className="flex items-center gap-2">
-        <Building2 size={15} className="text-violet-400" />
-        <h3 className="text-sm font-semibold text-white">Template entreprise</h3>
+        <Building2 size={15} className={templateName ? 'text-violet-400' : 'text-amber-400'} />
+        <h3 className="text-sm font-semibold text-white">Template Word</h3>
+        {!templateName && (
+          <span className="ml-auto text-[10px] font-semibold text-amber-400 bg-amber-900/30 border border-amber-700/40 px-2 py-0.5 rounded-full">
+            Requis pour exporter
+          </span>
+        )}
       </div>
 
       <p className="text-xs text-white/40 leading-relaxed">
-        Par défaut, l'export utilise le template SOGETREL. Vous pouvez charger votre propre fichier <code className="text-violet-300">.docx</code> avec des <code className="text-violet-300">{'{placeholder}'}</code> pour l'adapter à votre entreprise.
+        Chargez votre fichier <code className="text-violet-300">.docx</code> avec des <code className="text-violet-300">{'{placeholder}'}</code> correspondant aux champs du formulaire. L'export remplacera chaque placeholder par la valeur saisie.
       </p>
 
       {templateName ? (
@@ -308,7 +319,7 @@ function TemplatePanel() {
           </button>
         </div>
       ) : (
-        <p className="text-xs text-white/30 italic">Template par défaut : SOGETREL</p>
+        <p className="text-xs text-amber-400/70 italic">Aucun template chargé — l'export Word est désactivé.</p>
       )}
 
       <div>
@@ -339,14 +350,39 @@ function TemplatePanel() {
   )
 }
 
+// ─── Auto-fill mapping ────────────────────────────────────────────────────────
+
+function autoFillFromAnalysis(result: AnalysisResult): Partial<SyntheseData> {
+  const join = (arr?: string[]) => arr?.join('\n') ?? ''
+  return {
+    nom_projet_synthese:    result.nom_projet                                   || '',
+    besoin_description:     result.resume_executif || result.contexte            || '',
+    besoin_client:          result.besoin_client                                || '',
+    marche_objet:           result.objet || result.perimetre                    || '',
+    materiel_installer:     result.fourniture_demandee                          || '',
+    concurrence_identifiee: '',
+    planning_remise_offre:  result.date_offre                                   || '',
+    risques_operationnels:  join(result.risques),
+    atouts:                 join(result.points_cles),
+    aspects_contractuels:   join(result.points_vigilance),
+  }
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function SyntheseCorpTab({ projectId }: { projectId: string }) {
-  const [data, setData]       = useState<SyntheseData>(EMPTY)
-  const [saving, setSaving]   = useState(false)
+export function SyntheseCorpTab({
+  projectId,
+  analysisResult,
+}: {
+  projectId: string
+  analysisResult?: AnalysisResult | null
+}) {
+  const [data, setData]           = useState<SyntheseData>(EMPTY)
+  const [saving, setSaving]       = useState(false)
   const [exporting, setExporting] = useState(false)
-  const [saved, setSaved]     = useState(false)
-  const [error, setError]     = useState<string | null>(null)
+  const [saved, setSaved]         = useState(false)
+  const [error, setError]         = useState<string | null>(null)
+  const [filled, setFilled]       = useState(false)
 
   // Helper to update a single field
   function set<K extends keyof SyntheseData>(key: K, value: SyntheseData[K]) {
@@ -359,7 +395,6 @@ export function SyntheseCorpTab({ projectId }: { projectId: string }) {
       .then(r => r.json())
       .then(({ synthese }) => {
         if (synthese) {
-          // Convert boolean-stored-as-text from DB
           setData({
             ...EMPTY,
             ...synthese,
@@ -370,10 +405,21 @@ export function SyntheseCorpTab({ projectId }: { projectId: string }) {
             validite_type:      synthese.validite_type      ?? [],
             type_reponse:       synthese.type_reponse       ?? [],
           })
+        } else if (analysisResult) {
+          // No saved data yet → pre-fill from analysis
+          setData(prev => ({ ...prev, ...autoFillFromAnalysis(analysisResult) }))
+          setFilled(true)
         }
       })
       .catch(() => {})
-  }, [projectId])
+  }, [projectId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function applyAutoFill() {
+    if (!analysisResult) return
+    setData(prev => ({ ...prev, ...autoFillFromAnalysis(analysisResult) }))
+    setFilled(true)
+    setTimeout(() => setFilled(false), 3000)
+  }
 
   async function handleSave() {
     setSaving(true); setError(null); setSaved(false)
@@ -416,8 +462,27 @@ export function SyntheseCorpTab({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-4 pb-24">
 
-      {/* Template panel */}
-      <TemplatePanel />
+      {/* Top bar: template + auto-fill */}
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="flex-1"><TemplatePanel /></div>
+        {analysisResult && (
+          <div className="flex-shrink-0 flex flex-col justify-center">
+            <button
+              type="button"
+              onClick={applyAutoFill}
+              className="flex items-center gap-2 px-4 py-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-sm font-medium rounded-xl transition-all whitespace-nowrap"
+            >
+              <Sparkles size={15} />
+              Remplir depuis l'analyse IA
+            </button>
+            {filled && (
+              <p className="text-xs text-emerald-400 flex items-center gap-1 mt-1.5">
+                <CheckCircle size={11} />Champs pré-remplis
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* ── Section 1 – Contexte client ──────────────────────────────────── */}
       <SectionCard title="1 · Contexte client" color="bg-blue-500">
