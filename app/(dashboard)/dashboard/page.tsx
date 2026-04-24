@@ -9,9 +9,10 @@ import {
   TrendingUp, Trophy, XCircle, Clock, AlertCircle, Layers,
   Target, DollarSign, BarChart3, Activity, Zap,
   ChevronRight, Calendar, Users, Lightbulb, AlertTriangle,
+  MapPin, Building, ArrowRight, Flame,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import type { Project } from '@/types'
+import type { Project, GoNoGoVerdict } from '@/types'
 
 export const metadata: Metadata = { title: 'Dashboard — PILOT+' }
 
@@ -140,14 +141,27 @@ async function getDashboardData(userId: string) {
   const topClients = Object.entries(clientMap).sort(([,a],[,b]) => b - a).slice(0, 5)
     .map(([client, count]) => ({ client, count }))
 
-  // ── Upcoming deadlines (next 14 days) ──────────────────────────────────────
+  // ── Upcoming deadlines (next 30 days) ──────────────────────────────────────
   const now = Date.now()
+  // Build a map projectId → latest score for enriching the table
+  const latestScoreByProject: Record<string, { total_score: number; verdict: GoNoGoVerdict }> = {}
+  for (const s of scores) {
+    const pid = s.project_id as string
+    if (!latestScoreByProject[pid]) {
+      latestScoreByProject[pid] = { total_score: s.total_score as number, verdict: s.verdict as GoNoGoVerdict }
+    }
+  }
+
   const upcoming = projects
     .filter(p => p.offer_deadline && p.outcome === 'pending')
-    .map(p => ({ ...p, daysLeft: Math.ceil((new Date(p.offer_deadline!).getTime() - now) / 86400000) }))
-    .filter(p => p.daysLeft >= 0 && p.daysLeft <= 14)
+    .map(p => ({
+      ...p,
+      daysLeft: Math.ceil((new Date(p.offer_deadline!).getTime() - now) / 86400000),
+      scoreInfo: latestScoreByProject[p.id] ?? null,
+    }))
+    .filter(p => p.daysLeft >= 0 && p.daysLeft <= 30)
     .sort((a, b) => a.daysLeft - b.daysLeft)
-    .slice(0, 6)
+    .slice(0, 12)
 
   // ── Time to decision ───────────────────────────────────────────────────────
   const closedProjects = projects.filter(p => p.closed_at && p.outcome !== 'pending')
@@ -281,6 +295,169 @@ export default async function DashboardPage() {
             sub="répondus → gagnés" />
           <KpiCard label="Score moyen" value={summary.scoreMoyen > 0 ? `${summary.scoreMoyen}` : '—'} icon={BarChart3} iconColor="text-blue-400" accent="text-blue-300"
             sub={`sur ${scoring.total} dossiers`} />
+        </div>
+
+        {/* ── Prochaines échéances (full-width table) ─────────────────────── */}
+        <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/6">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+                <Calendar size={14} className="text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-white leading-none">Prochaines échéances</h2>
+                <p className="text-[11px] text-white/40 mt-0.5">Projets en cours — 30 prochains jours</p>
+              </div>
+            </div>
+            <Link href="/projects"
+              className="flex items-center gap-1 text-xs text-white/40 hover:text-white/70 transition-colors">
+              Tous les projets <ChevronRight size={12} />
+            </Link>
+          </div>
+
+          {upcoming.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="text-left px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30 w-16">Urgence</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30">Projet</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30 hidden md:table-cell">Client</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30 hidden lg:table-cell">Localisation</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30">Échéance</th>
+                    <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30 hidden sm:table-cell">Statut</th>
+                    <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30 hidden sm:table-cell">Score</th>
+                    <th className="w-10" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/4">
+                  {upcoming.map(p => {
+                    const isUrgent  = p.daysLeft <= 3
+                    const isWarning = p.daysLeft <= 7
+                    const isSoon    = p.daysLeft <= 14
+
+                    const urgencyColor = isUrgent  ? 'bg-red-500/20 text-red-400 border-red-500/20'
+                                       : isWarning ? 'bg-amber-500/20 text-amber-400 border-amber-500/20'
+                                       : isSoon    ? 'bg-blue-500/15 text-blue-400 border-blue-500/15'
+                                       :             'bg-white/5 text-white/40 border-white/8'
+
+                    const statusMap = {
+                      draft:    { label: 'Importé',  color: 'bg-white/5 text-white/40' },
+                      analyzed: { label: 'Analysé',  color: 'bg-blue-500/15 text-blue-400' },
+                      scored:   { label: 'Scoré',    color: 'bg-violet-500/15 text-violet-400' },
+                    }
+                    const status = statusMap[p.status as keyof typeof statusMap]
+
+                    const verdictMap: Record<GoNoGoVerdict, { label: string; color: string }> = {
+                      GO:        { label: 'GO',       color: 'bg-emerald-500/15 text-emerald-400' },
+                      A_ETUDIER: { label: '~ Étudier',color: 'bg-amber-500/15 text-amber-400'    },
+                      NO_GO:     { label: 'NO GO',    color: 'bg-red-500/15 text-red-400'         },
+                    }
+
+                    return (
+                      <tr key={p.id}
+                        className={cn(
+                          'group hover:bg-white/3 transition-colors',
+                          isUrgent && 'bg-red-500/3',
+                        )}>
+
+                        {/* Urgency badge */}
+                        <td className="px-5 py-3.5">
+                          <span className={cn(
+                            'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-extrabold tabular-nums',
+                            urgencyColor,
+                          )}>
+                            {isUrgent && <Flame size={10} />}
+                            {p.daysLeft === 0 ? "Auj." : `${p.daysLeft}j`}
+                          </span>
+                        </td>
+
+                        {/* Projet name */}
+                        <td className="px-4 py-3.5 max-w-[200px]">
+                          <Link href={`/projects/${p.id}`}
+                            className="font-medium text-white/80 group-hover:text-white truncate block leading-tight transition-colors hover:text-blue-300">
+                            {p.name}
+                          </Link>
+                          {p.consultation_type && (
+                            <span className="text-[11px] text-white/30 truncate block mt-0.5">{p.consultation_type}</span>
+                          )}
+                        </td>
+
+                        {/* Client */}
+                        <td className="px-4 py-3.5 hidden md:table-cell">
+                          <span className="flex items-center gap-1.5 text-white/50 text-xs">
+                            <Building size={11} className="flex-shrink-0 text-white/25" />
+                            <span className="truncate max-w-[120px]">{p.client}</span>
+                          </span>
+                        </td>
+
+                        {/* Location */}
+                        <td className="px-4 py-3.5 hidden lg:table-cell">
+                          <span className="flex items-center gap-1.5 text-white/40 text-xs">
+                            <MapPin size={11} className="flex-shrink-0 text-white/20" />
+                            <span className="truncate max-w-[120px]">{p.location}</span>
+                          </span>
+                        </td>
+
+                        {/* Deadline */}
+                        <td className="px-4 py-3.5">
+                          <span className="text-xs text-white/60 font-medium whitespace-nowrap">
+                            {new Date(p.offer_deadline!).toLocaleDateString('fr-FR', {
+                              weekday: 'short', day: 'numeric', month: 'short',
+                            })}
+                          </span>
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-4 py-3.5 hidden sm:table-cell text-center">
+                          <span className={cn('inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold', status.color)}>
+                            {status.label}
+                          </span>
+                        </td>
+
+                        {/* Score / Verdict */}
+                        <td className="px-4 py-3.5 hidden sm:table-cell text-center">
+                          {p.scoreInfo ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <span className={cn(
+                                'inline-block px-2 py-0.5 rounded-full text-[10px] font-bold',
+                                verdictMap[p.scoreInfo.verdict].color,
+                              )}>
+                                {verdictMap[p.scoreInfo.verdict].label}
+                              </span>
+                              <span className="text-[10px] text-white/30 tabular-nums">{p.scoreInfo.total_score}/100</span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-white/20">—</span>
+                          )}
+                        </td>
+
+                        {/* Arrow */}
+                        <td className="pr-4 py-3.5 text-right">
+                          <Link href={`/projects/${p.id}`}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/4 hover:bg-blue-500/20 text-white/20 hover:text-blue-400 transition-all group-hover:text-white/40">
+                            <ArrowRight size={12} />
+                          </Link>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <Calendar size={20} className="text-amber-400/40" />
+              </div>
+              <p className="text-sm text-white/30 text-center">Aucune échéance dans les 30 prochains jours</p>
+              <Link href="/projects/new"
+                className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors">
+                Nouveau projet <ChevronRight size={12} />
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* ── Row 2 : Funnel + Donut ───────────────────────────────────────── */}
@@ -457,8 +634,8 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Row 6 : Top clients + Échéances + Stats temps ───────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* ── Row 6 : Top clients + Stats temps ───────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* Top clients */}
           <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
@@ -481,38 +658,6 @@ export default async function DashboardPage() {
               </ol>
             ) : (
               <EmptyState message="Aucun client pour l'instant" />
-            )}
-          </div>
-
-          {/* Upcoming deadlines */}
-          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
-            <CardHeader icon={Calendar} iconColor="text-amber-400"
-              title="Échéances imminentes"
-              sub="14 prochains jours — projets en cours" />
-            {upcoming.length > 0 ? (
-              <div className="space-y-3">
-                {upcoming.map(p => (
-                  <Link key={p.id} href={`/projects/${p.id}`}
-                    className="flex items-center gap-3 group rounded-lg p-1.5 -mx-1.5 hover:bg-white/4 transition-colors">
-                    <div className={cn(
-                      'w-8 h-8 rounded-lg flex-shrink-0 flex flex-col items-center justify-center text-center',
-                      p.daysLeft <= 3 ? 'bg-red-500/20' : p.daysLeft <= 7 ? 'bg-amber-500/20' : 'bg-white/5',
-                    )}>
-                      <span className={cn('text-[10px] font-bold tabular-nums leading-none',
-                        p.daysLeft <= 3 ? 'text-red-400' : p.daysLeft <= 7 ? 'text-amber-400' : 'text-white/40'
-                      )}>{p.daysLeft}j</span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-white/80 truncate group-hover:text-blue-300 transition-colors leading-none">{p.name}</p>
-                      <p className="text-[11px] text-white/30 mt-0.5">
-                        {new Date(p.offer_deadline!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <EmptyState message="Aucune échéance dans les 14 prochains jours" />
             )}
           </div>
 
@@ -556,7 +701,7 @@ export default async function DashboardPage() {
                 summary.tauxTransfo > 0 && `Taux de transformation : ${summary.tauxTransfo}% (${summary.won} gagné${summary.won>1?'s':''} sur ${summary.responded} clôturé${summary.responded>1?'s':''})`,
                 scoring.avgWon !== null && scoring.avgLost !== null && scoring.avgWon > scoring.avgLost &&
                   `Scoring fiable : +${scoring.avgWon - scoring.avgLost} pts d'écart entre projets gagnés et perdus`,
-                upcoming.length > 0 && `${upcoming.length} projet${upcoming.length>1?'s':''} nécessite${upcoming.length>1?'nt':''} une action dans les 14 prochains jours`,
+                upcoming.length > 0 && `${upcoming.length} projet${upcoming.length>1?'s':''} nécessite${upcoming.length>1?'nt':''} une action dans les 30 prochains jours`,
                 lossReasons[0] && `Principale raison de perte : « ${lossReasons[0][0]} » (${lossReasons[0][1]} fois)`,
                 summary.abandoned > 0 && `${summary.abandoned} projet${summary.abandoned>1?'s':''} abandonné${summary.abandoned>1?'s':''} — analysez les raisons`,
                 summary.caTotal > 0 && `CA total généré via PILOT+ : ${caFormatted}`,
