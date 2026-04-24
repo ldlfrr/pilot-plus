@@ -4,22 +4,24 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { FileUpload } from '@/components/projects/FileUpload'
 import { ScoreDisplay } from '@/components/analysis/ScoreDisplay'
-import { SyntheseTab }    from '@/components/project/tabs/SyntheseTab'
-import { BesoinClientTab } from '@/components/project/tabs/BesoinClientTab'
-import { PiecesTab }       from '@/components/project/tabs/PiecesTab'
-import { SpecificitesTab } from '@/components/project/tabs/SpecificitesTab'
-import { ActionsTab }      from '@/components/project/tabs/ActionsTab'
+import { SyntheseTab }      from '@/components/project/tabs/SyntheseTab'
+import { SyntheseCorpTab }  from '@/components/project/tabs/SyntheseCorpTab'
+import { BesoinClientTab }  from '@/components/project/tabs/BesoinClientTab'
+import { PiecesTab }        from '@/components/project/tabs/PiecesTab'
+import { SpecificitesTab }  from '@/components/project/tabs/SpecificitesTab'
+import { ActionsTab }       from '@/components/project/tabs/ActionsTab'
 import {
   Cpu, Target, Trash2, Pencil, Loader2, AlertCircle, CheckCircle,
   Download, Share2, FilePlus, Calendar, MapPin, Building, Hash,
   FileText, Users, ListChecks, Wrench, BarChart3, Layers,
   Copy, X, ExternalLink, Link as LinkIcon, Lock, ArrowRight,
+  ClipboardList,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
 import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates, SubscriptionTier } from '@/types'
 
-type Tab = 'synthese' | 'besoin' | 'pieces' | 'specificites' | 'gonogo' | 'actions' | 'documents'
+type Tab = 'synthese' | 'corp' | 'besoin' | 'pieces' | 'specificites' | 'gonogo' | 'actions' | 'documents'
 
 interface ProjectData {
   project: Project
@@ -189,13 +191,14 @@ export default function ProjectPage() {
   // ────────────────────────────────────────────────────────────────────────────
 
   const TABS: { id: Tab; label: string; icon: typeof FileText }[] = [
-    { id: 'synthese',     label: 'Synthèse',        icon: FileText },
-    { id: 'besoin',       label: 'Besoin client',   icon: Users },
-    { id: 'pieces',       label: 'Pièces à fournir',icon: ListChecks },
-    { id: 'specificites', label: 'Spécificités',    icon: Wrench },
-    { id: 'gonogo',       label: 'Go / No Go',      icon: BarChart3 },
-    { id: 'actions',      label: 'Actions',          icon: Target },
-    { id: 'documents',    label: 'Documents',        icon: Layers },
+    { id: 'synthese',     label: 'Synthèse',            icon: FileText },
+    { id: 'corp',         label: 'Synthèse Corporate',  icon: ClipboardList },
+    { id: 'besoin',       label: 'Besoin client',       icon: Users },
+    { id: 'pieces',       label: 'Pièces à fournir',    icon: ListChecks },
+    { id: 'specificites', label: 'Spécificités',        icon: Wrench },
+    { id: 'gonogo',       label: 'Go / No Go',          icon: BarChart3 },
+    { id: 'actions',      label: 'Actions',              icon: Target },
+    { id: 'documents',    label: 'Documents',            icon: Layers },
   ]
 
   return (
@@ -407,6 +410,10 @@ export default function ProjectPage() {
           {latestAnalysis
             ? <SyntheseTab result={latestAnalysis.result} />
             : <EmptyAnalysis onAnalyze={handleAnalyze} analyzing={analyzing} />}
+        </div>
+
+        <div style={{ display: activeTab === 'corp' ? 'block' : 'none' }} className="p-4 md:p-6">
+          <SyntheseCorpTab projectId={id} />
         </div>
 
         <div style={{ display: activeTab === 'besoin' ? 'block' : 'none' }} className="p-4 md:p-6">
