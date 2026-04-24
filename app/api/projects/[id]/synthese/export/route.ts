@@ -141,7 +141,7 @@ export async function POST(req: Request, { params }: Params) {
     const projectName = (synthese.nom_projet_synthese || 'synthese').replace(/[^a-zA-Z0-9-_]/g, '_')
     const filename    = `Synthese_${projectName}_${new Date().toISOString().slice(0,10)}.docx`
 
-    return new Response(output, {
+    return new Response(output as unknown as BodyInit, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'Content-Disposition': `attachment; filename="${filename}"`,
