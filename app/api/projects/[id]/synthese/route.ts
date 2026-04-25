@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserTier, checkFeatureGate } from '@/lib/subscription'
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -8,6 +9,10 @@ export async function GET(_req: Request, { params }: Params) {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+
+  const tier = await getUserTier(supabase, user.id)
+  const gate = checkFeatureGate(tier, 'rapport_detaille')
+  if (gate) return NextResponse.json(gate, { status: 402 })
 
   const { data } = await supabase
     .from('project_syntheses')
@@ -24,6 +29,10 @@ export async function PUT(req: Request, { params }: Params) {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+
+  const tier2 = await getUserTier(supabase, user.id)
+  const gate2 = checkFeatureGate(tier2, 'rapport_detaille')
+  if (gate2) return NextResponse.json(gate2, { status: 402 })
 
   // Verify project ownership
   const { data: project } = await supabase

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserTier, checkFeatureGate } from '@/lib/subscription'
 import { getAnthropicClient } from '@/lib/ai/client'
 
 interface EmailEntry {
@@ -21,6 +22,10 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+
+    const tier = await getUserTier(supabase, user.id)
+    const gate = checkFeatureGate(tier, 'email_campaigns')
+    if (gate) return NextResponse.json(gate, { status: 402 })
 
     const body: GenerateRequest = await req.json()
     const { emails, context, senderName, tone = 'professional' } = body

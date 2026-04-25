@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserTier, checkFeatureGate } from '@/lib/subscription'
 import { getAnthropicClient } from '@/lib/ai/client'
 import type { ContactInput, EmailResult, EnrichedContact } from '@/lib/types/enrichment'
 
@@ -178,6 +179,10 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+
+    const tier = await getUserTier(supabase, user.id)
+    const gate = checkFeatureGate(tier, 'find_contacts')
+    if (gate) return NextResponse.json(gate, { status: 402 })
 
     const { contacts } = await req.json() as { contacts: ContactInput[] }
     if (!contacts?.length) return NextResponse.json({ error: 'Liste vide' }, { status: 400 })

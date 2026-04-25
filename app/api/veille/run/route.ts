@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserTier, checkFeatureGate } from '@/lib/subscription'
 
 const BOAMP_API = 'https://www.boamp.fr/api/explore/v2.1/catalog/datasets/boamp/records'
 
@@ -81,6 +82,10 @@ export async function POST() {
     const { data: authData } = await supabase.auth.getUser()
     const user = authData?.user
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const tier = await getUserTier(supabase, user.id)
+    const gate = checkFeatureGate(tier, 'veille_boamp')
+    if (gate) return NextResponse.json(gate, { status: 402 })
 
     const { data: settings } = await supabase
       .from('veille_settings').select('*').eq('user_id', user.id).single()
