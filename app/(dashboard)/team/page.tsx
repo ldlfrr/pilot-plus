@@ -460,7 +460,7 @@ function MembresTab({
                         <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/6 text-white/30">vous</span>
                       )}
                       {isCreator && !isMe && (
-                        <Crown size={11} className="text-amber-400/50 flex-shrink-0" title="Créateur de l'équipe"/>
+                        <Crown size={11} className="text-amber-400/50 flex-shrink-0"/>
                       )}
                     </div>
                     <p className="text-xs text-white/30 truncate">{member.email}</p>
