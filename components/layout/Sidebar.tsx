@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils/cn'
 import {
   FolderKanban, LayoutDashboard, Kanban, CalendarDays,
-  Radio, UserSearch, Mail, BarChart3, FileDown,
+  Radio, UserSearch, BarChart3, FileDown,
   Building2, Users, User, CreditCard, HelpCircle,
   LogOut, Plus, ChevronRight, ExternalLink, Sparkles,
   TrendingUp, Zap, Home,
@@ -30,9 +30,8 @@ const NAV_SECTIONS = [
     id: 'prospection',
     label: 'Prospection',
     items: [
-      { href: '/veille',          label: 'Veille BOAMP',    icon: Radio,       badge: 'Live', badgeColor: 'emerald', sub: 'Marchés publics' },
-      { href: '/enrichment',      label: 'Find contacts',   icon: UserSearch,  badge: 'IA',  badgeColor: 'blue',    sub: 'Enrichissement'  },
-      { href: '/email-campaigns', label: 'Campagnes email', icon: Mail,        badge: 'IA',  badgeColor: 'blue',    sub: 'Automatisation'  },
+      { href: '/veille',     label: 'Veille BOAMP', icon: Radio,      badge: 'Live', badgeColor: 'emerald', sub: 'Marchés publics'  },
+      { href: '/enrichment', label: 'Find LinkedIn', icon: UserSearch, badge: 'IA',   badgeColor: 'blue',    sub: 'Profils LinkedIn' },
     ],
   },
   {
