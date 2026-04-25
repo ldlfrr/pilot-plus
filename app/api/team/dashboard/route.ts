@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export interface MemberStats {
@@ -30,35 +30,41 @@ export interface TeamDashboard {
   members:         MemberStats[]
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  // 1. Find the user's team (they must be owner or member)
-  const { data: membership } = await supabase
+  const teamIdParam = req.nextUrl.searchParams.get('teamId')
+
+  // 1. Find a team where the user is admin
+  let membershipQuery = supabase
     .from('team_members')
     .select('team_id, role')
     .eq('user_id', user.id)
+    .eq('role', 'admin')
+
+  if (teamIdParam) {
+    membershipQuery = membershipQuery.eq('team_id', teamIdParam)
+  }
+
+  const { data: memberships } = await membershipQuery
     .order('joined_at', { ascending: true })
     .limit(1)
-    .single()
 
-  if (!membership) return NextResponse.json({ error: 'Aucune équipe trouvée' }, { status: 404 })
+  const membership = memberships?.[0]
+  if (!membership) {
+    return NextResponse.json({ error: 'Accès réservé aux admins' }, { status: 403 })
+  }
 
   const { data: team } = await supabase
     .from('teams')
-    .select('id, name, owner_id')
+    .select('id, name')
     .eq('id', membership.team_id)
     .single()
 
   if (!team) return NextResponse.json({ error: 'Équipe introuvable' }, { status: 404 })
-
-  // Only owner can see the full dashboard
-  if (team.owner_id !== user.id) {
-    return NextResponse.json({ error: 'Réservé au chef d\'équipe' }, { status: 403 })
-  }
 
   // 2. Get all team members with profiles
   const { data: members } = await supabase
@@ -96,7 +102,7 @@ export async function GET() {
 
   // 4. Fetch latest score per project
   const projectIds = (projects ?? []).map((p: { id: string }) => p.id)
-  let scoreMap = new Map<string, { verdict: string }>()
+  const scoreMap = new Map<string, { verdict: string }>()
 
   if (projectIds.length > 0) {
     const { data: scores } = await supabase

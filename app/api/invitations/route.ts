@@ -100,13 +100,23 @@ export async function POST(req: Request) {
 
       const { data: team } = await supabase
         .from('teams')
-        .select('id, name, owner_id')
+        .select('id, name')
         .eq('id', teamId)
         .single()
 
       if (!team) return NextResponse.json({ error: 'Équipe introuvable' }, { status: 404 })
-      if (team.owner_id !== user.id)
-        return NextResponse.json({ error: 'Seul le propriétaire peut inviter' }, { status: 403 })
+
+      // Only admins of this team can invite
+      const { data: callerMembership } = await supabase
+        .from('team_members')
+        .select('role')
+        .eq('team_id', teamId)
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle()
+
+      if (!callerMembership)
+        return NextResponse.json({ error: 'Seul un admin peut inviter' }, { status: 403 })
 
       teamName = team.name
 
@@ -212,12 +222,13 @@ export async function GET() {
     .eq('id', user.id)
     .single()
 
-  if (!profile?.email) return NextResponse.json({ invitations: [] })
+  const userEmail = (profile?.email ?? user.email ?? '').toLowerCase()
+  if (!userEmail) return NextResponse.json({ invitations: [] })
 
   const { data } = await supabase
     .from('invitations')
     .select('*')
-    .eq('invited_email', profile.email)
+    .eq('invited_email', userEmail)
     .eq('status', 'pending')
     .gt('expires_at', new Date().toISOString())
     .order('created_at', { ascending: false })

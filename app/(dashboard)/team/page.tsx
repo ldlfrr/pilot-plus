@@ -137,7 +137,7 @@ function DashboardTab({ teamId }: { teamId: string }) {
   const [openId, setOpenId] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/team/dashboard')
+    fetch(`/api/team/dashboard?teamId=${teamId}`)
       .then(r => r.json())
       .then(d => { if (d.error) throw new Error(d.error); setDash(d.dashboard) })
       .catch(e => setError(e.message))
