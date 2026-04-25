@@ -6,7 +6,7 @@ import {
   Users, UserPlus, Mail, Trash2, Loader2, CheckCircle,
   AlertCircle, Shield, Eye, Clock, X, BarChart3,
   Plus, Hash, ChevronDown, MoreVertical, LogOut,
-  Settings, Crown, Copy, Check, FolderOpen,
+  Settings, Crown, Copy, Check, FolderOpen, XCircle,
 } from 'lucide-react'
 import type { TeamDashboard, MemberStats } from '@/app/api/team/dashboard/route'
 import { SharedProjectsTab } from '@/components/team/SharedProjectsTab'
@@ -37,7 +37,17 @@ interface PendingInvitation {
   created_at:    string
 }
 
-type TeamTab = 'membres' | 'invitations' | 'dashboard' | 'projets'
+interface JoinRequestItem {
+  id:         string
+  user_id:    string
+  email:      string
+  full_name:  string | null
+  message:    string | null
+  created_at: string
+  status:     string
+}
+
+type TeamTab = 'membres' | 'invitations' | 'dashboard' | 'projets' | 'demandes'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -603,6 +613,113 @@ function MembresTab({
   )
 }
 
+// ─── Demandes tab ─────────────────────────────────────────────────────────────
+
+function DemandesTab({ teamId, requests, onAction }: {
+  teamId:    string
+  requests:  JoinRequestItem[]
+  onAction:  (requestId: string, action: 'accept' | 'reject', newMember?: TeamMember) => void
+}) {
+  const [acting,     setActing]     = useState<string | null>(null)
+  const [role,       setRole]       = useState<'admin' | 'member' | 'viewer'>('member')
+  const [msg,        setMsg]        = useState<{ text: string; ok: boolean } | null>(null)
+
+  async function handle(req: JoinRequestItem, action: 'accept' | 'reject') {
+    setActing(req.id)
+    try {
+      const res = await fetch('/api/team/join-request', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: req.id, action, role }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Erreur')
+      const newMember: TeamMember | undefined = action === 'accept' ? {
+        id: crypto.randomUUID(), user_id: req.user_id,
+        email: req.email, full_name: req.full_name, role, joined_at: new Date().toISOString(),
+      } : undefined
+      onAction(req.id, action, newMember)
+      setMsg({ text: action === 'accept' ? `${req.full_name ?? req.email} a été ajouté·e à l'équipe.` : 'Demande refusée.', ok: action === 'accept' })
+      setTimeout(() => setMsg(null), 3000)
+    } catch (e) { setMsg({ text: e instanceof Error ? e.message : 'Erreur', ok: false }) }
+    finally { setActing(null) }
+  }
+
+  return (
+    <div className="space-y-4">
+      {msg && (
+        <div className={cn('flex items-center gap-2 text-sm rounded-xl px-4 py-2.5',
+          msg.ok ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
+                 : 'text-red-400 bg-red-500/10 border border-red-500/20')}>
+          {msg.ok ? <CheckCircle size={13}/> : <AlertCircle size={13}/>}{msg.text}
+        </div>
+      )}
+
+      {/* Role for accepted members */}
+      <div className="rounded-xl p-3 flex items-center gap-3" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <span className="text-xs text-white/40">Rôle à attribuer lors de l&apos;acceptation :</span>
+        <div className="flex gap-1.5 ml-auto">
+          {(['admin','member','viewer'] as const).map(r => {
+            const cfg = ROLE_CFG[r]; const I = cfg.icon
+            return (
+              <button key={r} onClick={() => setRole(r)}
+                className={cn('flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold border transition-all', role === r ? cfg.color : 'text-white/30')}
+                style={{ background: role === r ? cfg.bg : 'transparent', border: `1px solid ${role === r ? cfg.border : 'rgba(255,255,255,0.08)'}` }}>
+                <I size={9}/>{cfg.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {requests.length === 0 ? (
+        <div className="rounded-xl py-12 text-center" style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.06)' }}>
+          <UserPlus size={20} className="text-white/15 mx-auto mb-2"/>
+          <p className="text-sm text-white/25">Aucune demande en attente</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {requests.map(req => {
+            const name = req.full_name ?? req.email.split('@')[0]
+            const initials = name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
+            const isAct = acting === req.id
+            return (
+              <div key={req.id} className="rounded-2xl p-4" style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.18)' }}>
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold text-violet-300 flex-shrink-0"
+                    style={{ background: 'rgba(139,92,246,0.18)', border: '1px solid rgba(139,92,246,0.28)' }}>
+                    {initials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white/85 truncate">{name}</p>
+                    <p className="text-xs text-white/40 truncate">{req.email}</p>
+                    <p className="text-[10px] text-white/25 mt-0.5">{new Date(req.created_at).toLocaleDateString('fr-FR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</p>
+                  </div>
+                </div>
+                {req.message && (
+                  <p className="text-xs text-white/50 italic mb-3 px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.04)', borderLeft: '2px solid rgba(139,92,246,0.4)' }}>
+                    &ldquo;{req.message}&rdquo;
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <button onClick={() => handle(req, 'accept')} disabled={!!acting}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-white transition-all disabled:opacity-40"
+                    style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}>
+                    {isAct ? <Loader2 size={12} className="animate-spin"/> : <CheckCircle size={12}/>}Accepter
+                  </button>
+                  <button onClick={() => handle(req, 'reject')} disabled={!!acting}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white/40 hover:text-white/70 transition-all"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                    <XCircle size={12}/>Refuser
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Team detail ──────────────────────────────────────────────────────────────
 
 function TeamDetail({
@@ -615,14 +732,16 @@ function TeamDetail({
   onRenamed:     (id: string, name: string) => void
   onLeft:        (id: string) => void
 }) {
-  const [tab,         setTab]         = useState<TeamTab>('membres')
-  const [members,     setMembers]     = useState<TeamMember[]>(team.members)
-  const [pending,     setPending]     = useState<PendingInvitation[]>([])
-  const [editName,    setEditName]    = useState(false)
-  const [newName,     setNewName]     = useState(team.name)
-  const [savingName,  setSavingName]  = useState(false)
-  const [nameMsg,     setNameMsg]     = useState<{ text: string; ok: boolean } | null>(null)
-  const [copied,      setCopied]      = useState(false)
+  const [tab,              setTab]              = useState<TeamTab>('membres')
+  const [members,          setMembers]          = useState<TeamMember[]>(team.members)
+  const [pending,          setPending]          = useState<PendingInvitation[]>([])
+  const [joinRequests,     setJoinRequests]     = useState<JoinRequestItem[]>([])
+  const [joinRequestCount, setJoinRequestCount] = useState(0)
+  const [editName,         setEditName]         = useState(false)
+  const [newName,          setNewName]          = useState(team.name)
+  const [savingName,       setSavingName]       = useState(false)
+  const [nameMsg,          setNameMsg]          = useState<{ text: string; ok: boolean } | null>(null)
+  const [copied,           setCopied]           = useState(false)
 
   const isAdmin = members.some(m => m.user_id === currentUserId && m.role === 'admin')
   const myRole  = members.find(m => m.user_id === currentUserId)?.role ?? null
@@ -634,6 +753,10 @@ function TeamDetail({
       fetch(`/api/team/invitations?teamId=${team.id}`)
         .then(r => r.ok ? r.json() : { invitations: [] })
         .then(d => setPending(d.invitations ?? []))
+        .catch(() => {})
+      fetch(`/api/team/join-request?teamId=${team.id}`)
+        .then(r => r.ok ? r.json() : { requests: [] })
+        .then(d => { const reqs = d.requests ?? []; setJoinRequests(reqs); setJoinRequestCount(reqs.length) })
         .catch(() => {})
     }
   }, [team.id, isAdmin])
@@ -663,10 +786,11 @@ function TeamDetail({
   }
 
   const TABS = [
-    { id: 'membres'     as const, label: 'Membres',           icon: Users,      always: true  },
-    { id: 'projets'     as const, label: 'Projets partagés',  icon: FolderOpen, always: true  },
-    { id: 'invitations' as const, label: 'Invitations',       icon: Mail,       always: false },
-    { id: 'dashboard'   as const, label: 'Dashboard',         icon: BarChart3,  always: false },
+    { id: 'membres'      as const, label: 'Membres',           icon: Users,      always: true,  badge: 0              },
+    { id: 'projets'      as const, label: 'Projets partagés',  icon: FolderOpen, always: true,  badge: 0              },
+    { id: 'invitations'  as const, label: 'Invitations',       icon: Mail,       always: false, badge: 0              },
+    { id: 'demandes'     as const, label: 'Demandes',          icon: UserPlus,   always: false, badge: joinRequestCount},
+    { id: 'dashboard'    as const, label: 'Dashboard',         icon: BarChart3,  always: false, badge: 0              },
   ].filter(t => t.always || isAdmin)
 
   return (
@@ -745,8 +869,13 @@ function TeamDetail({
           const active = tab === t.id
           return (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all relative',
                 active ? 'bg-white/10 text-white shadow-sm' : 'text-white/35 hover:text-white/65')}>
+              {t.badge > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-extrabold text-white bg-violet-500">
+                  {t.badge}
+                </span>
+              )}
               <I size={12}/>{t.label}
               {t.id === 'invitations' && pending.length > 0 && (
                 <span className="ml-1 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold bg-blue-500/30 text-blue-300 px-1">
@@ -775,6 +904,20 @@ function TeamDetail({
         <InvitationsTab teamId={team.id} pending={pending} setPending={setPending}/>
       )}
 
+      {tab === 'demandes' && isAdmin && (
+        <DemandesTab
+          teamId={team.id}
+          requests={joinRequests}
+          onAction={(requestId, action, newMember) => {
+            setJoinRequests(p => p.filter(r => r.id !== requestId))
+            setJoinRequestCount(p => Math.max(0, p - 1))
+            if (action === 'accept' && newMember) {
+              setMembers(p => [...p, newMember])
+            }
+          }}
+        />
+      )}
+
       {tab === 'dashboard' && isAdmin && (
         <DashboardTab teamId={team.id}/>
       )}
@@ -801,6 +944,11 @@ export default function TeamPage() {
   const [newName,       setNewName]       = useState('')
   const [saving,        setSaving]        = useState(false)
   const [globalErr,     setGlobalErr]     = useState<string | null>(null)
+  const [joining,       setJoining]       = useState(false)
+  const [joinId,        setJoinId]        = useState('')
+  const [joinMsg,       setJoinMsg]       = useState('')
+  const [joinSending,   setJoinSending]   = useState(false)
+  const [joinFeedback,  setJoinFeedback]  = useState<{ text: string; ok: boolean } | null>(null)
 
   const loadTeams = useCallback(async () => {
     try {
@@ -817,6 +965,24 @@ export default function TeamPage() {
   }, [])
 
   useEffect(() => { loadTeams() }, []) // eslint-disable-line
+
+  async function handleJoinRequest() {
+    if (!joinId.trim() || joinSending) return
+    setJoinSending(true)
+    try {
+      const res  = await fetch('/api/team/join-request', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId: joinId.trim(), message: joinMsg.trim() || undefined }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Erreur')
+      setJoinFeedback({ text: `Demande envoyée à l'équipe "${data.teamName}" — les admins recevront une notification.`, ok: true })
+      setJoinId(''); setJoinMsg('')
+      setTimeout(() => { setJoining(false); setJoinFeedback(null) }, 4000)
+    } catch (e) {
+      setJoinFeedback({ text: e instanceof Error ? e.message : 'Erreur', ok: false })
+    } finally { setJoinSending(false) }
+  }
 
   async function handleCreate() {
     if (!newName.trim() || saving) return
@@ -868,12 +1034,20 @@ export default function TeamPage() {
               {loading ? '…' : teams.length === 0 ? 'Aucune équipe' : `${teams.length} équipe${teams.length > 1 ? 's' : ''}`}
             </p>
           </div>
-          {!creating && (
-            <button onClick={() => setCreating(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-400 rounded-lg border border-blue-500/25 hover:border-blue-500/50 hover:bg-blue-500/8 transition-all">
-              <Plus size={12}/>Nouvelle équipe
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {!joining && (
+              <button onClick={() => setJoining(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-violet-400 rounded-lg border border-violet-500/25 hover:border-violet-500/50 hover:bg-violet-500/8 transition-all">
+                <UserPlus size={12}/>Rejoindre
+              </button>
+            )}
+            {!creating && (
+              <button onClick={() => setCreating(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-400 rounded-lg border border-blue-500/25 hover:border-blue-500/50 hover:bg-blue-500/8 transition-all">
+                <Plus size={12}/>Nouvelle équipe
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Team tabs */}
@@ -930,6 +1104,43 @@ export default function TeamPage() {
               <button onClick={() => { setCreating(false); setNewName('') }}
                 className="px-3 py-2.5 text-white/30 hover:text-white/70 rounded-xl border border-white/10 transition-all">
                 <X size={13}/>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Join team form */}
+        {joining && (
+          <div className="rounded-2xl p-5 mb-5" style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.20)' }}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold text-white/80 flex items-center gap-2">
+                <UserPlus size={13} className="text-violet-400"/>Rejoindre une équipe
+              </p>
+              <button onClick={() => { setJoining(false); setJoinId(''); setJoinMsg(''); setJoinFeedback(null) }}
+                className="text-white/25 hover:text-white/60 transition-colors"><X size={13}/></button>
+            </div>
+            {joinFeedback && (
+              <div className={cn('flex items-center gap-2 text-sm rounded-xl px-3 py-2.5 mb-3',
+                joinFeedback.ok ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
+                               : 'text-red-400 bg-red-500/10 border border-red-500/20')}>
+                {joinFeedback.ok ? <CheckCircle size={12}/> : <AlertCircle size={12}/>}
+                {joinFeedback.text}
+              </div>
+            )}
+            <p className="text-[11px] text-white/35 mb-3">Entrez l&apos;ID complet de l&apos;équipe que vous souhaitez rejoindre. Les admins recevront votre demande.</p>
+            <div className="space-y-2">
+              <input type="text" value={joinId} onChange={e => setJoinId(e.target.value)}
+                placeholder="ID de l'équipe (ex: 3f4a6b2c-…)"
+                className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-violet-500/40 font-mono"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}/>
+              <input type="text" value={joinMsg} onChange={e => setJoinMsg(e.target.value)}
+                placeholder="Message (optionnel)"
+                className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}/>
+              <button onClick={handleJoinRequest} disabled={!joinId.trim() || joinSending}
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-violet-700 hover:bg-violet-600 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-all">
+                {joinSending ? <Loader2 size={13} className="animate-spin"/> : <UserPlus size={13}/>}
+                Envoyer la demande
               </button>
             </div>
           </div>

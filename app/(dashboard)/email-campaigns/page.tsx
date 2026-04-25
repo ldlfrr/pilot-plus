@@ -641,7 +641,10 @@ export default function EmailCampaignsPage() {
                   style={!canGenerate || loading ? { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' } : {}}
                 >
                   {loading ? (
-                    <><Loader2 size={16} className="animate-spin" />Génération de {parsedEmails.length} email{parsedEmails.length > 1 ? 's' : ''} en cours…</>
+                    <><Loader2 size={16} className="animate-spin" />
+                    Génération de {parsedEmails.length} email{parsedEmails.length > 1 ? 's' : ''}
+                    {parsedEmails.length > 15 ? ` en ${Math.ceil(parsedEmails.length / 15)} lots` : ''} en cours…
+                    </>
                   ) : (
                     <>
                       <Sparkles size={16} />
@@ -659,6 +662,11 @@ export default function EmailCampaignsPage() {
                 {!canGenerate && !loading && (
                   <p className="text-center text-[11px] text-white/22">
                     {parsedEmails.length === 0 ? '→ Ajoutez au moins un email valide' : !senderName.trim() ? '→ Indiquez votre nom / entreprise' : '→ Décrivez votre campagne (min. 10 caractères)'}
+                  </p>
+                )}
+                {canGenerate && !loading && parsedEmails.length > 15 && (
+                  <p className="text-center text-[11px] text-white/30">
+                    ⏱ {Math.ceil(parsedEmails.length / 15)} lots · environ {Math.ceil(parsedEmails.length / 15) * 25}s
                   </p>
                 )}
               </div>

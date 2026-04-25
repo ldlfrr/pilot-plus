@@ -50,6 +50,17 @@ interface Invitation {
   created_at:   string
 }
 
+interface JoinRequest {
+  id:         string
+  team_id:    string
+  team_name:  string
+  user_id:    string
+  email:      string
+  full_name:  string | null
+  message:    string | null
+  created_at: string
+}
+
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Admin', member: 'Membre', viewer: 'Lecteur',
   editor: 'Éditeur', avant_vente: 'Avant-Vente',
@@ -102,29 +113,33 @@ function timeAgo(dateStr: string): string {
 function NotifPanel({
   open, onClose, tab, setTab,
   invitations, acting, onInviteAction,
+  joinRequests, actingJr, onJoinRequestAction,
   activeDeadlines, dismissedDeadlines,
   onDismiss, onDismissAll,
   history, historyLoading,
 }: {
-  open:              boolean
-  onClose:           () => void
-  tab:               'unread' | 'history'
-  setTab:            (t: 'unread' | 'history') => void
-  invitations:       Invitation[]
-  acting:            string | null
-  onInviteAction:    (token: string, action: 'accept' | 'decline') => void
-  activeDeadlines:   DeadlineNotification[]
-  dismissedDeadlines:DeadlineNotification[]
-  onDismiss:         (n: DeadlineNotification, e: React.MouseEvent) => void
-  onDismissAll:      () => void
-  history:           Invitation[]
-  historyLoading:    boolean
+  open:                boolean
+  onClose:             () => void
+  tab:                 'unread' | 'history'
+  setTab:              (t: 'unread' | 'history') => void
+  invitations:         Invitation[]
+  acting:              string | null
+  onInviteAction:      (token: string, action: 'accept' | 'decline') => void
+  joinRequests:        JoinRequest[]
+  actingJr:            string | null
+  onJoinRequestAction: (id: string, action: 'accept' | 'reject') => void
+  activeDeadlines:     DeadlineNotification[]
+  dismissedDeadlines:  DeadlineNotification[]
+  onDismiss:           (n: DeadlineNotification, e: React.MouseEvent) => void
+  onDismissAll:        () => void
+  history:             Invitation[]
+  historyLoading:      boolean
 }) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
   if (!mounted) return null
 
-  const unreadCount = invitations.length + activeDeadlines.length
+  const unreadCount = invitations.length + activeDeadlines.length + joinRequests.length
   const critical    = activeDeadlines.filter(n => n.urgency === 'critical').length
 
   const panel = (
@@ -221,6 +236,67 @@ function NotifPanel({
           {tab === 'unread' && (
             <>
               {/* Invitations */}
+              {/* Join requests — admin only */}
+              {joinRequests.length > 0 && (
+                <section className="p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">Demandes d&apos;équipe</span>
+                    <span className="ml-auto text-[10px] font-bold tabular-nums px-2 py-0.5 rounded-full"
+                      style={{ background: 'rgba(139,92,246,0.15)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.25)' }}>
+                      {joinRequests.length}
+                    </span>
+                  </div>
+                  {joinRequests.map(jr => {
+                    const name    = jr.full_name ?? jr.email.split('@')[0]
+                    const isAct   = actingJr === jr.id
+                    const initials = name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
+                    return (
+                      <div key={jr.id} className="rounded-2xl overflow-hidden"
+                        style={{ background: 'linear-gradient(135deg,rgba(139,92,246,0.07),rgba(99,102,241,0.07))', border: '1px solid rgba(139,92,246,0.22)' }}>
+                        <div className="h-0.5 w-full" style={{ background: 'linear-gradient(90deg,#8b5cf6,#6366f1)' }} />
+                        <div className="p-4">
+                          <div className="flex items-start gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xs font-bold text-violet-300"
+                              style={{ background: 'rgba(139,92,246,0.18)', border: '1px solid rgba(139,92,246,0.28)' }}>
+                              {initials}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-white leading-tight truncate">{name}</p>
+                              <p className="text-xs text-white/40 truncate">{jr.email}</p>
+                              <p className="text-[11px] text-violet-400/70 mt-0.5 flex items-center gap-1">
+                                <Users size={9}/>veut rejoindre <strong className="text-violet-300">{jr.team_name}</strong>
+                              </p>
+                            </div>
+                          </div>
+                          {jr.message && (
+                            <p className="text-xs text-white/45 italic mb-3 px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.04)', borderLeft: '2px solid rgba(139,92,246,0.4)' }}>
+                              &ldquo;{jr.message}&rdquo;
+                            </p>
+                          )}
+                          <div className="flex gap-2">
+                            <button onClick={() => onJoinRequestAction(jr.id, 'accept')} disabled={!!actingJr}
+                              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold text-white transition-all disabled:opacity-40"
+                              style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', boxShadow: '0 4px 12px rgba(124,58,237,0.30)' }}>
+                              {isAct ? <Loader2 size={12} className="animate-spin"/> : <CheckCircle size={12}/>}Accepter
+                            </button>
+                            <button onClick={() => onJoinRequestAction(jr.id, 'reject')} disabled={!!actingJr}
+                              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white/40 hover:text-white/70 transition-all"
+                              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                              <XCircle size={12}/>Refuser
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </section>
+              )}
+
+              {joinRequests.length > 0 && (invitations.length > 0 || activeDeadlines.length > 0) && (
+                <div className="mx-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
+              )}
+
               {invitations.length > 0 && (
                 <section className="p-4 space-y-3">
                   <div className="flex items-center gap-2">
@@ -482,6 +558,8 @@ export function NotificationBell() {
   const [seen,               setSeen]               = useState<Set<string>>(new Set())
   const [dlLoaded,           setDlLoaded]           = useState(false)
   const [invitations,        setInvitations]        = useState<Invitation[]>([])
+  const [joinRequests,       setJoinRequests]       = useState<JoinRequest[]>([])
+  const [actingJr,           setActingJr]           = useState<string | null>(null)
   const [acting,             setActing]             = useState<string | null>(null)
   const [open,               setOpen]               = useState(false)
   const [tab,                setTab]                = useState<'unread' | 'history'>('unread')
@@ -502,6 +580,10 @@ export function NotificationBell() {
       .then(r => r.ok ? r.json() : { invitations: [] })
       .then(d => setInvitations(d.invitations ?? []))
       .catch(() => {})
+    fetch('/api/team/join-request')
+      .then(r => r.ok ? r.json() : { requests: [] })
+      .then(d => setJoinRequests(d.requests ?? []))
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -509,6 +591,10 @@ export function NotificationBell() {
       fetch('/api/invitations')
         .then(r => r.ok ? r.json() : null)
         .then(d => { if (d) setInvitations(d.invitations ?? []) })
+        .catch(() => {})
+      fetch('/api/team/join-request')
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d) setJoinRequests(d.requests ?? []) })
         .catch(() => {})
     }, 20_000)
     return () => clearInterval(id)
@@ -556,8 +642,9 @@ export function NotificationBell() {
   // "New" = not yet seen
   const newInvCount  = invitations.filter(i => !seen.has(i.id)).length
   const newDlCount   = activeDeadlines.filter(n => !seen.has(notifKey(n))).length
-  const badgeCount   = newInvCount + newDlCount
-  const totalUnread  = invitations.length + activeDeadlines.length
+  const newJrCount   = joinRequests.filter(r => !seen.has(`jr-${r.id}`)).length
+  const badgeCount   = newInvCount + newDlCount + newJrCount
+  const totalUnread  = invitations.length + activeDeadlines.length + joinRequests.length
 
   const dismiss = useCallback((n: DeadlineNotification, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation()
@@ -570,6 +657,19 @@ export function NotificationBell() {
     deadlines.forEach(n => next.add(notifKey(n)))
     setDismissed(next); saveDismissed(next)
   }, [deadlines, dismissed])
+
+  async function handleJoinRequestAction(requestId: string, action: 'accept' | 'reject') {
+    setActingJr(requestId)
+    try {
+      const res = await fetch('/api/team/join-request', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId, action }),
+      })
+      if (res.ok) {
+        setJoinRequests(prev => prev.filter(r => r.id !== requestId))
+      }
+    } catch { /* silent */ } finally { setActingJr(null) }
+  }
 
   async function handleInviteAction(token: string, action: 'accept' | 'decline') {
     setActing(token)
@@ -626,6 +726,9 @@ export function NotificationBell() {
         invitations={invitations}
         acting={acting}
         onInviteAction={handleInviteAction}
+        joinRequests={joinRequests}
+        actingJr={actingJr}
+        onJoinRequestAction={handleJoinRequestAction}
         activeDeadlines={activeDeadlines}
         dismissedDeadlines={dismissedDeadlines}
         onDismiss={dismiss}

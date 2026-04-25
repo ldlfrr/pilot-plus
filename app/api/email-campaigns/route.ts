@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getUserTier, checkFeatureGate } from '@/lib/subscription'
 import { getAnthropicClient } from '@/lib/ai/client'
 
+export const maxDuration = 120  // up to 3 batches × ~30s each
+
 export interface EmailEntry {
   email: string
   company?: string
@@ -65,25 +67,29 @@ export async function POST(req: NextRequest) {
     }
 
     const toneDesc = TONE_MAP[tone]?.[language] ?? TONE_MAP.professional[language]
+    const lang     = language === 'fr' ? 'French' : 'English'
 
-    const emailListStr = emails.map((e, i) => {
-      const domain      = e.email.split('@')[1] ?? ''
-      const companyName = e.company || domain.replace(/\.(fr|com|net|org|io|eu|co\.uk)$/, '').replace(/[-_.]/g, ' ').trim()
-      return `${i + 1}. email=${e.email} | entreprise=${companyName || '?'} | contact=${e.name || '?'} | domaine=${domain}`
-    }).join('\n')
+    const anthropic = getAnthropicClient()
 
-    const lang = language === 'fr' ? 'French' : 'English'
+    // ── Batch processing to avoid token limits ─────────────────────────────────
+    // Each email needs ~350 output tokens. claude-opus-4-5 caps at 8192.
+    // We batch into chunks of 15 max and merge results.
+    const BATCH_SIZE = 15
+    const allResults: GeneratedEmail[] = []
 
-    const abInstruction = abSubject
-      ? `- "subjectB": a second alternative subject line (different angle, same email)`
-      : ''
-    const followUpInstruction = includeFollowUp
-      ? `- "followUp": a short follow-up email body (70-100 words) to send 3 days later if no reply`
-      : ''
+    const batches: EmailEntry[][] = []
+    for (let i = 0; i < emails.length; i += BATCH_SIZE) {
+      batches.push(emails.slice(i, i + BATCH_SIZE))
+    }
 
-    const qualityInstruction = `- "qualityScore": integer 0-100 measuring personalization depth (higher = more personalized to this specific company/contact)`
+    for (const batch of batches) {
+      const batchListStr = batch.map((e, i) => {
+        const domain      = e.email.split('@')[1] ?? ''
+        const companyName = e.company || domain.replace(/\.(fr|com|net|org|io|eu|co\.uk)$/, '').replace(/[-_.]/g, ' ').trim()
+        return `${i + 1}. email=${e.email} | entreprise=${companyName || '?'} | contact=${e.name || '?'} | domaine=${domain}`
+      }).join('\n')
 
-    const prompt = `You are a world-class B2B sales copywriter. Generate ${emails.length} highly personalized cold outreach emails in ${lang}.
+      const batchPrompt = `You are a world-class B2B sales copywriter. Generate ${batch.length} highly personalized cold outreach emails in ${lang}.
 
 SENDER: ${senderName}
 CAMPAIGN CONTEXT: ${context}
@@ -91,7 +97,7 @@ TONE: ${toneDesc}
 LANGUAGE: Write all emails in ${lang}
 
 RECIPIENTS:
-${emailListStr}
+${batchListStr}
 
 RULES:
 - Each email must be 130-200 words max — short, punchy, respectful of the reader's time
@@ -115,32 +121,43 @@ RESPOND with ONLY valid JSON (no markdown, no commentary):
   ]
 }`
 
-    const anthropic = getAnthropicClient()
-    const response  = await anthropic.messages.create({
-      model:      'claude-opus-4-5',
-      max_tokens: abSubject || includeFollowUp ? 6000 : 4096,
-      messages:   [{ role: 'user', content: prompt }],
-    })
+      // Calculate token budget: ~380 tokens per email + overhead
+      const tokensNeeded = batch.length * 380 + 500
+      const maxTokens    = Math.min(8192, Math.max(tokensNeeded, 2048))
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : ''
+      const response = await anthropic.messages.create({
+        model:      'claude-opus-4-5',
+        max_tokens: maxTokens,
+        messages:   [{ role: 'user', content: batchPrompt }],
+      })
 
-    // Strip potential markdown code fence
-    const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      console.error('[email-campaigns] No JSON found in response:', text.slice(0, 300))
-      return NextResponse.json({ error: 'Réponse IA invalide — réessayez' }, { status: 500 })
+      const text = response.content[0].type === 'text' ? response.content[0].text : ''
+
+      // Strip potential markdown code fence
+      const cleaned  = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) {
+        console.error('[email-campaigns] No JSON in batch response:', text.slice(0, 300))
+        return NextResponse.json({ error: 'Réponse IA invalide — réessayez' }, { status: 500 })
+      }
+
+      let parsed: { results: GeneratedEmail[] }
+      try {
+        parsed = JSON.parse(jsonMatch[0]) as { results: GeneratedEmail[] }
+      } catch (parseErr) {
+        console.error('[email-campaigns] JSON parse error:', parseErr)
+        return NextResponse.json({ error: 'Réponse IA invalide — réessayez' }, { status: 500 })
+      }
+
+      const batchResults = parsed.results.map(r => ({
+        ...r,
+        qualityScore: r.qualityScore ?? 70,
+      }))
+
+      allResults.push(...batchResults)
     }
 
-    const parsed = JSON.parse(jsonMatch[0]) as { results: GeneratedEmail[] }
-
-    // Ensure qualityScore exists on each result
-    const results: GeneratedEmail[] = parsed.results.map(r => ({
-      ...r,
-      qualityScore: r.qualityScore ?? 70,
-    }))
-
-    return NextResponse.json({ results })
+    return NextResponse.json({ results: allResults })
   } catch (err) {
     console.error('[email-campaigns]', err)
     return NextResponse.json({ error: 'Erreur serveur — réessayez' }, { status: 500 })
