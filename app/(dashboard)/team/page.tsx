@@ -6,9 +6,10 @@ import {
   Users, UserPlus, Mail, Trash2, Loader2, CheckCircle,
   AlertCircle, Shield, Eye, Clock, X, BarChart3,
   Plus, Hash, ChevronDown, MoreVertical, LogOut,
-  Settings, Crown, Copy, Check,
+  Settings, Crown, Copy, Check, FolderOpen,
 } from 'lucide-react'
 import type { TeamDashboard, MemberStats } from '@/app/api/team/dashboard/route'
+import { SharedProjectsTab } from '@/components/team/SharedProjectsTab'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,7 +37,7 @@ interface PendingInvitation {
   created_at:    string
 }
 
-type TeamTab = 'membres' | 'invitations' | 'dashboard'
+type TeamTab = 'membres' | 'invitations' | 'dashboard' | 'projets'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -662,9 +663,10 @@ function TeamDetail({
   }
 
   const TABS = [
-    { id: 'membres'     as const, label: 'Membres',      icon: Users,    always: true  },
-    { id: 'invitations' as const, label: 'Invitations',  icon: Mail,     always: false },
-    { id: 'dashboard'   as const, label: 'Dashboard',    icon: BarChart3,always: false },
+    { id: 'membres'     as const, label: 'Membres',           icon: Users,      always: true  },
+    { id: 'projets'     as const, label: 'Projets partagés',  icon: FolderOpen, always: true  },
+    { id: 'invitations' as const, label: 'Invitations',       icon: Mail,       always: false },
+    { id: 'dashboard'   as const, label: 'Dashboard',         icon: BarChart3,  always: false },
   ].filter(t => t.always || isAdmin)
 
   return (
@@ -775,6 +777,14 @@ function TeamDetail({
 
       {tab === 'dashboard' && isAdmin && (
         <DashboardTab teamId={team.id}/>
+      )}
+
+      {tab === 'projets' && (
+        <SharedProjectsTab
+          teamId={team.id}
+          currentUserId={currentUserId}
+          isTeamAdmin={isAdmin}
+        />
       )}
     </div>
   )

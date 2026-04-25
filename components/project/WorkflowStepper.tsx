@@ -1,30 +1,28 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle, ChevronRight, Loader2, ArrowRight } from 'lucide-react'
+import { Check, Loader2, ArrowRight, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { PipelineStage } from '@/types'
 
 interface Step {
-  id:       PipelineStage
-  label:    string
+  id:         PipelineStage
+  label:      string
   shortLabel: string
-  color:    string
-  // who can advance FROM this step
-  roles:    ('owner' | 'editor' | 'avant_vente' | 'viewer')[]
-  /** CTA label shown on the advance button at this stage */
-  ctaLabel: string
+  color:      string
+  roles:      ('owner' | 'editor' | 'avant_vente' | 'viewer')[]
+  ctaLabel:   string
 }
 
 const STEPS: Step[] = [
-  { id: 'veille',    label: 'Veille',        shortLabel: 'Veille',    color: '#60a5fa', roles: ['owner','editor'],                ctaLabel: 'Lancer l\'analyse' },
-  { id: 'analyse',   label: 'Analyse',       shortLabel: 'Analyse',   color: '#a78bfa', roles: ['owner','editor'],                ctaLabel: 'Valider l\'analyse' },
-  { id: 'go',        label: 'Go / No Go',    shortLabel: 'Go/No-Go',  color: '#34d399', roles: ['owner','editor'],                ctaLabel: 'GO → Envoyer aux AV' },
-  { id: 'brief',     label: 'Brief AV',      shortLabel: 'Brief AV',  color: '#fb923c', roles: ['owner','editor','avant_vente'],  ctaLabel: 'Brief transmis — AV commence' },
-  { id: 'chiffrage', label: 'Chiffrage AV',  shortLabel: 'Chiffrage', color: '#f472b6', roles: ['owner','editor','avant_vente'],  ctaLabel: 'Chiffrage déposé ✓' },
-  { id: 'relecture', label: 'Relecture',     shortLabel: 'Relecture', color: '#facc15', roles: ['owner','editor'],                ctaLabel: 'Relecture validée' },
-  { id: 'remis',     label: 'Remis',         shortLabel: 'Remis',     color: '#4ade80', roles: ['owner','editor'],                ctaLabel: 'Dossier remis ✓' },
-  { id: 'cloture',   label: 'Clôturé',       shortLabel: 'Clôturé',   color: '#94a3b8', roles: [],                                ctaLabel: '' },
+  { id: 'veille',    label: 'Veille',          shortLabel: 'Veille',    color: '#60a5fa', roles: ['owner','editor'],               ctaLabel: 'Démarrer l\'analyse' },
+  { id: 'analyse',   label: 'Analyse IA',      shortLabel: 'Analyse',   color: '#a78bfa', roles: ['owner','editor'],               ctaLabel: 'Valider — passer en décision' },
+  { id: 'go',        label: 'Go / No Go',      shortLabel: 'Go/No-Go',  color: '#34d399', roles: ['owner','editor'],               ctaLabel: 'GO — envoyer le Brief AV' },
+  { id: 'brief',     label: 'Brief AV',        shortLabel: 'Brief AV',  color: '#fb923c', roles: ['owner','editor','avant_vente'], ctaLabel: 'Brief transmis — AV commence' },
+  { id: 'chiffrage', label: 'Chiffrage',       shortLabel: 'Chiffrage', color: '#f472b6', roles: ['owner','editor','avant_vente'], ctaLabel: 'Chiffrage déposé ✓' },
+  { id: 'relecture', label: 'Relecture',       shortLabel: 'Relecture', color: '#facc15', roles: ['owner','editor'],               ctaLabel: 'Relecture validée ✓' },
+  { id: 'remis',     label: 'Dossier remis',   shortLabel: 'Remis',     color: '#4ade80', roles: ['owner','editor'],               ctaLabel: 'Dossier remis — clôture ✓' },
+  { id: 'cloture',   label: 'Clôturé',         shortLabel: 'Clôturé',   color: '#94a3b8', roles: [],                               ctaLabel: '' },
 ]
 
 const STAGE_INDEX: Record<PipelineStage, number> = Object.fromEntries(
@@ -32,21 +30,22 @@ const STAGE_INDEX: Record<PipelineStage, number> = Object.fromEntries(
 ) as Record<PipelineStage, number>
 
 interface WorkflowStepperProps {
-  projectId:   string
-  stage:       PipelineStage | undefined
-  currentRole: 'owner' | 'editor' | 'viewer' | 'avant_vente'
+  projectId:    string
+  stage:        PipelineStage | undefined
+  currentRole:  'owner' | 'editor' | 'viewer' | 'avant_vente'
   onStageChange?: (stage: PipelineStage) => void
 }
 
 export function WorkflowStepper({ projectId, stage, currentRole, onStageChange }: WorkflowStepperProps) {
-  const currentIndex = stage ? STAGE_INDEX[stage] ?? 0 : 0
+  const currentIndex = stage ? (STAGE_INDEX[stage] ?? 0) : 0
   const currentStep  = STEPS[currentIndex]
   const nextStep     = STEPS[currentIndex + 1] ?? null
+  const progressPct  = Math.round((currentIndex / (STEPS.length - 1)) * 100)
 
   const [advancing, setAdvancing] = useState(false)
   const [error,     setError]     = useState<string | null>(null)
 
-  const canAdvance = nextStep && currentStep.roles.includes(currentRole as never)
+  const canAdvance = !!(nextStep && currentStep.roles.includes(currentRole as never))
 
   async function handleAdvance() {
     if (!nextStep || !canAdvance) return
@@ -70,95 +69,143 @@ export function WorkflowStepper({ projectId, stage, currentRole, onStageChange }
   }
 
   return (
-    <div className="bg-[var(--bg-card)] border border-white/6 rounded-xl px-4 py-3 mb-4">
-      {/* Step track */}
-      <div className="flex items-center gap-0 overflow-x-auto scrollbar-hide mb-3">
-        {STEPS.map((step, idx) => {
-          const done    = idx < currentIndex
-          const active  = idx === currentIndex
-          const future  = idx > currentIndex
+    <div className="bg-[var(--bg-card)] border border-white/6 rounded-xl mb-4 overflow-hidden">
 
-          return (
-            <div key={step.id} className="flex items-center flex-shrink-0">
-              {/* Step node */}
-              <div className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all',
-                done   && 'text-white/35',
-                active && 'text-white',
-                future && 'text-white/20',
-              )}>
-                {/* Circle */}
-                <div className={cn(
-                  'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all',
-                  done   && 'border-white/20 bg-white/10',
-                  active && 'border-current bg-current/20',
-                  future && 'border-white/10 bg-transparent',
-                )}
-                style={active ? { borderColor: step.color, color: step.color } : undefined}
-                >
-                  {done
-                    ? <CheckCircle size={10} className="text-white/30" />
-                    : <span className="text-[9px] font-bold leading-none"
-                        style={active ? { color: step.color } : undefined}>
-                        {idx + 1}
-                      </span>
-                  }
-                </div>
-                <span className="hidden sm:block" style={active ? { color: step.color } : undefined}>
-                  {step.shortLabel}
-                </span>
-              </div>
-
-              {/* Arrow between steps */}
-              {idx < STEPS.length - 1 && (
-                <ChevronRight size={12} className={cn(
-                  'flex-shrink-0 mx-0.5',
-                  idx < currentIndex ? 'text-white/20' : 'text-white/8'
-                )} />
-              )}
-            </div>
-          )
-        })}
+      {/* ── Gradient progress bar ───────────────────────────────────────── */}
+      <div className="h-[2px] bg-white/5 relative">
+        <div
+          className="absolute inset-y-0 left-0 transition-all duration-700 ease-out"
+          style={{
+            width: `${progressPct}%`,
+            background: `linear-gradient(90deg, #60a5fa 0%, ${currentStep.color} 100%)`,
+          }}
+        />
       </div>
 
-      {/* Current stage label + advance button */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div>
-          <p className="text-[11px] text-white/30 font-medium uppercase tracking-wider leading-none mb-0.5">Étape actuelle</p>
-          <p className="text-sm font-bold" style={{ color: currentStep.color }}>{currentStep.label}</p>
+      {/* ── Step track ──────────────────────────────────────────────────── */}
+      <div className="px-4 pt-3 pb-0 overflow-x-auto scrollbar-hide">
+        <div className="flex items-center min-w-0">
+          {STEPS.map((step, idx) => {
+            const done   = idx < currentIndex
+            const active = idx === currentIndex
+            const future = idx > currentIndex
+
+            return (
+              <div key={step.id} className="flex items-center flex-shrink-0">
+                {/* Node + label */}
+                <div className={cn(
+                  'flex items-center gap-1.5 px-1 py-0.5 rounded-md transition-all',
+                )}>
+                  {/* Circle */}
+                  <div
+                    className={cn(
+                      'flex items-center justify-center rounded-full flex-shrink-0 transition-all',
+                      done   ? 'w-4.5 h-4.5 bg-white/10 w-[18px] h-[18px]' : '',
+                      active ? 'w-[22px] h-[22px] border-[2px]' : '',
+                      future ? 'w-[18px] h-[18px] border border-white/10' : '',
+                    )}
+                    style={active ? {
+                      borderColor: step.color,
+                      backgroundColor: `${step.color}22`,
+                    } : {}}
+                  >
+                    {done
+                      ? <Check size={10} className="text-white/40" />
+                      : <span
+                          className="text-[9px] font-bold leading-none"
+                          style={{ color: active ? step.color : 'rgba(255,255,255,0.18)' }}
+                        >
+                          {idx + 1}
+                        </span>
+                    }
+                  </div>
+
+                  {/* Label — always visible for active, hidden on sm for others */}
+                  <span
+                    className={cn(
+                      'text-[11px] font-semibold whitespace-nowrap transition-colors',
+                      done   ? 'hidden sm:block text-white/20' : '',
+                      active ? 'block' : '',
+                      future ? 'hidden sm:block text-white/12' : '',
+                    )}
+                    style={active ? { color: step.color } : {}}
+                  >
+                    {step.shortLabel}
+                  </span>
+                </div>
+
+                {/* Connector line */}
+                {idx < STEPS.length - 1 && (
+                  <div className={cn(
+                    'flex-shrink-0 h-px mx-1',
+                    idx < currentIndex - 1 ? 'w-5 bg-white/18' :
+                    idx === currentIndex - 1 ? 'w-5 bg-white/18' :
+                    'w-4 bg-white/6',
+                  )} />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Bottom bar: current stage + CTA ─────────────────────────────── */}
+      <div className="flex items-center justify-between px-4 py-3 mt-2 border-t border-white/5">
+        {/* Stage indicator */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span
+            className="flex-shrink-0 w-2 h-2 rounded-full animate-pulse"
+            style={{ backgroundColor: currentStep.color }}
+          />
+          <div className="min-w-0">
+            <p className="text-[10px] font-medium text-white/25 uppercase tracking-widest leading-none">
+              Étape actuelle
+            </p>
+            <p className="text-sm font-bold leading-snug mt-0.5 truncate"
+               style={{ color: currentStep.color }}>
+              {currentStep.label}
+            </p>
+          </div>
         </div>
 
-        {canAdvance && nextStep && (
-          <button
-            onClick={handleAdvance}
-            disabled={advancing}
-            className="ml-auto flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{
-              backgroundColor: `${nextStep.color}18`,
-              borderColor:     `${nextStep.color}40`,
-              color:           nextStep.color,
-            }}
-          >
-            {advancing
-              ? <Loader2 size={12} className="animate-spin" />
-              : <ArrowRight size={12} />}
-            {currentStep.ctaLabel}
-          </button>
-        )}
+        {/* CTA / status */}
+        <div className="flex-shrink-0 ml-4">
+          {canAdvance && nextStep && (
+            <button
+              onClick={handleAdvance}
+              disabled={advancing}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-125"
+              style={{
+                backgroundColor: `${nextStep.color}18`,
+                borderColor:     `${nextStep.color}45`,
+                color:            nextStep.color,
+              }}
+            >
+              {advancing
+                ? <Loader2 size={11} className="animate-spin" />
+                : <ArrowRight size={11} />}
+              <span>{currentStep.ctaLabel}</span>
+            </button>
+          )}
 
-        {!canAdvance && currentStep.id !== 'cloture' && (
-          <p className="ml-auto text-xs text-white/20 italic">
-            {currentRole === 'viewer'
-              ? 'Lecture seule — avancement non autorisé'
-              : currentRole === 'avant_vente' && !currentStep.roles.includes('avant_vente' as never)
-              ? 'En attente du commercial'
-              : null}
-          </p>
-        )}
+          {currentStep.id === 'cloture' && (
+            <span className="text-xs text-white/25 italic">Pipeline terminé</span>
+          )}
+
+          {!canAdvance && currentStep.id !== 'cloture' && (
+            <span className="text-[11px] text-white/20 italic">
+              {currentRole === 'viewer'
+                ? 'Accès lecture seule'
+                : currentRole === 'avant_vente' && !currentStep.roles.includes('avant_vente' as never)
+                ? 'En attente du commercial'
+                : null}
+            </span>
+          )}
+        </div>
       </div>
 
       {error && (
-        <p className="mt-2 text-xs text-red-400">{error}</p>
+        <p className="px-4 pb-3 text-xs text-red-400 -mt-1">{error}</p>
       )}
     </div>
   )

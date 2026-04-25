@@ -26,6 +26,7 @@ import {
   Copy, X, ExternalLink, Link as LinkIcon, Lock, ArrowRight,
   ClipboardList, Map, Trophy, XCircle, Flag, TrendingUp,
   BookOpen, MessageSquare, Calculator, ClipboardCheck, FileDown,
+  FolderOpen,
 } from 'lucide-react'
 import { ExportMenu } from '@/components/projects/ExportMenu'
 import Link from 'next/link'
@@ -33,6 +34,7 @@ import { cn } from '@/lib/utils/cn'
 import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates, SubscriptionTier, ProjectOutcome, Intervenant, ChiffrageData, ChecklistRemise } from '@/types'
 
 type Tab = 'synthese' | 'corp' | 'map' | 'besoin' | 'pieces' | 'specificites' | 'gonogo' | 'actions' | 'documents' | 'plan' | 'comments' | 'intervenants' | 'chiffrage' | 'checklist' | 'memoire' | 'membres'
+type TabGroup = 'analyse' | 'reponse' | 'commercial' | 'equipe'
 
 interface ProjectData {
   project: Project
@@ -68,6 +70,14 @@ export default function ProjectPage() {
   const [shareLoading, setShareLoading] = useState(false)
   const [shareUrl, setShareUrl]         = useState<string | null>(null)
   const [copyOk, setCopyOk]             = useState(false)
+
+  // ── Share with team ──────────────────────────────────────────────────────────
+  interface TeamBasic { id: string; name: string }
+  const [teamShareOpen,   setTeamShareOpen]   = useState(false)
+  const [myTeams,         setMyTeams]         = useState<TeamBasic[]>([])
+  const [teamsLoaded,     setTeamsLoaded]     = useState(false)
+  const [sharingTeamId,   setSharingTeamId]   = useState<string | null>(null)
+  const [teamShareDone,   setTeamShareDone]   = useState<Set<string>>(new Set())
 
   // ── Clôture panel ────────────────────────────────────────────────────────────
   const [cloturePanelOpen, setCloturePanelOpen] = useState(false)
@@ -226,6 +236,40 @@ export default function ProjectPage() {
     } finally { setCloturing(false) }
   }
 
+  async function openTeamShareDropdown() {
+    setTeamShareOpen(v => !v)
+    if (!teamsLoaded) {
+      fetch('/api/team')
+        .then(r => r.json())
+        .then(d => {
+          setMyTeams((d.teams ?? []).map((t: { id: string; name: string }) => ({ id: t.id, name: t.name })))
+          setTeamsLoaded(true)
+        })
+        .catch(() => { setTeamsLoaded(true) })
+    }
+  }
+
+  async function handleShareWithTeam(teamId: string) {
+    setSharingTeamId(teamId)
+    try {
+      const res = await fetch('/api/team/projects', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ teamId, projectId: id }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erreur')
+      setTeamShareDone(prev => new Set([...prev, teamId]))
+      setActionSuccess('Projet partagé avec l\'équipe ✓')
+      setTimeout(() => setTeamShareOpen(false), 1200)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Erreur')
+      setTeamShareOpen(false)
+    } finally {
+      setSharingTeamId(null)
+    }
+  }
+
   async function handleBriefAvantVente() {
     setBriefLoading(true); setBriefError(null)
     try {
@@ -310,25 +354,73 @@ export default function ProjectPage() {
   const isTabLocked = (tabId: Tab) => isFree && FREE_LOCKED_TABS.includes(tabId)
   // ────────────────────────────────────────────────────────────────────────────
 
-  const TABS: { id: Tab; label: string; icon: typeof FileText }[] = [
-    { id: 'synthese',     label: 'Synthèse',            icon: FileText },
-    { id: 'corp',         label: 'Synthèse Corporate',  icon: ClipboardList },
-    { id: 'map',          label: 'Carte',               icon: Map },
-    { id: 'besoin',       label: 'Besoin client',       icon: Users },
-    { id: 'pieces',       label: 'Pièces à fournir',    icon: ListChecks },
-    { id: 'specificites', label: 'Spécificités',        icon: Wrench },
-    { id: 'gonogo',       label: 'Go / No Go',          icon: BarChart3 },
-    { id: 'actions',      label: 'Actions',             icon: Target },
-    { id: 'documents',    label: 'Documents',           icon: Layers },
-    { id: 'plan',         label: 'Plan de réponse',     icon: BookOpen },
-    { id: 'comments',     label: 'Commentaires',        icon: MessageSquare },
-    // ── Pipeline commercial ──────────────────────────────────────────────────
-    { id: 'intervenants', label: 'Intervenants',        icon: Users },
-    { id: 'chiffrage',    label: 'Chiffrage',           icon: Calculator },
-    { id: 'checklist',    label: 'Checklist remise',    icon: ClipboardCheck },
-    { id: 'memoire',      label: 'Mémoire technique',   icon: BookOpen },
-    { id: 'membres',      label: 'Membres',             icon: Users    },
+  interface TabDef { id: Tab; label: string; icon: typeof FileText }
+  const TAB_GROUPS: {
+    id:             TabGroup
+    label:          string
+    icon:           typeof FileText
+    activeGroupCls: string
+    activeSubColor: string
+    tabs:           TabDef[]
+  }[] = [
+    {
+      id: 'analyse',
+      label: 'Analyse IA',
+      icon: Cpu,
+      activeGroupCls: 'bg-blue-500/12 border-blue-500/30 text-blue-400',
+      activeSubColor: 'text-blue-400',
+      tabs: [
+        { id: 'synthese',     label: 'Synthèse',           icon: FileText    },
+        { id: 'besoin',       label: 'Besoin client',       icon: Users       },
+        { id: 'specificites', label: 'Spécificités',        icon: Wrench      },
+        { id: 'pieces',       label: 'Pièces à fournir',    icon: ListChecks  },
+        { id: 'gonogo',       label: 'Go / No Go',          icon: BarChart3   },
+        { id: 'actions',      label: 'Actions',             icon: Target      },
+      ],
+    },
+    {
+      id: 'reponse',
+      label: 'Dossier',
+      icon: FolderOpen,
+      activeGroupCls: 'bg-violet-500/12 border-violet-500/30 text-violet-400',
+      activeSubColor: 'text-violet-400',
+      tabs: [
+        { id: 'plan',         label: 'Plan de réponse',     icon: BookOpen    },
+        { id: 'memoire',      label: 'Mémoire technique',   icon: FileText    },
+        { id: 'corp',         label: 'Synthèse Corporate',  icon: ClipboardList },
+        { id: 'documents',    label: 'Documents',           icon: Layers      },
+        { id: 'map',          label: 'Carte',               icon: Map         },
+      ],
+    },
+    {
+      id: 'commercial',
+      label: 'Commercial',
+      icon: TrendingUp,
+      activeGroupCls: 'bg-amber-500/12 border-amber-500/30 text-amber-400',
+      activeSubColor: 'text-amber-400',
+      tabs: [
+        { id: 'intervenants', label: 'Intervenants',        icon: Users        },
+        { id: 'chiffrage',    label: 'Chiffrage',           icon: Calculator   },
+        { id: 'checklist',    label: 'Checklist remise',    icon: ClipboardCheck },
+      ],
+    },
+    {
+      id: 'equipe',
+      label: 'Équipe',
+      icon: Users,
+      activeGroupCls: 'bg-emerald-500/12 border-emerald-500/30 text-emerald-400',
+      activeSubColor: 'text-emerald-400',
+      tabs: [
+        { id: 'comments',     label: 'Commentaires',        icon: MessageSquare },
+        { id: 'membres',      label: 'Membres',             icon: Users         },
+      ],
+    },
   ]
+
+  // Derive the active group from the active tab
+  const activeGroupObj = TAB_GROUPS.find(g => g.tabs.some(t => t.id === activeTab)) ?? TAB_GROUPS[0]
+
+  // Active group derived from active tab — no extra state needed
 
   return (
     <div className="flex flex-col min-h-0 animate-fade-in">
@@ -409,6 +501,65 @@ export default function ProjectPage() {
                 : shareUrl ? <LinkIcon size={13} /> : <Share2 size={13} />}
               {shareUrl ? 'Masquer le lien' : 'Partager'}
             </button>
+            {/* Share with team */}
+            <div className="relative">
+              <button
+                onClick={openTeamShareDropdown}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-2 border text-xs font-medium rounded-lg transition-all',
+                  teamShareOpen
+                    ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400'
+                    : 'bg-white/5 hover:bg-white/10 border-white/10 text-white/70 hover:text-white',
+                )}
+              >
+                <FolderOpen size={13} />
+                Équipe
+              </button>
+              {teamShareOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setTeamShareOpen(false)} />
+                  <div className="absolute left-0 top-full mt-1.5 w-56 rounded-xl shadow-2xl z-50 overflow-hidden"
+                  style={{ background: 'rgba(12,18,38,0.98)', border: '1px solid rgba(255,255,255,0.10)', backdropFilter: 'blur(20px)' }}>
+                  <div className="p-1.5">
+                    <p className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white/20">
+                      Partager avec une équipe
+                    </p>
+                    {!teamsLoaded ? (
+                      <div className="flex justify-center py-3">
+                        <Loader2 size={14} className="animate-spin text-white/30" />
+                      </div>
+                    ) : myTeams.length === 0 ? (
+                      <p className="px-3 py-2 text-xs text-white/30">Vous n'appartenez à aucune équipe</p>
+                    ) : (
+                      myTeams.map(team => {
+                        const done = teamShareDone.has(team.id)
+                        return (
+                          <button
+                            key={team.id}
+                            onClick={() => !done && handleShareWithTeam(team.id)}
+                            disabled={sharingTeamId === team.id || done}
+                            className={cn(
+                              'w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg transition-all text-left',
+                              done ? 'text-emerald-400 opacity-60 cursor-default' : 'hover:bg-white/6 text-white/70 hover:text-white',
+                            )}
+                          >
+                            {sharingTeamId === team.id
+                              ? <Loader2 size={11} className="animate-spin flex-shrink-0" />
+                              : done
+                              ? <CheckCircle size={11} className="flex-shrink-0 text-emerald-400" />
+                              : <FolderOpen size={11} className="flex-shrink-0 text-white/30" />}
+                            <span className="font-medium truncate">{team.name}</span>
+                            {done && <span className="ml-auto text-[10px] text-emerald-400/60">Partagé</span>}
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
+                  </div>
+                </>
+              )}
+            </div>
+
             <button
               onClick={handleAddDoc}
               className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-xs font-medium rounded-lg transition-all"
@@ -664,26 +815,58 @@ export default function ProjectPage() {
           onStageChange={setPipelineStage}
         />
 
-        {/* Tabs */}
-        <div className="flex gap-0.5 -mb-px overflow-x-auto scrollbar-hide">
-          {TABS.map(({ id: tabId, label, icon: Icon }) => {
+        {/* ── Grouped tab navigation ─────────────────────────────────── */}
+        {/* Level 1 — section groups */}
+        <div className="flex items-center gap-1.5 mb-1.5 overflow-x-auto scrollbar-hide">
+          {TAB_GROUPS.map(group => {
+            const Icon = group.icon
+            const isActive = group.id === activeGroupObj.id
+            return (
+              <button
+                key={group.id}
+                onClick={() => {
+                  if (!isActive) {
+                    // Switch to first tab of this group
+                    setActiveTab(group.tabs[0].id)
+                  }
+                }}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap flex-shrink-0',
+                  isActive
+                    ? group.activeGroupCls
+                    : 'bg-white/3 border-white/6 text-white/35 hover:text-white/60 hover:border-white/15 hover:bg-white/5',
+                )}
+              >
+                <Icon size={12} />
+                {group.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Level 2 — sub-tabs within active group */}
+        <div className="flex gap-0 -mb-px overflow-x-auto scrollbar-hide">
+          {activeGroupObj.tabs.map(({ id: tabId, label, icon: Icon }) => {
             const locked = isTabLocked(tabId)
+            const isActive = !locked && activeTab === tabId
             return (
               <button
                 key={tabId}
                 data-tab-btn
-                data-active={(!locked && activeTab === tabId).toString()}
+                data-active={isActive.toString()}
                 onClick={() => !locked && setActiveTab(tabId)}
                 className={cn(
-                  'flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap',
+                  'flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-medium whitespace-nowrap transition-colors',
                   locked
-                    ? 'text-white/20 hover:text-white/30 cursor-default'
-                    : activeTab === tabId
-                      ? 'text-blue-400'
-                      : 'text-white/40 hover:text-white/70'
+                    ? 'text-white/20 cursor-default'
+                    : isActive
+                      ? cn('font-semibold', activeGroupObj.activeSubColor)
+                      : 'text-white/40 hover:text-white/70',
                 )}
               >
-                {locked ? <Lock size={11} className="flex-shrink-0" /> : <Icon size={13} className="flex-shrink-0" />}
+                {locked
+                  ? <Lock size={11} className="flex-shrink-0" />
+                  : <Icon size={12} className="flex-shrink-0" />}
                 {label}
               </button>
             )
