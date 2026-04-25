@@ -17,13 +17,14 @@ export async function POST() {
     .eq('id', user.id)
     .single()
 
-  if (!profile?.email) return NextResponse.json({ accepted: [] })
+  const userEmail = (profile?.email ?? user.email ?? '').toLowerCase()
+  if (!userEmail) return NextResponse.json({ accepted: [] })
 
   // Fetch all pending invitations for this email
   const { data: invitations } = await supabase
     .from('invitations')
     .select('*')
-    .eq('invited_email', profile.email.toLowerCase())
+    .eq('invited_email', userEmail)
     .eq('status', 'pending')
     .gt('expires_at', new Date().toISOString())
 
