@@ -86,7 +86,7 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
           <h1 className="text-base font-semibold text-white">Mes projets</h1>
           <p className="text-xs text-white/35 mt-0.5">{filtered.length} projet{filtered.length !== 1 ? 's' : ''}</p>
         </div>
-        <Link href="/projects/new" className="btn-primary">
+        <Link href="/projects/new" className="btn-primary flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white">
           <Plus size={14} />
           Nouveau projet
         </Link>
