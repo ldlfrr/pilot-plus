@@ -541,29 +541,62 @@ function MembresTab({
         </div>
       </div>
 
-      {/* Leave team / danger zone */}
-      <div className="flex items-center justify-between gap-3 pt-1">
-        {/* Leave team (any non-sole-admin) */}
-        {myMembership && !(isAdmin && isSoleAdmin) && (
-          <button onClick={handleLeave} disabled={leaving}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-white/35 hover:text-amber-400 border border-white/10 hover:border-amber-500/25 hover:bg-amber-950/15 rounded-xl transition-all disabled:opacity-40">
-            {leaving ? <Loader2 size={13} className="animate-spin"/> : <LogOut size={13}/>}
-            Quitter l&apos;équipe
-          </button>
-        )}
-        {/* Sole admin can't leave — must delete or promote first */}
-        {isAdmin && isSoleAdmin && (
-          <p className="text-[11px] text-white/20 italic">Vous êtes le seul admin — promouvez un membre avant de partir</p>
-        )}
+      {/* ── Actions zone ─────────────────────────────────────────────────── */}
+      <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.015)' }}>
+        <p className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/20 border-b border-white/6">
+          Actions
+        </p>
+        <div className="p-3 space-y-2">
 
-        {/* Delete team (admin only) */}
-        {isAdmin && (
-          <button onClick={handleDeleteTeam} disabled={deleting}
-            className="ml-auto flex items-center gap-1.5 px-4 py-2 text-sm text-red-400/40 hover:text-red-400 border border-red-500/10 hover:border-red-500/30 hover:bg-red-950/20 rounded-xl transition-all disabled:opacity-40">
-            {deleting ? <Loader2 size={13} className="animate-spin"/> : <Trash2 size={13}/>}
-            Supprimer l&apos;équipe
-          </button>
-        )}
+          {/* Member: leave team */}
+          {myMembership && !isAdmin && (
+            <button onClick={handleLeave} disabled={leaving}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-amber-300/80 hover:text-amber-300 hover:bg-amber-950/30 border border-amber-500/15 hover:border-amber-500/35 transition-all disabled:opacity-40 text-left">
+              {leaving ? <Loader2 size={15} className="animate-spin flex-shrink-0"/> : <LogOut size={15} className="flex-shrink-0"/>}
+              <div>
+                <p className="font-semibold leading-tight">Quitter l&apos;équipe</p>
+                <p className="text-[11px] text-amber-400/40 mt-0.5">Vous perdrez l&apos;accès à cette équipe</p>
+              </div>
+            </button>
+          )}
+
+          {/* Admin who is not sole admin: can also leave */}
+          {isAdmin && !isSoleAdmin && (
+            <button onClick={handleLeave} disabled={leaving}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-amber-300/80 hover:text-amber-300 hover:bg-amber-950/30 border border-amber-500/15 hover:border-amber-500/35 transition-all disabled:opacity-40 text-left">
+              {leaving ? <Loader2 size={15} className="animate-spin flex-shrink-0"/> : <LogOut size={15} className="flex-shrink-0"/>}
+              <div>
+                <p className="font-semibold leading-tight">Quitter l&apos;équipe</p>
+                <p className="text-[11px] text-amber-400/40 mt-0.5">Un autre admin continuera à gérer l&apos;équipe</p>
+              </div>
+            </button>
+          )}
+
+          {/* Sole admin can't leave */}
+          {isAdmin && isSoleAdmin && (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm border border-white/5"
+              style={{ background: 'rgba(255,255,255,0.02)' }}>
+              <LogOut size={15} className="text-white/15 flex-shrink-0"/>
+              <div>
+                <p className="font-medium text-white/25 leading-tight">Quitter l&apos;équipe</p>
+                <p className="text-[11px] text-white/15 mt-0.5">Promouvez un membre en admin avant de partir</p>
+              </div>
+            </div>
+          )}
+
+          {/* Admin: delete team */}
+          {isAdmin && (
+            <button onClick={handleDeleteTeam} disabled={deleting}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400/70 hover:text-red-400 hover:bg-red-950/25 border border-red-500/15 hover:border-red-500/40 transition-all disabled:opacity-40 text-left">
+              {deleting ? <Loader2 size={15} className="animate-spin flex-shrink-0"/> : <Trash2 size={15} className="flex-shrink-0"/>}
+              <div>
+                <p className="font-semibold leading-tight">Supprimer l&apos;équipe</p>
+                <p className="text-[11px] text-red-400/40 mt-0.5">Tous les membres perdront l&apos;accès. Irréversible.</p>
+              </div>
+            </button>
+          )}
+
+        </div>
       </div>
     </div>
   )

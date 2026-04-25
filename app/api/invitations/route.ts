@@ -209,9 +209,10 @@ export async function POST(req: Request) {
 }
 
 /**
- * GET /api/invitations — list pending invitations for the current user
+ * GET /api/invitations — list invitations for the current user
+ * ?history=1 → returns accepted/declined/expired (for notification history)
  */
-export async function GET() {
+export async function GET(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
@@ -225,13 +226,21 @@ export async function GET() {
   const userEmail = (profile?.email ?? user.email ?? '').toLowerCase()
   if (!userEmail) return NextResponse.json({ invitations: [] })
 
-  const { data } = await supabase
-    .from('invitations')
-    .select('*')
-    .eq('invited_email', userEmail)
-    .eq('status', 'pending')
-    .gt('expires_at', new Date().toISOString())
-    .order('created_at', { ascending: false })
+  const isHistory = new URL(req.url).searchParams.get('history') === '1'
 
+  const query = supabase
+    .from('invitations')
+    .select('id, type, project_id, team_id, project_name, team_name, inviter_name, role, token, status, created_at, expires_at')
+    .eq('invited_email', userEmail)
+    .order('created_at', { ascending: false })
+    .limit(30)
+
+  if (isHistory) {
+    query.in('status', ['accepted', 'declined', 'expired'])
+  } else {
+    query.eq('status', 'pending').gt('expires_at', new Date().toISOString())
+  }
+
+  const { data } = await query
   return NextResponse.json({ invitations: data ?? [] })
 }

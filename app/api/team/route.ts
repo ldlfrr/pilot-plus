@@ -12,23 +12,36 @@ async function getFormattedTeam(supabase: Awaited<ReturnType<typeof createClient
 
   if (!team) return null
 
-  const { data: members } = await supabase
+  // Step 1: fetch team members (no embedding — avoids PostgREST FK resolution issues)
+  const { data: memberRows } = await supabase
     .from('team_members')
-    .select('id, user_id, role, joined_at, profiles(email, full_name)')
+    .select('id, user_id, role, joined_at')
     .eq('team_id', teamId)
     .order('joined_at', { ascending: true })
 
-  const formattedMembers = (members ?? []).map((m: Record<string, unknown>) => {
-    const profile = m.profiles as { email: string; full_name: string | null } | null
-    return {
-      id:        m.id,
-      user_id:   m.user_id,
-      email:     profile?.email ?? '',
-      full_name: profile?.full_name ?? null,
-      role:      m.role,
-      joined_at: m.joined_at,
+  const rows = memberRows ?? []
+
+  // Step 2: fetch profiles for those user_ids
+  const userIds = rows.map(m => m.user_id as string).filter(Boolean)
+  let profileMap: Record<string, { email: string; full_name: string | null }> = {}
+  if (userIds.length > 0) {
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .in('id', userIds)
+    for (const p of profilesData ?? []) {
+      profileMap[p.id] = { email: p.email ?? '', full_name: p.full_name ?? null }
     }
-  })
+  }
+
+  const formattedMembers = rows.map(m => ({
+    id:        m.id,
+    user_id:   m.user_id,
+    email:     profileMap[m.user_id as string]?.email ?? '',
+    full_name: profileMap[m.user_id as string]?.full_name ?? null,
+    role:      m.role,
+    joined_at: m.joined_at,
+  }))
 
   return { ...team, members: formattedMembers }
 }
@@ -67,45 +80,28 @@ export async function POST(req: NextRequest) {
 
   const { name } = await req.json() as { name: string }
 
+  // Step 1: Insert team — owner can SELECT their own team via teams_select policy (owner_id = auth.uid())
   const { data: team, error: teamErr } = await supabase
     .from('teams')
     .insert({ name: name?.trim() || 'Mon équipe', owner_id: user.id })
-    .select()
+    .select('id, name, owner_id')
     .single()
 
   if (teamErr) return NextResponse.json({ error: teamErr.message }, { status: 500 })
 
-  // Add creator as first member with admin role
-  const { data: newMember, error: memberErr } = await supabase
+  // Step 2: Add creator as admin member
+  const { error: memberErr } = await supabase
     .from('team_members')
     .insert({ team_id: team.id, user_id: user.id, role: 'admin' })
-    .select()
-    .single()
 
   if (memberErr) {
-    // Rollback team creation if member insert fails
+    // Rollback: delete the orphan team
     await supabase.from('teams').delete().eq('id', team.id)
     return NextResponse.json({ error: memberErr.message }, { status: 500 })
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('email, full_name')
-    .eq('id', user.id)
-    .single()
-
-  const formattedTeam = {
-    ...team,
-    members: [{
-      id:        newMember?.id ?? `${team.id}-admin`,
-      user_id:   user.id,
-      email:     profile?.email ?? user.email ?? '',
-      full_name: profile?.full_name ?? null,
-      role:      'admin' as const,
-      joined_at: new Date().toISOString(),
-    }],
-  }
-
+  // Step 3: Return fully formatted team (user is now a member, getFormattedTeam works)
+  const formattedTeam = await getFormattedTeam(supabase, team.id)
   return NextResponse.json({ team: formattedTeam }, { status: 201 })
 }
 

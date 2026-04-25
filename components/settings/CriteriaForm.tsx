@@ -4,12 +4,13 @@ import { useState } from 'react'
 import {
   Plus, X, Info, MapPin, Wrench, Award, Users, TrendingUp,
   Star, SlidersHorizontal, FileText, Building2, Zap, Target,
-  Globe, Briefcase, BarChart3, Euro, Calendar, Layers, AlertTriangle,
+  Globe, Briefcase, BarChart3, Euro, Layers, AlertTriangle,
+  Sun, Wind, HardHat, Activity, Leaf, Check, Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { CompanyCriteria } from '@/types'
 
-// ── Preset data ───────────────────────────────────────────────────────────────
+// ── Geographic zones (universal) ──────────────────────────────────────────────
 
 const ZONES_GEO = [
   'Île-de-France', 'Auvergne-Rhône-Alpes', "Provence-Alpes-Côte d'Azur",
@@ -18,34 +19,232 @@ const ZONES_GEO = [
   'Bourgogne-Franche-Comté', 'Corse', 'DOM-TOM', 'National',
 ]
 
-const TYPES_PROJETS = [
-  'Toiture industrielle', 'Toiture commerciale', 'Toiture agricole (agrivoltaïsme)',
-  'Ombrière parking', 'Centrale au sol', 'Toiture tertiaire',
-  'Façade intégrée (BIPV)', 'Flottant (floating PV)', 'Serre photovoltaïque',
-  'Résidentiel collectif', 'Bâtiment public', 'Infrastructure routière',
-]
-
-const CERTIFICATIONS = [
-  'QualiPV Bat', 'QualiPV Elec', 'RGE', 'Qualifelec ENR',
-  "Quali'EnR", 'IRVE', 'ISO 9001', 'ISO 14001',
-  'MASE', 'OHSAS 18001', 'CONSUEL agréé', 'Qualibat',
-  'AISBL', 'CSPE',
-]
-
-const SECTEURS_CLIENTS = [
-  'Industrie', 'Collectivités territoriales', 'Tertiaire / bureaux',
-  'Grande distribution', 'Logistique / entrepôts', 'Agriculture',
-  'Enseignement', 'Santé', 'Hôtellerie', 'Particuliers', 'Promoteurs',
-]
-
-const SECTEURS_PRINCIPAUX = [
-  'Photovoltaïque', 'Éolien', 'BTP / Génie civil', 'Électricité / CVC',
-  'Géothermie', 'Biomasse / Biogaz', 'Efficacité énergétique', 'Multi-énergie',
-]
-
 const EFFECTIFS_OPTIONS = ['1 – 5', '6 – 20', '21 – 50', '51 – 200', '201 – 500', '500+']
 const CA_OPTIONS = ['< 500 k€', '500 k€ – 2 M€', '2 – 10 M€', '10 – 50 M€', '50 – 200 M€', '200 M€+']
 const DELAI_OPTIONS = ['< 1 mois', '1 – 3 mois', '3 – 6 mois', '6 – 12 mois', '> 12 mois']
+
+// ── Sector configuration ───────────────────────────────────────────────────────
+
+interface SectorConfig {
+  label:               string
+  icon:                React.ElementType
+  iconColor:           string   // classes for icon container
+  activeCard:          string   // classes for selected card border/bg
+  badgeCls:            string   // mini badge pill
+  types_projets:       string[]
+  certifications:      string[]
+  secteurs_clients:    string[]
+  cap_unit:            string
+  cap_min_label:       string
+  cap_max_label:       string
+  cap_mensuelle_label: string
+}
+
+const SECTOR_CONFIG: Record<string, SectorConfig> = {
+  'Photovoltaïque': {
+    label: 'Photovoltaïque',
+    icon: Sun,
+    iconColor: 'bg-amber-500/15 text-amber-400',
+    activeCard: 'border-amber-500/40 bg-amber-500/8',
+    badgeCls: 'bg-amber-500/15 text-amber-300 border-amber-500/25',
+    types_projets: [
+      'Toiture industrielle', 'Toiture commerciale', 'Toiture agricole (agrivoltaïsme)',
+      'Ombrière parking', 'Centrale au sol', 'Toiture tertiaire',
+      'Façade intégrée (BIPV)', 'Flottant (floating PV)', 'Serre photovoltaïque',
+      'Résidentiel collectif', 'Bâtiment public', 'Infrastructure routière',
+    ],
+    certifications: [
+      'QualiPV Bat', 'QualiPV Elec', 'RGE', 'Qualifelec ENR',
+      "Quali'EnR", 'CONSUEL agréé', 'ISO 9001', 'ISO 14001', 'Qualibat',
+    ],
+    secteurs_clients: [
+      'Industrie', 'Collectivités territoriales', 'Tertiaire / bureaux',
+      'Grande distribution', 'Logistique / entrepôts', 'Agriculture',
+      'Enseignement', 'Santé', 'Hôtellerie', 'Particuliers', 'Promoteurs',
+    ],
+    cap_unit: 'kWc',
+    cap_min_label: 'Puissance min acceptée',
+    cap_max_label: 'Puissance max acceptée',
+    cap_mensuelle_label: 'Capacité mensuelle',
+  },
+  'IRVE': {
+    label: 'IRVE',
+    icon: Zap,
+    iconColor: 'bg-cyan-500/15 text-cyan-400',
+    activeCard: 'border-cyan-500/40 bg-cyan-500/8',
+    badgeCls: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/25',
+    types_projets: [
+      'Borne AC résidentiel (T2)', 'Borne AC tertiaire', 'Borne DC rapide (≥ 50 kW)',
+      'Borne DC ultra-rapide (≥ 150 kW)', 'Station de charge collective',
+      'Parking public / privé', 'Autoroute / aire de service', 'Fleet B2B',
+    ],
+    certifications: [
+      'IRVE P1', 'IRVE P2', 'RGE IRVE', 'Qualifelec IRVE',
+      'Qualibat', 'ISO 9001', 'AFNOR NF C 15-100',
+    ],
+    secteurs_clients: [
+      'Collectivités / Mairies', 'Syndics de copropriété', 'Entreprises / Flottes',
+      'Grande distribution', 'Hôtellerie', 'Promoteurs',
+      'Opérateurs de mobilité', 'Bailleurs sociaux',
+    ],
+    cap_unit: 'bornes',
+    cap_min_label: 'Nb bornes min / projet',
+    cap_max_label: 'Nb bornes max / projet',
+    cap_mensuelle_label: 'Bornes installées / mois',
+  },
+  'Désamiantage': {
+    label: 'Désamiantage',
+    icon: HardHat,
+    iconColor: 'bg-red-500/15 text-red-400',
+    activeCard: 'border-red-500/40 bg-red-500/8',
+    badgeCls: 'bg-red-500/15 text-red-300 border-red-500/25',
+    types_projets: [
+      'Retrait toiture fibrociment', 'Retrait amiante sol', 'Retrait amiante mur / plafond',
+      'Encapsulage / confinement', 'Démolition avant rénovation',
+      'Désamiantage industriel', 'Traitement avant déconstruction', 'Dalles vinyle-amiante',
+    ],
+    certifications: [
+      'Certification SS3 (sous-section 3)', 'Certification SS4 (sous-section 4)',
+      'Qualibat 1552', 'MASE', 'ISO 9001', 'ISO 14001', 'ISO 45001',
+    ],
+    secteurs_clients: [
+      'Industrie', 'Collectivités territoriales', 'Bailleurs sociaux',
+      'Tertiaire / bureaux', 'Particuliers', 'Syndics de copropriété', 'Promoteurs',
+    ],
+    cap_unit: 'm²',
+    cap_min_label: 'Surface min / chantier',
+    cap_max_label: 'Surface max / chantier',
+    cap_mensuelle_label: 'Surface traitée / mois',
+  },
+  'Éolien': {
+    label: 'Éolien',
+    icon: Wind,
+    iconColor: 'bg-sky-500/15 text-sky-400',
+    activeCard: 'border-sky-500/40 bg-sky-500/8',
+    badgeCls: 'bg-sky-500/15 text-sky-300 border-sky-500/25',
+    types_projets: [
+      'Éolien terrestre < 100 kW', 'Éolien terrestre 100 – 1000 kW',
+      'Éolien terrestre > 1 MW', 'Micro-éolien urbain',
+      'Repowering / Remplacement', 'Éolien flottant (offshore)',
+    ],
+    certifications: [
+      'Qualifelec ENR', 'RGE', 'Qualibat', 'MASE', 'ISO 9001', 'ISO 14001',
+    ],
+    secteurs_clients: [
+      'Collectivités territoriales', 'Agriculteurs', 'Industriels',
+      'Développeurs énergétiques', 'SEM / SEML', 'Communautés énergétiques',
+    ],
+    cap_unit: 'kW',
+    cap_min_label: 'Puissance min acceptée',
+    cap_max_label: 'Puissance max acceptée',
+    cap_mensuelle_label: 'Capacité installée / mois',
+  },
+  'BTP / Génie civil': {
+    label: 'BTP / Génie civil',
+    icon: Building2,
+    iconColor: 'bg-stone-500/15 text-stone-400',
+    activeCard: 'border-stone-500/40 bg-stone-500/8',
+    badgeCls: 'bg-stone-500/15 text-stone-300 border-stone-500/25',
+    types_projets: [
+      'Terrassement / VRD', 'Construction neuve gros œuvre', 'Réhabilitation',
+      'Démolition', 'Charpente-couverture', 'Étanchéité',
+      'Maçonnerie', 'Second œuvre', 'Travaux spéciaux',
+    ],
+    certifications: [
+      'Qualibat', 'ISO 9001', 'ISO 14001', 'MASE', 'ISO 45001', 'COFRAC',
+    ],
+    secteurs_clients: [
+      'Collectivités territoriales', 'Promoteurs', 'Bailleurs sociaux',
+      'Industrie', 'Agriculture', 'Particuliers', 'Syndics',
+    ],
+    cap_unit: 'm²',
+    cap_min_label: 'Surface min / chantier',
+    cap_max_label: 'Surface max / chantier',
+    cap_mensuelle_label: 'Surface construite / mois',
+  },
+  'Électricité / CVC': {
+    label: 'Électricité / CVC',
+    icon: Activity,
+    iconColor: 'bg-violet-500/15 text-violet-400',
+    activeCard: 'border-violet-500/40 bg-violet-500/8',
+    badgeCls: 'bg-violet-500/15 text-violet-300 border-violet-500/25',
+    types_projets: [
+      'Installation électrique tertiaire', 'Installation industrielle HTA / HTB',
+      'CVC résidentiel', 'CVC tertiaire', 'Climatisation / Froid',
+      'Ventilation VMC / VMC double flux', 'Pompe à chaleur', 'Chauffage biomasse',
+      'Géothermie', 'Désenfumage',
+    ],
+    certifications: [
+      'Qualifelec', 'RGE', 'Qualibat', 'IRVE P1', 'IRVE P2',
+      'PGN / PGP gaz', 'ISO 9001', 'COFRAC',
+    ],
+    secteurs_clients: [
+      'Industrie', 'Collectivités territoriales', 'Tertiaire / bureaux',
+      'Résidentiel collectif', 'Grande distribution', 'Santé', 'Hôtellerie',
+    ],
+    cap_unit: 'kW',
+    cap_min_label: 'Puissance min / chantier',
+    cap_max_label: 'Puissance max / chantier',
+    cap_mensuelle_label: 'Capacité installée / mois',
+  },
+  'Efficacité énergétique': {
+    label: 'Efficacité énergétique',
+    icon: Leaf,
+    iconColor: 'bg-emerald-500/15 text-emerald-400',
+    activeCard: 'border-emerald-500/40 bg-emerald-500/8',
+    badgeCls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
+    types_projets: [
+      'Audit énergétique', 'CPE (Contrat de performance énergétique)',
+      'Isolation thermique ITE / ITI', 'Remplacement éclairage LED',
+      'GTB / GTC / Automate bâtiment', 'Smart building / BMS',
+      'Récupération chaleur', 'Stockage énergie (BESS)',
+    ],
+    certifications: [
+      'RGE', 'Qualibat', 'ISO 50001', 'ISO 9001', 'ISO 14001', 'BREEAM', 'HQE',
+    ],
+    secteurs_clients: [
+      'Industrie', 'Collectivités territoriales', 'Tertiaire / bureaux',
+      'Hôpitaux / Santé', 'Logistique / entrepôts', 'Hôtellerie', 'Copropriétés',
+    ],
+    cap_unit: 'kWh/an',
+    cap_min_label: 'Économies min estimées',
+    cap_max_label: 'Économies max estimées',
+    cap_mensuelle_label: 'Volume traité / mois',
+  },
+  'Multi-activité': {
+    label: 'Multi-activité',
+    icon: Layers,
+    iconColor: 'bg-blue-500/15 text-blue-400',
+    activeCard: 'border-blue-500/40 bg-blue-500/8',
+    badgeCls: 'bg-blue-500/15 text-blue-300 border-blue-500/25',
+    types_projets: [
+      'Photovoltaïque', 'IRVE / Mobilité électrique', 'Désamiantage',
+      'Éolien', 'BTP / Génie civil', 'Électricité tertiaire / industrielle',
+      'CVC', 'Efficacité énergétique', 'Réhabilitation multi-lots', 'Autre',
+    ],
+    certifications: [
+      'RGE', 'QualiPV Bat', 'QualiPV Elec', 'Qualifelec', 'IRVE P1', 'IRVE P2',
+      'Qualibat', 'MASE', 'ISO 9001', 'ISO 14001', 'ISO 45001', 'ISO 50001',
+      'Certification SS3', 'Certification SS4', 'COFRAC', 'BREEAM', 'HQE',
+    ],
+    secteurs_clients: [
+      'Industrie', 'Collectivités territoriales', 'Tertiaire / bureaux',
+      'Grande distribution', 'Logistique / entrepôts', 'Agriculture',
+      'Enseignement', 'Santé', 'Hôtellerie', 'Particuliers', 'Promoteurs',
+      'Bailleurs sociaux', 'Syndics de copropriété',
+    ],
+    cap_unit: '€',
+    cap_min_label: 'Budget min / projet',
+    cap_max_label: 'Budget max / projet',
+    cap_mensuelle_label: 'Volume mensuel',
+  },
+}
+
+const SECTOR_KEYS = Object.keys(SECTOR_CONFIG)
+
+function getSector(secteur: string | undefined): SectorConfig {
+  return SECTOR_CONFIG[secteur ?? ''] ?? SECTOR_CONFIG['Photovoltaïque']
+}
 
 // ── Shared atoms ──────────────────────────────────────────────────────────────
 
@@ -285,6 +484,64 @@ function WeightSelector({
   )
 }
 
+// ── Sector selector card ──────────────────────────────────────────────────────
+
+function SectorPicker({
+  value, onChange,
+}: { value: string | undefined; onChange: (v: string) => void }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      {SECTOR_KEYS.map(key => {
+        const cfg = SECTOR_CONFIG[key]
+        const Icon = cfg.icon
+        const active = value === key
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onChange(key)}
+            className={cn(
+              'relative flex flex-col items-center gap-2 p-3.5 rounded-xl border transition-all text-center',
+              active
+                ? cn('border-white/20', cfg.activeCard)
+                : 'border-white/7 bg-white/3 hover:bg-white/6 hover:border-white/15',
+            )}
+          >
+            {active && (
+              <span className="absolute top-2 right-2 w-4 h-4 bg-white/90 rounded-full flex items-center justify-center">
+                <Check size={9} className="text-black" />
+              </span>
+            )}
+            <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', cfg.iconColor)}>
+              <Icon size={15} />
+            </div>
+            <span className={cn('text-[11px] font-semibold leading-tight', active ? 'text-white' : 'text-white/55')}>
+              {cfg.label}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Sector context banner (shown in non-profil tabs) ─────────────────────────
+
+function SectorBanner({ secteur }: { secteur: string | undefined }) {
+  if (!secteur) return null
+  const cfg = getSector(secteur)
+  const Icon = cfg.icon
+  return (
+    <div className={cn(
+      'flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-xs font-medium',
+      cfg.badgeCls,
+    )}>
+      <Icon size={13} />
+      <span>Critères adaptés pour le secteur <strong>{cfg.label}</strong> — unité : <strong>{cfg.cap_unit}</strong></span>
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 type Tab = 'profil' | 'perimetre' | 'capacites' | 'scoring' | 'import'
@@ -298,16 +555,37 @@ interface CriteriaFormProps {
 export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProps) {
   if (activeTab === 'import') return null
 
+  const sector = getSector(criteria.secteur_principal)
   const totalPoids = criteria.poids_rentabilite + criteria.poids_complexite +
     criteria.poids_alignement + criteria.poids_probabilite + criteria.poids_charge
 
   return (
     <div className="p-5 md:p-8 space-y-5 animate-fade-in">
 
-      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'profil' && (
         <>
-          {/* Identité */}
+          {/* Sector picker — prominent, at the top */}
+          <Card>
+            <SectionHeader
+              icon={Sparkles}
+              color="bg-blue-500/15 text-blue-400"
+              label="Secteur d'activité"
+              sub="Définit les certifications, types de projets et unités de capacité proposés dans le formulaire"
+            />
+            <SectorPicker
+              value={criteria.secteur_principal}
+              onChange={v => onUpdate('secteur_principal', v)}
+            />
+            {!criteria.secteur_principal && (
+              <p className="mt-3 text-[11px] text-amber-400/70 flex items-center gap-1.5">
+                <AlertTriangle size={11} />
+                Choisissez un secteur pour afficher des critères adaptés à votre activité.
+              </p>
+            )}
+          </Card>
+
+          {/* Company identity */}
           <Card>
             <SectionHeader icon={Building2} color="bg-blue-500/15 text-blue-400" label="Identité de l'entreprise" sub="Informations légales et administratives" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -328,15 +606,6 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
                 <TextInput value={criteria.annee_creation ?? ''} onChange={v => onUpdate('annee_creation', v)} placeholder="2012" type="number" />
               </div>
               <div>
-                <Label tooltip="Secteur d'activité principal de votre entreprise">Secteur principal</Label>
-                <SelectInput
-                  value={criteria.secteur_principal ?? ''}
-                  onChange={v => onUpdate('secteur_principal', v)}
-                  options={SECTEURS_PRINCIPAUX}
-                  placeholder="Choisir un secteur…"
-                />
-              </div>
-              <div>
                 <Label>Effectifs</Label>
                 <SelectInput
                   value={criteria.effectifs ?? ''}
@@ -345,7 +614,7 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
                   placeholder="Nombre de salariés…"
                 />
               </div>
-              <div className="sm:col-span-2">
+              <div>
                 <Label tooltip="Chiffre d'affaires annuel (dernier exercice clos)">CA annuel</Label>
                 <SelectInput
                   value={criteria.ca_annuel ?? ''}
@@ -357,7 +626,7 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
             </div>
           </Card>
 
-          {/* Description */}
+          {/* Company description */}
           <Card>
             <SectionHeader icon={FileText} color="bg-violet-500/15 text-violet-400" label="Présentation de l'entreprise" sub="Description transmise à l'IA à chaque scoring" />
             <div className="space-y-2">
@@ -368,7 +637,13 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
                 value={criteria.description_courte ?? ''}
                 onChange={e => onUpdate('description_courte', e.target.value)}
                 rows={5}
-                placeholder="Ex : Entreprise spécialisée dans l'installation de panneaux solaires en toiture industrielle et commerciale depuis 2015. Présente principalement en Île-de-France et Hauts-de-France. Certifiée RGE et QualiPV Elec. Forte expérience avec les collectivités locales et les bâtiments logistiques > 1 000 m²."
+                placeholder={
+                  criteria.secteur_principal === 'IRVE'
+                    ? "Ex : Entreprise spécialisée dans l'installation de bornes de recharge pour véhicules électriques. Certifiée IRVE P2. Présente en Île-de-France et PACA."
+                    : criteria.secteur_principal === 'Désamiantage'
+                    ? "Ex : Entreprise certifiée SS3 et SS4 intervenant sur des chantiers de désamiantage industriels et tertiaires depuis 2010. Présente sur toute la région Grand Est."
+                    : "Ex : Entreprise spécialisée dans l'installation de panneaux solaires en toiture industrielle et commerciale depuis 2015. Présente principalement en Île-de-France. Certifiée RGE et QualiPV Elec."
+                }
                 className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/8 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/30 resize-none leading-relaxed transition-all"
               />
               <p className="text-[10px] text-white/25 text-right tabular-nums">
@@ -379,9 +654,11 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
         </>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'perimetre' && (
         <>
+          <SectorBanner secteur={criteria.secteur_principal} />
+
           <Card>
             <SectionHeader icon={MapPin} color="bg-blue-500/15 text-blue-400" label="Périmètre géographique" sub="Régions où votre entreprise intervient habituellement" />
             <Chips options={ZONES_GEO} selected={criteria.zones_geo} onChange={v => onUpdate('zones_geo', v)} />
@@ -393,13 +670,47 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
           </Card>
 
           <Card>
-            <SectionHeader icon={Wrench} color="bg-violet-500/15 text-violet-400" label="Types de projets maîtrisés" sub="Typologies avec références et expertise reconnue" />
-            <Chips options={TYPES_PROJETS} selected={criteria.types_projets} onChange={v => onUpdate('types_projets', v)} />
+            <SectionHeader
+              icon={Wrench}
+              color="bg-violet-500/15 text-violet-400"
+              label="Types de projets maîtrisés"
+              sub="Typologies avec références et expertise reconnue"
+            />
+            {!criteria.secteur_principal && (
+              <p className="text-xs text-white/35 mb-3 italic">
+                Sélectionnez un secteur dans l'onglet Profil pour voir des types de projets adaptés.
+              </p>
+            )}
+            <Chips
+              options={sector.types_projets}
+              selected={criteria.types_projets}
+              onChange={v => onUpdate('types_projets', v)}
+            />
+            {/* Custom tag input for additional project types */}
+            <Divider />
+            <p className="text-[11px] text-white/30 mb-3 font-medium">Ajouter d'autres types de projets</p>
+            <TagsInput
+              values={criteria.types_projets.filter(t => !sector.types_projets.includes(t))}
+              onChange={custom => onUpdate('types_projets', [
+                ...criteria.types_projets.filter(t => sector.types_projets.includes(t)),
+                ...custom,
+              ])}
+              placeholder="Autre type de projet… (Entrée)"
+            />
           </Card>
 
           <Card>
             <SectionHeader icon={Users} color="bg-emerald-500/15 text-emerald-400" label="Secteurs clients ciblés" sub="Segments de marché où vous êtes le plus compétitif" />
-            <Chips options={SECTEURS_CLIENTS} selected={criteria.secteurs_clients} onChange={v => onUpdate('secteurs_clients', v)} />
+            {!criteria.secteur_principal && (
+              <p className="text-xs text-white/35 mb-3 italic">
+                Sélectionnez un secteur dans l'onglet Profil pour voir des clients adaptés.
+              </p>
+            )}
+            <Chips
+              options={sector.secteurs_clients}
+              selected={criteria.secteurs_clients}
+              onChange={v => onUpdate('secteurs_clients', v)}
+            />
           </Card>
 
           <Card>
@@ -430,24 +741,46 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
         </>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'capacites' && (
         <>
-          {/* Capacité technique */}
+          <SectorBanner secteur={criteria.secteur_principal} />
+
+          {/* Technical capacity */}
           <Card>
-            <SectionHeader icon={Zap} color="bg-amber-500/15 text-amber-400" label="Capacités techniques" sub="Plage de puissance et volume mensuel que vous pouvez absorber" />
+            <SectionHeader
+              icon={sector.icon}
+              color={sector.iconColor}
+              label="Capacités techniques"
+              sub={`Plage de ${sector.cap_unit} et volume mensuel que vous pouvez absorber`}
+            />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <Label tooltip="Taille minimale de projet acceptée">Puissance min</Label>
-                <NumberInput value={criteria.puissance_min_kwc} onChange={v => onUpdate('puissance_min_kwc', v)} suffix="kWc" min={1} />
+                <Label tooltip="Taille minimale de projet acceptée">{sector.cap_min_label}</Label>
+                <NumberInput
+                  value={criteria.puissance_min_kwc}
+                  onChange={v => onUpdate('puissance_min_kwc', v)}
+                  suffix={sector.cap_unit}
+                  min={0}
+                />
               </div>
               <div>
-                <Label tooltip="Au-delà, le projet dépasse votre capacité ou financement">Puissance max</Label>
-                <NumberInput value={criteria.puissance_max_kwc} onChange={v => onUpdate('puissance_max_kwc', v)} suffix="kWc" min={1} />
+                <Label tooltip="Au-delà, le projet dépasse votre capacité ou financement">{sector.cap_max_label}</Label>
+                <NumberInput
+                  value={criteria.puissance_max_kwc}
+                  onChange={v => onUpdate('puissance_max_kwc', v)}
+                  suffix={sector.cap_unit}
+                  min={0}
+                />
               </div>
               <div>
-                <Label tooltip="Volume de puissance installable par mois avec vos équipes">Capacité mensuelle</Label>
-                <NumberInput value={criteria.capacite_mensuelle_kwc} onChange={v => onUpdate('capacite_mensuelle_kwc', v)} suffix="kWc" min={1} />
+                <Label tooltip="Volume que vous pouvez traiter par mois avec vos équipes">{sector.cap_mensuelle_label}</Label>
+                <NumberInput
+                  value={criteria.capacite_mensuelle_kwc}
+                  onChange={v => onUpdate('capacite_mensuelle_kwc', v)}
+                  suffix={sector.cap_unit}
+                  min={0}
+                />
               </div>
             </div>
 
@@ -456,17 +789,21 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
               <div className="mt-4 p-3 bg-white/3 rounded-xl border border-white/6">
                 <p className="text-[10px] text-white/35 mb-2">Fenêtre d&apos;acceptation</p>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-white/40 tabular-nums w-16 text-right">{criteria.puissance_min_kwc.toLocaleString('fr-FR')} kWc</span>
+                  <span className="text-white/40 tabular-nums w-20 text-right truncate">
+                    {criteria.puissance_min_kwc.toLocaleString('fr-FR')} {sector.cap_unit}
+                  </span>
                   <div className="flex-1 h-2 bg-white/8 rounded-full overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-amber-500/60 to-amber-400 rounded-full" style={{ width: '100%' }} />
                   </div>
-                  <span className="text-white/40 tabular-nums w-20">{criteria.puissance_max_kwc.toLocaleString('fr-FR')} kWc</span>
+                  <span className="text-white/40 tabular-nums w-20 truncate">
+                    {criteria.puissance_max_kwc.toLocaleString('fr-FR')} {sector.cap_unit}
+                  </span>
                 </div>
               </div>
             )}
           </Card>
 
-          {/* Capacité financière */}
+          {/* Financial capacity */}
           <Card>
             <SectionHeader icon={Euro} color="bg-emerald-500/15 text-emerald-400" label="Capacité financière" sub="Valeur des marchés que vous pouvez adresser" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -481,7 +818,7 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
             </div>
           </Card>
 
-          {/* Organisation */}
+          {/* Operations */}
           <Card>
             <SectionHeader icon={Layers} color="bg-indigo-500/15 text-indigo-400" label="Organisation & charge" sub="Contraintes opérationnelles de votre équipe" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -503,21 +840,39 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
         </>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'scoring' && (
         <>
-          {/* Certifications */}
+          <SectorBanner secteur={criteria.secteur_principal} />
+
+          {/* Certifications — dynamic per sector */}
           <Card>
             <SectionHeader icon={Award} color="bg-emerald-500/15 text-emerald-400" label="Certifications & qualifications" sub="Qualifications actuellement détenues par votre entreprise" />
+            {!criteria.secteur_principal && (
+              <p className="text-xs text-white/35 mb-3 italic">
+                Sélectionnez un secteur dans l'onglet Profil pour voir des certifications adaptées.
+              </p>
+            )}
             <Chips
-              options={CERTIFICATIONS}
+              options={sector.certifications}
               selected={criteria.certifications}
               onChange={v => onUpdate('certifications', v)}
               colorActive="bg-emerald-600/20 text-emerald-300 border-emerald-500/40"
             />
+            {/* Custom certifications */}
+            <Divider />
+            <p className="text-[11px] text-white/30 mb-3 font-medium">Ajouter d'autres certifications</p>
+            <TagsInput
+              values={criteria.certifications.filter(c => !sector.certifications.includes(c))}
+              onChange={custom => onUpdate('certifications', [
+                ...criteria.certifications.filter(c => sector.certifications.includes(c)),
+                ...custom,
+              ])}
+              placeholder="Autre certification… (Entrée)"
+            />
           </Card>
 
-          {/* Rentabilité */}
+          {/* Min margin */}
           <Card>
             <SectionHeader icon={TrendingUp} color="bg-rose-500/15 text-rose-400" label="Marge minimale acceptée" sub="Un projet sous ce seuil pénalisera le score Rentabilité" />
             <div className="flex items-center gap-5">
@@ -540,7 +895,7 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
             </div>
           </Card>
 
-          {/* Points forts */}
+          {/* Key strengths */}
           <Card>
             <SectionHeader icon={Star} color="bg-amber-500/15 text-amber-400" label="Points forts de l'entreprise" sub="Arguments différenciants pris en compte pour la probabilité de gain" />
             <TagsInput
@@ -550,7 +905,7 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
             />
           </Card>
 
-          {/* Mots-clés d'exclusion */}
+          {/* Exclusion keywords */}
           <Card>
             <SectionHeader icon={AlertTriangle} color="bg-red-500/15 text-red-400" label="Mots-clés d'exclusion" sub="Termes dans un DCE qui déclenchent automatiquement un NO GO" />
             <TagsInput
@@ -560,18 +915,18 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
             />
           </Card>
 
-          {/* Pondérations */}
+          {/* Score weights */}
           <Card>
             <SectionHeader icon={SlidersHorizontal} color="bg-indigo-500/15 text-indigo-400" label="Pondérations des critères" sub="Ajustez l'importance relative de chaque critère dans le score final" />
             <div className="space-y-5">
-              <WeightSelector label="Rentabilité"        value={criteria.poids_rentabilite}  onChange={v => onUpdate('poids_rentabilite', v)}  tooltip="Importance du potentiel de marge dans la décision" />
-              <WeightSelector label="Complexité"         value={criteria.poids_complexite}   onChange={v => onUpdate('poids_complexite', v)}   tooltip="Importance de la simplicité d'exécution (score inversé : complexe = pénalisé)" />
-              <WeightSelector label="Alignement capacité" value={criteria.poids_alignement}  onChange={v => onUpdate('poids_alignement', v)}   tooltip="Adéquation entre les exigences du projet et vos capacités réelles" />
-              <WeightSelector label="Probabilité de gain" value={criteria.poids_probabilite} onChange={v => onUpdate('poids_probabilite', v)}  tooltip="Vos chances de remporter le marché (références, position concurrentielle)" />
-              <WeightSelector label="Charge interne"     value={criteria.poids_charge}       onChange={v => onUpdate('poids_charge', v)}       tooltip="Légèreté en ressources humaines requises (score inversé : charge lourde = pénalisé)" />
+              <WeightSelector label="Rentabilité"         value={criteria.poids_rentabilite}  onChange={v => onUpdate('poids_rentabilite', v)}  tooltip="Importance du potentiel de marge dans la décision" />
+              <WeightSelector label="Complexité"          value={criteria.poids_complexite}   onChange={v => onUpdate('poids_complexite', v)}   tooltip="Importance de la simplicité d'exécution (score inversé : complexe = pénalisé)" />
+              <WeightSelector label="Alignement capacité" value={criteria.poids_alignement}   onChange={v => onUpdate('poids_alignement', v)}   tooltip="Adéquation entre les exigences du projet et vos capacités réelles" />
+              <WeightSelector label="Probabilité de gain" value={criteria.poids_probabilite}  onChange={v => onUpdate('poids_probabilite', v)}  tooltip="Vos chances de remporter le marché (références, position concurrentielle)" />
+              <WeightSelector label="Charge interne"      value={criteria.poids_charge}       onChange={v => onUpdate('poids_charge', v)}       tooltip="Légèreté en ressources humaines requises (score inversé : charge lourde = pénalisé)" />
             </div>
 
-            {/* Distribution bars */}
+            {/* Weight distribution bars */}
             <Divider />
             <p className="text-[10px] text-white/30 font-semibold uppercase tracking-wider mb-3">Répartition des poids</p>
             <div className="flex gap-2 items-end h-20">
@@ -597,7 +952,7 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
             </div>
           </Card>
 
-          {/* Notes IA */}
+          {/* AI notes */}
           <Card>
             <SectionHeader icon={BarChart3} color="bg-blue-500/15 text-blue-400" label="Notes pour l'IA" sub="Contexte supplémentaire transmis à Claude lors de chaque scoring" />
             <textarea
