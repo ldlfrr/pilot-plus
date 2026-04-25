@@ -277,14 +277,15 @@ export default function VeillePage() {
 
         {/* ══ LEFT SIDEBAR ════════════════════════════════════════════════ */}
         <aside className={cn(
-          'flex flex-col flex-shrink-0 border-r border-white/5 overflow-y-auto',
-          // Desktop: static sidebar
-          'lg:static lg:w-[420px] xl:w-[460px] lg:z-auto lg:translate-x-0',
+          'flex flex-col flex-shrink-0 overflow-y-auto',
+          // Desktop: 42% width for a nice 42/58 split
+          'lg:static lg:w-[42%] xl:w-[40%] lg:z-auto lg:translate-x-0',
           // Mobile: slide-in drawer
           'fixed inset-y-0 left-0 z-40 w-[88vw] max-w-sm bg-[var(--bg-surface)]',
           'transition-transform duration-300 ease-in-out',
           showMobileCriteria ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-        )}>
+        )}
+        style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}>
           {/* Mobile drawer header */}
           <div className="lg:hidden flex items-center justify-between px-5 py-4 border-b border-white/8 flex-shrink-0">
             <span className="text-sm font-semibold text-white">Critères de veille</span>
@@ -299,9 +300,10 @@ export default function VeillePage() {
           <div className="p-5 space-y-6 overflow-y-auto flex-1">
 
             {/* Info banner */}
-            <div className="flex items-start gap-2.5 p-3.5 bg-blue-500/6 border border-blue-500/12 rounded-xl">
-              <Info size={13} className="text-blue-400/70 flex-shrink-0 mt-0.5" />
-              <p className="text-[11px] text-white/45 leading-relaxed">
+            <div className="flex items-start gap-2.5 p-3.5 rounded-xl"
+              style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.12)' }}>
+              <Info size={13} className="text-blue-400/60 flex-shrink-0 mt-0.5" />
+              <p className="text-[11px] text-white/42 leading-relaxed">
                 Les annonces trouvées sont stockées ici. Ajoutez celles qui vous intéressent à vos projets.
               </p>
             </div>
@@ -510,19 +512,20 @@ export default function VeillePage() {
             </div>
 
           ) : groups.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4 py-24">
-              <div className="w-16 h-16 rounded-2xl bg-white/4 border border-white/6 flex items-center justify-center">
-                <Inbox size={24} className="text-white/15" />
+            <div className="flex flex-col items-center justify-center h-full gap-5 py-24 px-8">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}>
+                <Inbox size={24} className="text-blue-400/40" />
               </div>
               <div className="text-center">
-                <p className="text-sm font-medium text-white/40">Aucune veille lancée</p>
-                <p className="text-xs text-white/20 mt-1">Configurez vos mots-clés et lancez la première veille.</p>
+                <p className="text-sm font-semibold text-white/45">Aucune veille lancée</p>
+                <p className="text-xs text-white/25 mt-1.5 leading-relaxed">Configurez vos mots-clés à gauche<br />et lancez la première recherche.</p>
               </div>
               {settings.keywords.length > 0 && (
                 <button
                   onClick={runVeille}
                   disabled={running}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-colors"
+                  className="btn-primary flex items-center gap-2"
                 >
                   <Play size={13} fill="currentColor" />Lancer maintenant
                 </button>
@@ -547,8 +550,8 @@ export default function VeillePage() {
                 return (
                   <div
                     key={group.id}
-                    className="rounded-2xl border border-white/7 overflow-hidden"
-                    style={{ background: 'rgba(255,255,255,0.02)' }}
+                    className="rounded-2xl overflow-hidden"
+                    style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(8px)' }}
                   >
                     {/* ── Group header ── */}
                     <div className="flex items-center">
@@ -647,12 +650,15 @@ export default function VeillePage() {
                           return (
                             <div
                               key={result.id}
-                              className={cn(
-                                'group rounded-xl border p-4 transition-all duration-150',
-                                isDone
-                                  ? 'border-white/5 bg-white/1 opacity-60 hover:opacity-80'
-                                  : 'border-white/8 bg-[var(--bg-base)] hover:border-white/12 hover:bg-white/3',
-                              )}
+                              className={cn('group rounded-xl p-4 transition-all duration-150', isDone && 'opacity-55 hover:opacity-75')}
+                              style={isDone ? {
+                                background: 'rgba(255,255,255,0.015)',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                              } : {
+                                background: 'rgba(255,255,255,0.03)',
+                                border: '1px solid rgba(255,255,255,0.09)',
+                                backdropFilter: 'blur(8px)',
+                              }}
                             >
                               {/* Top row: title + BOAMP link */}
                               <div className="flex items-start gap-3 mb-3">
