@@ -2,8 +2,9 @@ import { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import {
   Check, X, Zap, Star, Building2, Sparkles,
-  Shield, Clock, Headphones, BarChart3, FileText,
-  Users, Infinity, ArrowRight, BadgeCheck,
+  Shield, Clock, Headphones, BarChart3,
+  ArrowRight, BadgeCheck, Lock, FileText,
+  Users, Infinity as InfinityIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { CheckoutButton } from './CheckoutButton'
@@ -14,26 +15,43 @@ export const metadata: Metadata = { title: 'Mon abonnement — PILOT+' }
 
 // ── Plans ─────────────────────────────────────────────────────────────────────
 
-interface Feature { label: string; included: boolean; highlight?: boolean }
+interface Feature { label: string; included: boolean; highlight?: boolean; locked?: boolean }
 
 const PLANS = [
+  {
+    id:       'free' as SubscriptionTier,
+    name:     'Gratuit',
+    price:    0,
+    tagline:  'Découvrir PILOT+',
+    icon:     Lock,
+    color:    'free',
+    badge:    null,
+    features: [
+      { label: '1 analyse IA / mois',     included: true  },
+      { label: 'Score Go / No Go',        included: true  },
+      { label: 'Historique complet',      included: false, locked: true },
+      { label: 'Export PDF',              included: false, locked: true },
+      { label: 'Veille BOAMP',            included: false, locked: true },
+      { label: 'Support prioritaire',     included: false, locked: true },
+    ] as Feature[],
+  },
   {
     id:       'basic' as SubscriptionTier,
     name:     'Basic',
     price:    49,
-    tagline:  'Pour démarrer',
+    tagline:  'Pour démarrer sérieusement',
     icon:     Zap,
     color:    'blue',
     badge:    null,
     features: [
-      { label: '10 analyses IA / mois',  included: true  },
-      { label: '1 utilisateur',           included: true  },
-      { label: 'Score Go / No Go',        included: true  },
-      { label: 'Support email',           included: true  },
-      { label: 'Historique complet',      included: false },
-      { label: 'Export PDF',              included: false },
-      { label: 'Veille BOAMP',            included: false },
-      { label: 'Support prioritaire',     included: false },
+      { label: '10 analyses IA / mois',   included: true, highlight: true },
+      { label: '1 utilisateur',            included: true  },
+      { label: 'Score Go / No Go',         included: true  },
+      { label: 'Support email',            included: true  },
+      { label: 'Historique complet',       included: false, locked: true },
+      { label: 'Export PDF',               included: false, locked: true },
+      { label: 'Veille BOAMP',             included: false, locked: true },
+      { label: 'Support prioritaire',      included: false, locked: true },
     ] as Feature[],
   },
   {
@@ -45,14 +63,14 @@ const PLANS = [
     color:    'blue-highlight',
     badge:    'Le plus populaire',
     features: [
-      { label: '50 analyses IA / mois',  included: true, highlight: true },
-      { label: '5 utilisateurs',          included: true  },
-      { label: 'Score Go / No Go',        included: true  },
-      { label: 'Historique complet',      included: true, highlight: true },
-      { label: 'Export PDF des rapports', included: true, highlight: true },
-      { label: 'Veille BOAMP',            included: true, highlight: true },
-      { label: 'Support prioritaire',     included: true  },
-      { label: 'API access',              included: false },
+      { label: '50 analyses IA / mois',   included: true, highlight: true },
+      { label: '5 utilisateurs',           included: true  },
+      { label: 'Score Go / No Go',         included: true  },
+      { label: 'Historique complet',       included: true, highlight: true },
+      { label: 'Export PDF des rapports',  included: true, highlight: true },
+      { label: 'Veille BOAMP',             included: true, highlight: true },
+      { label: 'Support prioritaire',      included: true  },
+      { label: 'Campagnes email IA',       included: true, highlight: true },
     ] as Feature[],
   },
   {
@@ -64,14 +82,14 @@ const PLANS = [
     color:    'purple',
     badge:    null,
     features: [
-      { label: 'Analyses illimitées',           included: true, highlight: true },
-      { label: 'Utilisateurs illimités',         included: true, highlight: true },
-      { label: 'Score + historique complet',     included: true  },
-      { label: 'Export PDF',                     included: true  },
-      { label: 'Veille BOAMP avancée',           included: true  },
-      { label: 'API access',                     included: true, highlight: true },
-      { label: 'Onboarding dédié',               included: true  },
-      { label: 'SLA + support téléphonique',     included: true  },
+      { label: 'Analyses illimitées',            included: true, highlight: true },
+      { label: 'Utilisateurs illimités',          included: true, highlight: true },
+      { label: 'Score + historique complet',      included: true  },
+      { label: 'Export PDF',                      included: true  },
+      { label: 'Veille BOAMP avancée',            included: true  },
+      { label: 'Campagnes email IA illimitées',   included: true, highlight: true },
+      { label: 'Onboarding dédié',                included: true  },
+      { label: 'SLA + support téléphonique',      included: true  },
     ] as Feature[],
   },
 ]
@@ -173,7 +191,7 @@ export default async function SubscriptionPage({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 {PLANS.map(plan => (
                   <PlanCard
                     key={plan.id}
@@ -343,16 +361,21 @@ function PlanCard({
 }) {
   const isHighlighted = plan.color === 'blue-highlight'
   const isPurple      = plan.color === 'purple'
+  const isFree        = plan.color === 'free'
   const Icon          = plan.icon
 
   const cardStyle: React.CSSProperties = isHighlighted ? {
-    background: 'linear-gradient(180deg, rgba(59,130,246,0.10) 0%, rgba(8,14,34,0.97) 100%)',
-    border: '1px solid rgba(59,130,246,0.40)',
-    boxShadow: '0 0 50px rgba(59,130,246,0.12), inset 0 1px 0 rgba(255,255,255,0.08)',
+    background: 'linear-gradient(180deg, rgba(59,130,246,0.12) 0%, rgba(8,14,34,0.97) 100%)',
+    border: '1px solid rgba(59,130,246,0.42)',
+    boxShadow: '0 0 50px rgba(59,130,246,0.14), inset 0 1px 0 rgba(255,255,255,0.08)',
     backdropFilter: 'blur(16px)',
   } : isPurple ? {
-    background: 'linear-gradient(180deg, rgba(139,92,246,0.08) 0%, rgba(8,14,34,0.97) 100%)',
-    border: '1px solid rgba(139,92,246,0.25)',
+    background: 'linear-gradient(180deg, rgba(139,92,246,0.09) 0%, rgba(8,14,34,0.97) 100%)',
+    border: '1px solid rgba(139,92,246,0.28)',
+    backdropFilter: 'blur(12px)',
+  } : isFree ? {
+    background: 'rgba(255,255,255,0.02)',
+    border: '1px solid rgba(255,255,255,0.07)',
     backdropFilter: 'blur(12px)',
   } : isCurrent ? {
     background: 'linear-gradient(180deg, rgba(16,185,129,0.08) 0%, rgba(8,14,34,0.97) 100%)',
@@ -410,8 +433,9 @@ function PlanCard({
           <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
             style={isHighlighted ? { background: 'rgba(59,130,246,0.18)', border: '1px solid rgba(59,130,246,0.30)', boxShadow: '0 0 12px rgba(59,130,246,0.20)' }
               : isPurple ? { background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.25)' }
+              : isFree ? { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }
               : { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}>
-            <Icon size={17} className={isHighlighted ? 'text-blue-400' : isPurple ? 'text-purple-400' : 'text-white/55'} />
+            <Icon size={17} className={isHighlighted ? 'text-blue-400' : isPurple ? 'text-purple-400' : isFree ? 'text-white/30' : 'text-white/55'} />
           </div>
           <div>
             <p className="font-extrabold text-white leading-none">{plan.name}</p>
@@ -434,32 +458,37 @@ function PlanCard({
         <div className="h-px mb-5" style={{ background: 'rgba(255,255,255,0.06)' }} />
 
         {/* Features */}
-        <ul className="space-y-2.5 flex-1 mb-6">
-          {plan.features.map(({ label, included, highlight }) => (
+        <ul className="space-y-2 flex-1 mb-6">
+          {plan.features.map(({ label, included, highlight, locked }) => (
             <li key={label} className={cn(
               'flex items-center gap-2.5 text-xs',
-              included ? (highlight ? 'text-white/90 font-medium' : 'text-white/58') : 'text-white/18',
+              included ? (highlight ? 'text-white/90 font-medium' : 'text-white/60') : locked ? 'text-white/22' : 'text-white/22',
             )}>
               {included
                 ? <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"
                     style={highlight
-                      ? { background: 'rgba(16,185,129,0.20)', border: '1px solid rgba(16,185,129,0.25)' }
+                      ? { background: 'rgba(16,185,129,0.22)', border: '1px solid rgba(16,185,129,0.28)' }
                       : { background: 'rgba(255,255,255,0.07)' }}>
                     <Check size={9} className={highlight ? 'text-emerald-400' : 'text-white/45'} />
                   </div>
-                : <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{ background: 'rgba(255,255,255,0.04)' }}>
-                    <X size={8} className="text-white/18" />
-                  </div>
+                : locked
+                  ? <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'rgba(255,255,255,0.04)' }}>
+                      <Lock size={7} className="text-white/20" />
+                    </div>
+                  : <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'rgba(255,255,255,0.04)' }}>
+                      <X size={8} className="text-white/20" />
+                    </div>
               }
-              {label}
+              <span className="flex-1 truncate">{label}</span>
               {included && highlight && (
-                <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-md"
+                <span className="ml-auto text-[8px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0"
                   style={isHighlighted
-                    ? { background: 'rgba(59,130,246,0.15)', color: '#93c5fd' }
+                    ? { background: 'rgba(59,130,246,0.18)', color: '#93c5fd' }
                     : isPurple
-                      ? { background: 'rgba(139,92,246,0.15)', color: '#c4b5fd' }
-                      : { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)' }}>NEW</span>
+                      ? { background: 'rgba(139,92,246,0.18)', color: '#c4b5fd' }
+                      : { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)' }}>INC</span>
               )}
             </li>
           ))}
@@ -476,8 +505,13 @@ function PlanCard({
             style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.20)' }}>
             <BadgeCheck size={13} />Plan actuel
           </div>
+        ) : plan.id === 'free' ? (
+          <div className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl text-white/30 text-xs font-semibold"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            Plan de démarrage
+          </div>
         ) : plan.id === 'enterprise' ? (
-          <a href={`mailto:contact@pilot-plus.fr?subject=Abonnement%20PILOT%2B%20Entreprise`}
+          <a href="mailto:contact@pilot-plus.fr?subject=Abonnement%20PILOT%2B%20Entreprise"
             className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl text-purple-300 text-sm font-semibold transition-all"
             style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.30)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(139,92,246,0.25)')}

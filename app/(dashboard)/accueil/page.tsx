@@ -133,7 +133,7 @@ export default async function AccueilPage() {
           <p className="text-xs text-white/35 capitalize font-medium hidden sm:block">{dateStr}</p>
         </div>
         <div className="flex items-center gap-2.5">
-          <Link href="/projects/new" className="btn-primary hidden sm:flex items-center gap-1.5">
+          <Link href="/projects/new" className="btn-primary hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold text-white">
             <PlusCircle size={13} />Nouveau projet
           </Link>
           <NotificationBell />

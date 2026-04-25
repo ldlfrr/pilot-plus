@@ -6,12 +6,11 @@ import { cn } from '@/lib/utils/cn'
 import {
   Home, FolderOpen, PlusCircle, BarChart3, Building2,
   LogOut, User, CreditCard, Radio, HelpCircle,
-  ChevronRight, ExternalLink, Users,
+  ChevronRight, ExternalLink, Users, Mail,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { NotificationBell } from './NotificationBell'
 
 // ── Nav definitions ───────────────────────────────────────────────────────────
 
@@ -21,10 +20,11 @@ const MAIN_NAV = [
 ]
 
 const TOOLS_NAV = [
-  { href: '/dashboard', label: 'Dashboard',      icon: BarChart3,  badge: null },
-  { href: '/veille',    label: 'Veille BOAMP',   icon: Radio,      badge: 'Live' },
-  { href: '/settings',  label: 'Mon entreprise', icon: Building2,  badge: null },
-  { href: '/team',      label: 'Équipe',          icon: Users,      badge: null },
+  { href: '/dashboard',        label: 'Dashboard',        icon: BarChart3,  badge: null  },
+  { href: '/veille',           label: 'Veille BOAMP',     icon: Radio,      badge: 'Live' },
+  { href: '/email-campaigns',  label: 'Campagnes email',  icon: Mail,       badge: 'IA'  },
+  { href: '/settings',         label: 'Mon entreprise',   icon: Building2,  badge: null  },
+  { href: '/team',             label: 'Équipe',            icon: Users,      badge: null  },
 ]
 
 const BOTTOM_NAV = [
@@ -109,9 +109,6 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             Décidez · Exécutez · Gagnez
           </p>
         </Link>
-        <div className="hidden md:block">
-          <NotificationBell />
-        </div>
       </div>
 
       {/* ── CTA Nouveau projet ───────────────────────────────────────────── */}

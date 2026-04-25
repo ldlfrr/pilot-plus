@@ -74,16 +74,21 @@ const NAV: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'danger',       label: 'Zone de danger', icon: AlertTriangle },
 ]
 
-const THEMES = [
-  { id: 'dark' as Theme,     label: 'Sombre',     description: 'Classique, moins fatigant',   colors: { base: '#0f1117', surface: '#13161e', card: '#1a1d2e', accent: '#3b82f6' } },
-  { id: 'pilot' as Theme,    label: 'Pilot+',     description: 'Bleu marine profond',         colors: { base: '#05091a', surface: '#080e22', card: '#0b1530', accent: '#3b82f6' } },
-  { id: 'midnight' as Theme, label: 'Minuit',     description: 'OLED pur noir',               colors: { base: '#000000', surface: '#0a0a0a', card: '#111111', accent: '#3b82f6' } },
-  { id: 'slate' as Theme,    label: 'Ardoise',    description: 'Gris bleuté élégant',         colors: { base: '#0d1117', surface: '#161b22', card: '#21262d', accent: '#3b82f6' } },
-  { id: 'forest' as Theme,   label: 'Forêt',      description: 'Vert profond naturel',        colors: { base: '#060e0a', surface: '#0a1610', card: '#0f2018', accent: '#22c55e' } },
-  { id: 'aurora' as Theme,   label: 'Aurore',     description: 'Violet mystérieux',           colors: { base: '#0c0814', surface: '#110e1e', card: '#18142a', accent: '#a78bfa' } },
-  { id: 'dusk' as Theme,     label: 'Crépuscule', description: 'Ambré chaleureux',            colors: { base: '#0e0a06', surface: '#181008', card: '#22160a', accent: '#fb923c' } },
-  { id: 'light' as Theme,    label: 'Clair',      description: 'Lumineux, idéal le jour',     colors: { base: '#f0f4f8', surface: '#e4eaf3', card: '#ffffff',  accent: '#3b82f6' } },
-] as const
+const THEMES: { id: Theme; label: string; description: string; animated?: boolean; colors: { base: string; surface: string; card: string; accent: string } }[] = [
+  { id: 'dark',         label: 'Sombre',         description: 'Classique, moins fatigant',     colors: { base: '#0f1117', surface: '#13161e', card: '#1a1d2e', accent: '#3b82f6' } },
+  { id: 'pilot',        label: 'Pilot+',         description: 'Bleu marine profond',           colors: { base: '#05091a', surface: '#080e22', card: '#0b1530', accent: '#3b82f6' } },
+  { id: 'midnight',     label: 'Minuit',         description: 'OLED pur noir',                 colors: { base: '#000000', surface: '#0a0a0a', card: '#111111', accent: '#3b82f6' } },
+  { id: 'slate',        label: 'Ardoise',        description: 'Gris bleuté élégant',           colors: { base: '#0d1117', surface: '#161b22', card: '#21262d', accent: '#3b82f6' } },
+  { id: 'forest',       label: 'Forêt',          description: 'Vert profond naturel',          colors: { base: '#060e0a', surface: '#0a1610', card: '#0f2018', accent: '#22c55e' } },
+  { id: 'aurora',       label: 'Aurore',         description: 'Violet mystérieux',             colors: { base: '#0c0814', surface: '#110e1e', card: '#18142a', accent: '#a78bfa' } },
+  { id: 'dusk',         label: 'Crépuscule',     description: 'Ambré chaleureux',              colors: { base: '#0e0a06', surface: '#181008', card: '#22160a', accent: '#fb923c' } },
+  { id: 'cyber',        label: 'Cyber',          description: 'Néon cyan, ambiance matrix',    colors: { base: '#00060e', surface: '#000d1a', card: '#001527', accent: '#00e5ff' } },
+  { id: 'sunset',       label: 'Coucher de soleil', description: 'Rouge intense, chaleur vive', colors: { base: '#0d0500', surface: '#180800', card: '#240d02', accent: '#ff4500' } },
+  { id: 'ocean',        label: 'Océan',          description: 'Bleu profond, azur apaisant',   colors: { base: '#010810', surface: '#030f1a', card: '#061826', accent: '#0ea5e9' } },
+  { id: 'rose',         label: 'Rose',           description: 'Dark rose, élégance féminine',  colors: { base: '#0d020a', surface: '#180510', card: '#220818', accent: '#f43f5e' } },
+  { id: 'holographic',  label: 'Holographique',  description: 'Arc-en-ciel animé',  animated: true, colors: { base: '#06020e', surface: '#0a0420', card: '#10062e', accent: '#8b5cf6' } },
+  { id: 'light',        label: 'Clair',          description: 'Lumineux, idéal le jour',       colors: { base: '#f0f4f8', surface: '#e4eaf3', card: '#ffffff',  accent: '#3b82f6' } },
+]
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -618,7 +623,7 @@ export default function AccountPage() {
               <div className="space-y-5 animate-fade-in">
                 <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
                   <SectionTitle>Thème de l&apos;interface</SectionTitle>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     {THEMES.map(t => {
                       const active = theme === t.id
                       return (
@@ -626,38 +631,52 @@ export default function AccountPage() {
                           key={t.id}
                           onClick={() => setTheme(t.id)}
                           className={cn(
-                            'relative flex flex-col gap-2.5 p-3 rounded-xl border text-left transition-all',
+                            'relative flex flex-col gap-2.5 p-3 rounded-xl border text-left transition-all group',
                             active
                               ? 'border-blue-500/60 bg-blue-600/8 shadow-[0_0_20px_rgba(59,130,246,0.1)]'
                               : 'border-white/8 hover:border-white/20 bg-white/2 hover:bg-white/4',
                           )}
                         >
                           {active && (
-                            <span className="absolute top-2 right-2 w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+                            <span className="absolute top-2 right-2 w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center z-10">
                               <Check size={9} className="text-white" />
                             </span>
                           )}
+                          {t.animated && !active && (
+                            <span className="absolute top-2 right-2 text-[7px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wide"
+                              style={{ background: 'rgba(139,92,246,0.25)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.35)' }}>
+                              LIVE
+                            </span>
+                          )}
+                          {/* Mini preview */}
                           <div
-                            className="w-full h-12 rounded-md overflow-hidden flex flex-col gap-1 p-2"
-                            style={{ background: t.colors.base, border: t.id === 'light' ? '1px solid rgba(0,0,0,0.08)' : undefined }}
+                            className="w-full h-14 rounded-lg overflow-hidden flex flex-col gap-1 p-1.5 relative"
+                            style={{ background: t.colors.base, border: t.id === 'light' ? '1px solid rgba(0,0,0,0.10)' : '1px solid rgba(255,255,255,0.06)' }}
                           >
-                            <div className="h-1.5 w-9 rounded" style={{ background: t.colors.surface }} />
-                            <div className="flex gap-1 flex-1">
-                              <div className="w-4 rounded" style={{ background: t.colors.surface }} />
-                              <div className="flex-1 rounded" style={{ background: t.colors.card }} />
+                            {/* Fake orbs */}
+                            <div className="absolute inset-0 opacity-40" style={{
+                              background: `radial-gradient(circle at 20% 30%, ${t.colors.accent}20 0%, transparent 60%)`,
+                            }} />
+                            <div className="h-1.5 w-8 rounded flex-shrink-0" style={{ background: t.colors.surface }} />
+                            <div className="flex gap-1 flex-1 min-h-0">
+                              <div className="w-4 h-full rounded" style={{ background: t.colors.surface }} />
+                              <div className="flex-1 h-full rounded" style={{ background: t.colors.card }} />
                             </div>
-                            <div className="h-1 w-6 rounded" style={{ background: t.colors.accent, opacity: 0.8 }} />
+                            <div className="h-1 w-5 rounded flex-shrink-0" style={{ background: t.colors.accent, opacity: 0.9 }} />
                           </div>
-                          <div>
-                            <p className={cn('text-xs font-bold', active ? 'text-blue-400' : 'text-white/80')}>{t.label}</p>
-                            <p className="text-[10px] text-white/35 mt-0.5 leading-snug">{t.description}</p>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className={cn('text-xs font-bold truncate', active ? 'text-blue-400' : 'text-white/80')}>{t.label}</p>
+                            </div>
+                            <p className="text-[9px] text-white/30 mt-0.5 leading-snug line-clamp-2">{t.description}</p>
                           </div>
                         </button>
                       )
                     })}
                   </div>
                   <p className="text-[10px] text-white/25 mt-4">
-                    Le thème est appliqué instantanément et sauvegardé localement.
+                    Le thème est appliqué instantanément et sauvegardé localement. Les thèmes&nbsp;
+                    <span className="text-violet-400/70 font-medium">LIVE</span> ont des animations actives.
                   </p>
                 </div>
               </div>

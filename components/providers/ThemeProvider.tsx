@@ -8,9 +8,9 @@ import React, {
   useState,
 } from 'react'
 
-export type Theme = 'dark' | 'pilot' | 'midnight' | 'slate' | 'forest' | 'aurora' | 'dusk' | 'light'
+export type Theme = 'dark' | 'pilot' | 'midnight' | 'slate' | 'forest' | 'aurora' | 'dusk' | 'light' | 'cyber' | 'sunset' | 'ocean' | 'rose' | 'holographic'
 
-const VALID_THEMES: Theme[] = ['dark', 'pilot', 'midnight', 'slate', 'forest', 'aurora', 'dusk', 'light']
+const VALID_THEMES: Theme[] = ['dark', 'pilot', 'midnight', 'slate', 'forest', 'aurora', 'dusk', 'light', 'cyber', 'sunset', 'ocean', 'rose', 'holographic']
 const STORAGE_KEY = 'pilot-theme'
 const DEFAULT_THEME: Theme = 'dark'
 
