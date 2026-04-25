@@ -15,12 +15,13 @@ import { ResponsePlanTab }  from '@/components/project/tabs/ResponsePlanTab'
 import { CommentsTab }      from '@/components/project/tabs/CommentsTab'
 import {
   Cpu, Target, Trash2, Pencil, Loader2, AlertCircle, CheckCircle,
-  Download, Share2, FilePlus, Calendar, MapPin, Building, Hash,
+  Share2, FilePlus, Calendar, MapPin, Building, Hash,
   FileText, Users, ListChecks, Wrench, BarChart3, Layers,
   Copy, X, ExternalLink, Link as LinkIcon, Lock, ArrowRight,
   ClipboardList, Map, Trophy, XCircle, Flag, TrendingUp,
   BookOpen, MessageSquare,
 } from 'lucide-react'
+import { ExportMenu } from '@/components/projects/ExportMenu'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
 import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates, SubscriptionTier, ProjectOutcome } from '@/types'
@@ -154,10 +155,6 @@ export default function ProjectPage() {
       setCopyOk(true)
       setTimeout(() => setCopyOk(false), 2000)
     } catch { /* clipboard blocked */ }
-  }
-
-  function handleExportPdf() {
-    window.open(`/print/${id}`, '_blank')
   }
 
   async function handleDelete() {
@@ -316,12 +313,11 @@ export default function ProjectPage() {
           </div>
           {/* Action buttons */}
           <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
-            <button
-              onClick={handleExportPdf}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-xs font-medium rounded-lg transition-all"
-            >
-              <Download size={13} />Export PDF
-            </button>
+            <ExportMenu
+              projectId={id}
+              projectName={project.name}
+              userTier={userLimits?.tier ?? 'free'}
+            />
             <button
               onClick={handleShare}
               disabled={shareLoading}
