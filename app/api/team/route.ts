@@ -75,10 +75,12 @@ export async function POST(req: NextRequest) {
 
   if (teamErr) return NextResponse.json({ error: teamErr.message }, { status: 500 })
 
-  // Add owner as first member
-  const { error: memberErr } = await supabase
+  // Add creator as first member with admin role
+  const { data: newMember, error: memberErr } = await supabase
     .from('team_members')
-    .insert({ team_id: team.id, user_id: user.id, role: 'owner' })
+    .insert({ team_id: team.id, user_id: user.id, role: 'admin' })
+    .select()
+    .single()
 
   if (memberErr) {
     // Rollback team creation if member insert fails
@@ -95,11 +97,11 @@ export async function POST(req: NextRequest) {
   const formattedTeam = {
     ...team,
     members: [{
-      id:        `${team.id}-owner`,
+      id:        newMember?.id ?? `${team.id}-admin`,
       user_id:   user.id,
       email:     profile?.email ?? user.email ?? '',
       full_name: profile?.full_name ?? null,
-      role:      'owner' as const,
+      role:      'admin' as const,
       joined_at: new Date().toISOString(),
     }],
   }
@@ -107,7 +109,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ team: formattedTeam }, { status: 201 })
 }
 
-// ─── DELETE — delete a team (owner only) ─────────────────────────────────────
+// ─── DELETE — delete a team (admin only) ─────────────────────────────────────
 
 export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
@@ -117,17 +119,27 @@ export async function DELETE(req: NextRequest) {
   const { teamId } = await req.json() as { teamId: string }
   if (!teamId) return NextResponse.json({ error: 'teamId requis' }, { status: 400 })
 
+  // Verify caller is admin of this team
+  const { data: membership } = await supabase
+    .from('team_members')
+    .select('role')
+    .eq('team_id', teamId)
+    .eq('user_id', user.id)
+    .eq('role', 'admin')
+    .maybeSingle()
+
+  if (!membership) return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })
+
   const { error } = await supabase
     .from('teams')
     .delete()
     .eq('id', teamId)
-    .eq('owner_id', user.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
 
-// ─── PATCH — rename a team (owner only) ──────────────────────────────────────
+// ─── PATCH — rename a team (admin only) ──────────────────────────────────────
 
 export async function PATCH(req: NextRequest) {
   const supabase = await createClient()
@@ -138,11 +150,21 @@ export async function PATCH(req: NextRequest) {
   if (!teamId) return NextResponse.json({ error: 'teamId requis' }, { status: 400 })
   if (!name?.trim()) return NextResponse.json({ error: 'Nom requis' }, { status: 400 })
 
+  // Verify caller is admin of this team
+  const { data: membership } = await supabase
+    .from('team_members')
+    .select('role')
+    .eq('team_id', teamId)
+    .eq('user_id', user.id)
+    .eq('role', 'admin')
+    .maybeSingle()
+
+  if (!membership) return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })
+
   const { error } = await supabase
     .from('teams')
     .update({ name: name.trim() })
     .eq('id', teamId)
-    .eq('owner_id', user.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
