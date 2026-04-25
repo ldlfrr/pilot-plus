@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Sidebar } from './Sidebar'
 import { NotificationBell } from './NotificationBell'
+import { FloatingShapes } from '@/components/ui/FloatingShapes'
 import { Menu } from 'lucide-react'
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -15,6 +16,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-base)' }}>
+
+      {/* ── Floating micro-shapes ────────────────────────────────────────── */}
+      <FloatingShapes />
 
       {/* ── Animated background orbs ─────────────────────────────────────── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden>
