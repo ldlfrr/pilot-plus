@@ -274,21 +274,26 @@ Retourne uniquement le JSON.`
 
 function buildCriteriaContext(c: CompanyCriteria): string {
   const lines: string[] = []
-  if (c.zones_geo.length > 0)
-    lines.push(`- Zones géographiques d'intervention : ${c.zones_geo.join(', ')}`)
-  if (c.types_projets.length > 0)
-    lines.push(`- Types de projets maîtrisés : ${c.types_projets.join(', ')}`)
-  lines.push(`- Capacité technique : ${c.puissance_min_kwc}–${c.puissance_max_kwc} kWc par projet, ${c.capacite_mensuelle_kwc} kWc/mois`)
-  if (c.certifications.length > 0)
-    lines.push(`- Certifications & qualifications : ${c.certifications.join(', ')}`)
-  if (c.secteurs_clients.length > 0)
-    lines.push(`- Secteurs clients ciblés : ${c.secteurs_clients.join(', ')}`)
-  lines.push(`- Marge minimale attendue : ${c.rentabilite_min_pct}%`)
-  if (c.points_forts.length > 0)
-    lines.push(`- Points forts : ${c.points_forts.join(', ')}`)
-  if (c.notes.trim())
-    lines.push(`- Notes complémentaires : ${c.notes.trim()}`)
-  return lines.join('\n')
+  const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
+  const str = (v: unknown): string => (typeof v === 'string' ? v : '')
+
+  if (arr(c.zones_geo).length > 0)
+    lines.push(`- Zones géographiques d'intervention : ${arr(c.zones_geo).join(', ')}`)
+  if (arr(c.types_projets).length > 0)
+    lines.push(`- Types de projets maîtrisés : ${arr(c.types_projets).join(', ')}`)
+  if (c.puissance_min_kwc != null || c.puissance_max_kwc != null)
+    lines.push(`- Capacité technique : ${c.puissance_min_kwc ?? '?'}–${c.puissance_max_kwc ?? '?'} kWc par projet, ${c.capacite_mensuelle_kwc ?? '?'} kWc/mois`)
+  if (arr(c.certifications).length > 0)
+    lines.push(`- Certifications & qualifications : ${arr(c.certifications).join(', ')}`)
+  if (arr(c.secteurs_clients).length > 0)
+    lines.push(`- Secteurs clients ciblés : ${arr(c.secteurs_clients).join(', ')}`)
+  if (c.rentabilite_min_pct != null)
+    lines.push(`- Marge minimale attendue : ${c.rentabilite_min_pct}%`)
+  if (arr(c.points_forts).length > 0)
+    lines.push(`- Points forts : ${arr(c.points_forts).join(', ')}`)
+  if (str(c.notes).trim())
+    lines.push(`- Notes complémentaires : ${str(c.notes).trim()}`)
+  return lines.length > 0 ? lines.join('\n') : 'Aucun critère spécifique configuré — utilise des critères standards.'
 }
 
 function buildPoidsContext(c: CompanyCriteria): string {

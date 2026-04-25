@@ -104,16 +104,32 @@ async function handleScore(params: Params['params']) {
     scoringResult = getMockScore()
   } else {
     // ── Real mode : Anthropic ──────────────────────────────────────────────────
+    if (!analysis.result) {
+      return NextResponse.json(
+        { error: "L'analyse IA ne contient pas de résultat. Relancez l'analyse avant de scorer." },
+        { status: 422 }
+      )
+    }
+
     let rawContent: string
 
     try {
+      let userPrompt: string
+      try {
+        userPrompt = buildScoringUserPrompt(analysis.result, scoringContext)
+      } catch (promptErr: unknown) {
+        const msg = promptErr instanceof Error ? promptErr.message : String(promptErr)
+        console.error('[score] Error building prompt:', msg)
+        return NextResponse.json({ error: `Erreur construction du prompt : ${msg}` }, { status: 500 })
+      }
+
       const message = await getAnthropicClient().messages.create({
         model: SCORING_MODEL,
         max_tokens: 2048,
         temperature: 0.2,
         system: buildScoringSystemPrompt(),
         messages: [
-          { role: 'user', content: buildScoringUserPrompt(analysis.result, scoringContext) },
+          { role: 'user', content: userPrompt },
         ],
       })
 
