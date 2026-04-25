@@ -2,15 +2,14 @@
 
 import { useState } from 'react'
 import {
-  Plus, X, Info, MapPin, Wrench, Award, Users, TrendingUp,
-  Star, SlidersHorizontal, FileText, Building2, Zap, Target,
-  Globe, Briefcase, BarChart3, Euro, Layers, AlertTriangle,
-  Sun, Wind, HardHat, Activity, Leaf, Check, Sparkles,
+  Plus, X, Info, MapPin, Briefcase, Award, Users,
+  Star, Globe, Euro, BarChart3, Check, Sparkles,
+  Building2, Zap, Target, SlidersHorizontal, FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { CompanyCriteria } from '@/types'
 
-// ── Geographic zones (universal) ──────────────────────────────────────────────
+// ── Universal data ─────────────────────────────────────────────────────────────
 
 const ZONES_GEO = [
   'Île-de-France', 'Auvergne-Rhône-Alpes', "Provence-Alpes-Côte d'Azur",
@@ -23,238 +22,50 @@ const EFFECTIFS_OPTIONS = ['1 – 5', '6 – 20', '21 – 50', '51 – 200', '20
 const CA_OPTIONS = ['< 500 k€', '500 k€ – 2 M€', '2 – 10 M€', '10 – 50 M€', '50 – 200 M€', '200 M€+']
 const DELAI_OPTIONS = ['< 1 mois', '1 – 3 mois', '3 – 6 mois', '6 – 12 mois', '> 12 mois']
 
-// ── Sector configuration ───────────────────────────────────────────────────────
+const TYPES_PROJETS_SUGGESTIONS = [
+  'Travaux publics', 'Bâtiment / Construction', 'Réhabilitation',
+  'Maintenance', 'Étude / Conseil', 'Fournitures',
+  'Services informatiques', 'Prestations intellectuelles',
+  'Formation', 'Nettoyage / Entretien',
+  'Sécurité / Surveillance', 'Transport / Logistique',
+  'Génie civil', 'Infrastructure réseaux', 'Énergie / ENR',
+  'Environnement', 'Numérique / IT', 'Santé / Médical',
+  'Alimentaire / Restauration', 'Événementiel',
+]
 
-interface SectorConfig {
-  label:               string
-  icon:                React.ElementType
-  iconColor:           string   // classes for icon container
-  activeCard:          string   // classes for selected card border/bg
-  badgeCls:            string   // mini badge pill
-  types_projets:       string[]
-  certifications:      string[]
-  secteurs_clients:    string[]
-  cap_unit:            string
-  cap_min_label:       string
-  cap_max_label:       string
-  cap_mensuelle_label: string
-}
+const SECTEURS_CLIENTS = [
+  'Collectivités territoriales', 'État / Établissements publics',
+  'Industrie', 'Tertiaire / Bureaux', 'Grande distribution',
+  'Santé / Hôpitaux', 'Enseignement', 'Logistique / Entrepôts',
+  'Hôtellerie / Restauration', 'Agriculture',
+  'Bailleurs sociaux / Promoteurs', 'Syndics / Copropriétés',
+  'PME / Entreprises privées', 'Particuliers',
+  'Associations / ONG',
+]
 
-const SECTOR_CONFIG: Record<string, SectorConfig> = {
-  'Photovoltaïque': {
-    label: 'Photovoltaïque',
-    icon: Sun,
-    iconColor: 'bg-amber-500/15 text-amber-400',
-    activeCard: 'border-amber-500/40 bg-amber-500/8',
-    badgeCls: 'bg-amber-500/15 text-amber-300 border-amber-500/25',
-    types_projets: [
-      'Toiture industrielle', 'Toiture commerciale', 'Toiture agricole (agrivoltaïsme)',
-      'Ombrière parking', 'Centrale au sol', 'Toiture tertiaire',
-      'Façade intégrée (BIPV)', 'Flottant (floating PV)', 'Serre photovoltaïque',
-      'Résidentiel collectif', 'Bâtiment public', 'Infrastructure routière',
-    ],
-    certifications: [
-      'QualiPV Bat', 'QualiPV Elec', 'RGE', 'Qualifelec ENR',
-      "Quali'EnR", 'CONSUEL agréé', 'ISO 9001', 'ISO 14001', 'Qualibat',
-    ],
-    secteurs_clients: [
-      'Industrie', 'Collectivités territoriales', 'Tertiaire / bureaux',
-      'Grande distribution', 'Logistique / entrepôts', 'Agriculture',
-      'Enseignement', 'Santé', 'Hôtellerie', 'Particuliers', 'Promoteurs',
-    ],
-    cap_unit: 'kWc',
-    cap_min_label: 'Puissance min acceptée',
-    cap_max_label: 'Puissance max acceptée',
-    cap_mensuelle_label: 'Capacité mensuelle',
-  },
-  'IRVE': {
-    label: 'IRVE',
-    icon: Zap,
-    iconColor: 'bg-cyan-500/15 text-cyan-400',
-    activeCard: 'border-cyan-500/40 bg-cyan-500/8',
-    badgeCls: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/25',
-    types_projets: [
-      'Borne AC résidentiel (T2)', 'Borne AC tertiaire', 'Borne DC rapide (≥ 50 kW)',
-      'Borne DC ultra-rapide (≥ 150 kW)', 'Station de charge collective',
-      'Parking public / privé', 'Autoroute / aire de service', 'Fleet B2B',
-    ],
-    certifications: [
-      'IRVE P1', 'IRVE P2', 'RGE IRVE', 'Qualifelec IRVE',
-      'Qualibat', 'ISO 9001', 'AFNOR NF C 15-100',
-    ],
-    secteurs_clients: [
-      'Collectivités / Mairies', 'Syndics de copropriété', 'Entreprises / Flottes',
-      'Grande distribution', 'Hôtellerie', 'Promoteurs',
-      'Opérateurs de mobilité', 'Bailleurs sociaux',
-    ],
-    cap_unit: 'bornes',
-    cap_min_label: 'Nb bornes min / projet',
-    cap_max_label: 'Nb bornes max / projet',
-    cap_mensuelle_label: 'Bornes installées / mois',
-  },
-  'Désamiantage': {
-    label: 'Désamiantage',
-    icon: HardHat,
-    iconColor: 'bg-red-500/15 text-red-400',
-    activeCard: 'border-red-500/40 bg-red-500/8',
-    badgeCls: 'bg-red-500/15 text-red-300 border-red-500/25',
-    types_projets: [
-      'Retrait toiture fibrociment', 'Retrait amiante sol', 'Retrait amiante mur / plafond',
-      'Encapsulage / confinement', 'Démolition avant rénovation',
-      'Désamiantage industriel', 'Traitement avant déconstruction', 'Dalles vinyle-amiante',
-    ],
-    certifications: [
-      'Certification SS3 (sous-section 3)', 'Certification SS4 (sous-section 4)',
-      'Qualibat 1552', 'MASE', 'ISO 9001', 'ISO 14001', 'ISO 45001',
-    ],
-    secteurs_clients: [
-      'Industrie', 'Collectivités territoriales', 'Bailleurs sociaux',
-      'Tertiaire / bureaux', 'Particuliers', 'Syndics de copropriété', 'Promoteurs',
-    ],
-    cap_unit: 'm²',
-    cap_min_label: 'Surface min / chantier',
-    cap_max_label: 'Surface max / chantier',
-    cap_mensuelle_label: 'Surface traitée / mois',
-  },
-  'Éolien': {
-    label: 'Éolien',
-    icon: Wind,
-    iconColor: 'bg-sky-500/15 text-sky-400',
-    activeCard: 'border-sky-500/40 bg-sky-500/8',
-    badgeCls: 'bg-sky-500/15 text-sky-300 border-sky-500/25',
-    types_projets: [
-      'Éolien terrestre < 100 kW', 'Éolien terrestre 100 – 1000 kW',
-      'Éolien terrestre > 1 MW', 'Micro-éolien urbain',
-      'Repowering / Remplacement', 'Éolien flottant (offshore)',
-    ],
-    certifications: [
-      'Qualifelec ENR', 'RGE', 'Qualibat', 'MASE', 'ISO 9001', 'ISO 14001',
-    ],
-    secteurs_clients: [
-      'Collectivités territoriales', 'Agriculteurs', 'Industriels',
-      'Développeurs énergétiques', 'SEM / SEML', 'Communautés énergétiques',
-    ],
-    cap_unit: 'kW',
-    cap_min_label: 'Puissance min acceptée',
-    cap_max_label: 'Puissance max acceptée',
-    cap_mensuelle_label: 'Capacité installée / mois',
-  },
-  'BTP / Génie civil': {
-    label: 'BTP / Génie civil',
-    icon: Building2,
-    iconColor: 'bg-stone-500/15 text-stone-400',
-    activeCard: 'border-stone-500/40 bg-stone-500/8',
-    badgeCls: 'bg-stone-500/15 text-stone-300 border-stone-500/25',
-    types_projets: [
-      'Terrassement / VRD', 'Construction neuve gros œuvre', 'Réhabilitation',
-      'Démolition', 'Charpente-couverture', 'Étanchéité',
-      'Maçonnerie', 'Second œuvre', 'Travaux spéciaux',
-    ],
-    certifications: [
-      'Qualibat', 'ISO 9001', 'ISO 14001', 'MASE', 'ISO 45001', 'COFRAC',
-    ],
-    secteurs_clients: [
-      'Collectivités territoriales', 'Promoteurs', 'Bailleurs sociaux',
-      'Industrie', 'Agriculture', 'Particuliers', 'Syndics',
-    ],
-    cap_unit: 'm²',
-    cap_min_label: 'Surface min / chantier',
-    cap_max_label: 'Surface max / chantier',
-    cap_mensuelle_label: 'Surface construite / mois',
-  },
-  'Électricité / CVC': {
-    label: 'Électricité / CVC',
-    icon: Activity,
-    iconColor: 'bg-violet-500/15 text-violet-400',
-    activeCard: 'border-violet-500/40 bg-violet-500/8',
-    badgeCls: 'bg-violet-500/15 text-violet-300 border-violet-500/25',
-    types_projets: [
-      'Installation électrique tertiaire', 'Installation industrielle HTA / HTB',
-      'CVC résidentiel', 'CVC tertiaire', 'Climatisation / Froid',
-      'Ventilation VMC / VMC double flux', 'Pompe à chaleur', 'Chauffage biomasse',
-      'Géothermie', 'Désenfumage',
-    ],
-    certifications: [
-      'Qualifelec', 'RGE', 'Qualibat', 'IRVE P1', 'IRVE P2',
-      'PGN / PGP gaz', 'ISO 9001', 'COFRAC',
-    ],
-    secteurs_clients: [
-      'Industrie', 'Collectivités territoriales', 'Tertiaire / bureaux',
-      'Résidentiel collectif', 'Grande distribution', 'Santé', 'Hôtellerie',
-    ],
-    cap_unit: 'kW',
-    cap_min_label: 'Puissance min / chantier',
-    cap_max_label: 'Puissance max / chantier',
-    cap_mensuelle_label: 'Capacité installée / mois',
-  },
-  'Efficacité énergétique': {
-    label: 'Efficacité énergétique',
-    icon: Leaf,
-    iconColor: 'bg-emerald-500/15 text-emerald-400',
-    activeCard: 'border-emerald-500/40 bg-emerald-500/8',
-    badgeCls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
-    types_projets: [
-      'Audit énergétique', 'CPE (Contrat de performance énergétique)',
-      'Isolation thermique ITE / ITI', 'Remplacement éclairage LED',
-      'GTB / GTC / Automate bâtiment', 'Smart building / BMS',
-      'Récupération chaleur', 'Stockage énergie (BESS)',
-    ],
-    certifications: [
-      'RGE', 'Qualibat', 'ISO 50001', 'ISO 9001', 'ISO 14001', 'BREEAM', 'HQE',
-    ],
-    secteurs_clients: [
-      'Industrie', 'Collectivités territoriales', 'Tertiaire / bureaux',
-      'Hôpitaux / Santé', 'Logistique / entrepôts', 'Hôtellerie', 'Copropriétés',
-    ],
-    cap_unit: 'kWh/an',
-    cap_min_label: 'Économies min estimées',
-    cap_max_label: 'Économies max estimées',
-    cap_mensuelle_label: 'Volume traité / mois',
-  },
-  'Multi-activité': {
-    label: 'Multi-activité',
-    icon: Layers,
-    iconColor: 'bg-blue-500/15 text-blue-400',
-    activeCard: 'border-blue-500/40 bg-blue-500/8',
-    badgeCls: 'bg-blue-500/15 text-blue-300 border-blue-500/25',
-    types_projets: [
-      'Photovoltaïque', 'IRVE / Mobilité électrique', 'Désamiantage',
-      'Éolien', 'BTP / Génie civil', 'Électricité tertiaire / industrielle',
-      'CVC', 'Efficacité énergétique', 'Réhabilitation multi-lots', 'Autre',
-    ],
-    certifications: [
-      'RGE', 'QualiPV Bat', 'QualiPV Elec', 'Qualifelec', 'IRVE P1', 'IRVE P2',
-      'Qualibat', 'MASE', 'ISO 9001', 'ISO 14001', 'ISO 45001', 'ISO 50001',
-      'Certification SS3', 'Certification SS4', 'COFRAC', 'BREEAM', 'HQE',
-    ],
-    secteurs_clients: [
-      'Industrie', 'Collectivités territoriales', 'Tertiaire / bureaux',
-      'Grande distribution', 'Logistique / entrepôts', 'Agriculture',
-      'Enseignement', 'Santé', 'Hôtellerie', 'Particuliers', 'Promoteurs',
-      'Bailleurs sociaux', 'Syndics de copropriété',
-    ],
-    cap_unit: '€',
-    cap_min_label: 'Budget min / projet',
-    cap_max_label: 'Budget max / projet',
-    cap_mensuelle_label: 'Volume mensuel',
-  },
-}
+const CERTIFICATIONS_SUGGESTIONS = [
+  'ISO 9001', 'ISO 14001', 'ISO 45001', 'ISO 50001',
+  'RGE', 'Qualibat', 'Qualifelec', 'QualiPV Bat', 'QualiPV Elec',
+  'IRVE P1', 'IRVE P2', 'MASE', 'COFRAC',
+  'BREEAM', 'HQE', 'OPQIBI', 'AFNOR',
+  'Certification SS3', 'Certification SS4',
+]
 
-const SECTOR_KEYS = Object.keys(SECTOR_CONFIG)
+const POINTS_FORTS_SUGGESTIONS = [
+  'Expertise technique reconnue', 'Prix compétitif',
+  'Réactivité et flexibilité', 'Références similaires',
+  'Équipe expérimentée', 'Certifications spécifiques',
+  'Proximité géographique', 'Capacité financière',
+  'Innovation & R&D', 'Service après-vente',
+]
 
-function getSector(secteur: string | undefined): SectorConfig {
-  return SECTOR_CONFIG[secteur ?? ''] ?? SECTOR_CONFIG['Photovoltaïque']
-}
+// ── Atoms ──────────────────────────────────────────────────────────────────────
 
-// ── Shared atoms ──────────────────────────────────────────────────────────────
-
-function SectionHeader({
-  icon: Icon, color, label, sub,
-}: { icon: React.ElementType; color: string; label: string; sub: string }) {
+function SectionHeader({ icon: Icon, color, label, sub }: { icon: React.ElementType; color: string; label: string; sub: string }) {
   return (
-    <div className="flex items-center gap-3 mb-5">
-      <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0', color)}>
-        <Icon size={16} />
+    <div className="flex items-center gap-3 mb-6">
+      <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', color)}>
+        <Icon size={18} />
       </div>
       <div>
         <p className="text-sm font-bold text-white">{label}</p>
@@ -272,18 +83,14 @@ function Card({ children, className }: { children: React.ReactNode; className?: 
   )
 }
 
-function Divider() {
-  return <div className="h-px bg-white/5 my-6" />
-}
-
-function Label({ children, tooltip }: { children: React.ReactNode; tooltip?: string }) {
+function FieldLabel({ children, tooltip }: { children: React.ReactNode; tooltip?: string }) {
   return (
-    <label className="flex items-center gap-1.5 text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">
+    <label className="flex items-center gap-1.5 text-[11px] font-semibold text-white/45 uppercase tracking-wider mb-2">
       {children}
       {tooltip && (
         <span className="group relative inline-flex cursor-help">
-          <Info size={11} className="text-white/20 hover:text-white/50 transition-colors" />
-          <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 rounded-xl bg-[var(--bg-surface)] border border-white/10 px-3 py-2 text-[11px] text-white/60 opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-xl leading-relaxed">
+          <Info size={10} className="text-white/20 hover:text-white/50 transition-colors" />
+          <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 rounded-xl bg-[var(--bg-surface)] border border-white/10 px-3 py-2 text-[11px] text-white/60 opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-xl leading-relaxed normal-case tracking-normal font-normal">
             {tooltip}
           </span>
         </span>
@@ -292,62 +99,28 @@ function Label({ children, tooltip }: { children: React.ReactNode; tooltip?: str
   )
 }
 
-function TextInput({
-  value, onChange, placeholder, type = 'text', prefix,
-}: {
-  value: string; onChange: (v: string) => void; placeholder?: string
-  type?: string; prefix?: string
+function TextInput({ value, onChange, placeholder, type = 'text' }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; type?: string
 }) {
   return (
-    <div className="relative flex items-center">
-      {prefix && <span className="absolute left-3 text-white/25 text-sm pointer-events-none">{prefix}</span>}
-      <input
-        type={type}
-        value={value ?? ''}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={cn(
-          'w-full py-2.5 rounded-xl bg-white/5 border border-white/8 text-sm text-white',
-          'placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/30 transition-all',
-          prefix ? 'pl-7 pr-3' : 'px-3',
-        )}
-      />
-    </div>
+    <input
+      type={type}
+      value={value ?? ''}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full px-3.5 py-2.5 rounded-xl bg-white/4 border border-white/8 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/40 focus:border-blue-500/30 transition-all"
+    />
   )
 }
 
-function NumberInput({
-  value, onChange, placeholder, min, max, suffix,
-}: {
-  value: number; onChange: (v: number) => void; placeholder?: string
-  min?: number; max?: number; suffix?: string
-}) {
-  return (
-    <div className="relative flex items-center">
-      <input
-        type="number"
-        min={min}
-        max={max}
-        value={value || ''}
-        onChange={e => onChange(Number(e.target.value))}
-        placeholder={placeholder ?? '0'}
-        className="w-full pl-3 pr-8 py-2.5 rounded-xl bg-white/5 border border-white/8 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/30 transition-all"
-      />
-      {suffix && <span className="absolute right-3 text-white/25 text-xs pointer-events-none">{suffix}</span>}
-    </div>
-  )
-}
-
-function SelectInput({
-  value, onChange, options, placeholder,
-}: {
+function SelectInput({ value, onChange, options, placeholder }: {
   value: string; onChange: (v: string) => void; options: string[]; placeholder?: string
 }) {
   return (
     <select
       value={value ?? ''}
       onChange={e => onChange(e.target.value)}
-      className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/8 text-sm text-white/80 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/30 transition-all appearance-none cursor-pointer"
+      className="w-full px-3.5 py-2.5 rounded-xl bg-white/4 border border-white/8 text-sm text-white/80 focus:outline-none focus:ring-1 focus:ring-blue-500/40 focus:border-blue-500/30 transition-all appearance-none cursor-pointer"
       style={{ backgroundImage: "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='rgba(255,255,255,0.3)' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '16px' }}
     >
       {placeholder && <option value="" className="bg-[#13161e] text-white/40">{placeholder}</option>}
@@ -356,9 +129,25 @@ function SelectInput({
   )
 }
 
-function Chips({
-  options, selected, onChange, colorActive = 'bg-blue-600 text-white border-blue-600',
-}: {
+function NumberInput({ value, onChange, placeholder, min, max, suffix }: {
+  value: number; onChange: (v: number) => void; placeholder?: string; min?: number; max?: number; suffix?: string
+}) {
+  return (
+    <div className="relative">
+      <input
+        type="number" min={min} max={max}
+        value={value || ''}
+        onChange={e => onChange(Number(e.target.value))}
+        placeholder={placeholder ?? '0'}
+        className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-white/4 border border-white/8 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/40 focus:border-blue-500/30 transition-all"
+      />
+      {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 text-xs pointer-events-none">{suffix}</span>}
+    </div>
+  )
+}
+
+// Chip row for multi-select
+function ChipGrid({ options, selected, onChange, colorActive = 'bg-blue-600 text-white border-blue-600/80' }: {
   options: string[]; selected: string[]; onChange: (v: string[]) => void; colorActive?: string
 }) {
   return (
@@ -366,18 +155,16 @@ function Chips({
       {options.map(opt => {
         const active = selected.includes(opt)
         return (
-          <button
-            key={opt}
-            type="button"
+          <button key={opt} type="button"
             onClick={() => onChange(active ? selected.filter(s => s !== opt) : [...selected, opt])}
             className={cn(
               'px-3 py-1.5 rounded-full text-xs font-medium border transition-all',
               active
                 ? colorActive
-                : 'bg-white/4 text-white/50 border-white/8 hover:border-blue-400/40 hover:text-white/80 hover:bg-white/8',
+                : 'bg-white/3 text-white/50 border-white/8 hover:border-white/25 hover:text-white/75 hover:bg-white/6',
             )}
           >
-            {opt}
+            {active && <Check size={9} className="inline mr-1" />}{opt}
           </button>
         )
       })}
@@ -385,43 +172,53 @@ function Chips({
   )
 }
 
-function TagsInput({
-  values, onChange, placeholder,
-}: { values: string[]; onChange: (v: string[]) => void; placeholder?: string }) {
+// Free-text tag input with optional suggestions
+function TagsInput({ values, onChange, placeholder, suggestions }: {
+  values: string[]; onChange: (v: string[]) => void; placeholder?: string; suggestions?: string[]
+}) {
   const [input, setInput] = useState('')
-  function add() {
-    const v = input.trim()
-    if (v && !values.includes(v)) onChange([...values, v])
-    setInput('')
+  function add(v?: string) {
+    const val = (v ?? input).trim()
+    if (val && !values.includes(val)) onChange([...values, val])
+    if (!v) setInput('')
   }
+  const filteredSuggestions = (suggestions ?? []).filter(s => !values.includes(s))
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
-          placeholder={placeholder ?? 'Ajouter et appuyer sur Entrée…'}
-          className="flex-1 px-3 py-2.5 rounded-xl bg-white/5 border border-white/8 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/30 transition-all"
-        />
-        <button
-          type="button"
-          onClick={add}
-          className="px-3 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-colors"
-        >
-          <Plus size={15} />
-        </button>
-      </div>
+      {/* Selected tags */}
       {values.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {values.map(v => (
-            <span key={v} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/15 text-blue-300 text-xs font-medium rounded-full border border-blue-500/20">
+            <span key={v} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600/20 border border-blue-500/35 text-xs font-medium text-blue-300">
               {v}
-              <button type="button" onClick={() => onChange(values.filter(s => s !== v))} className="hover:text-red-400 transition-colors">
+              <button type="button" onClick={() => onChange(values.filter(x => x !== v))} className="text-blue-400/60 hover:text-blue-300 transition-colors">
                 <X size={10} />
               </button>
             </span>
+          ))}
+        </div>
+      )}
+      {/* Input */}
+      <div className="flex gap-2">
+        <input
+          type="text" value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
+          placeholder={placeholder ?? 'Ajouter…'}
+          className="flex-1 px-3.5 py-2 rounded-xl bg-white/4 border border-white/8 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/40 focus:border-blue-500/30 transition-all"
+        />
+        <button type="button" onClick={() => add()}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/6 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white text-xs font-medium transition-all">
+          <Plus size={12} />Ajouter
+        </button>
+      </div>
+      {/* Suggestions */}
+      {filteredSuggestions.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {filteredSuggestions.slice(0, 12).map(s => (
+            <button key={s} type="button" onClick={() => add(s)}
+              className="px-2.5 py-1 rounded-lg bg-white/3 border border-white/8 text-[11px] text-white/35 hover:border-white/25 hover:text-white/60 hover:bg-white/6 transition-all">
+              + {s}
+            </button>
           ))}
         </div>
       )}
@@ -429,469 +226,373 @@ function TagsInput({
   )
 }
 
-function WeightSelector({
-  label, value, onChange, tooltip,
-}: { label: string; value: number; onChange: (v: number) => void; tooltip: string }) {
-  const LEVELS = [
-    { v: 1, label: 'Faible',   color: 'from-white/20 to-white/10' },
-    { v: 2, label: 'Bas',      color: 'from-blue-500/60 to-blue-600/40' },
-    { v: 3, label: 'Normal',   color: 'from-blue-500 to-blue-600' },
-    { v: 4, label: 'Élevé',    color: 'from-amber-500 to-amber-600' },
-    { v: 5, label: 'Critique', color: 'from-red-500 to-red-600' },
-  ]
-  const current = LEVELS.find(l => l.v === value)
+// Weight slider component
+function WeightSlider({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  const pct = Math.round((value / 5) * 100)
   return (
-    <div>
-      <div className="flex items-center justify-between mb-2.5">
-        <label className="text-sm font-medium text-white/70 flex items-center gap-1.5">
-          {label}
-          <span className="group relative cursor-help">
-            <Info size={11} className="text-white/20 hover:text-white/50 transition-colors" />
-            <span className="pointer-events-none absolute bottom-full left-0 mb-2 w-52 rounded-xl bg-[var(--bg-surface)] border border-white/10 px-3 py-2 text-[11px] text-white/55 opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-xl leading-relaxed">
-              {tooltip}
-            </span>
-          </span>
-        </label>
-        <span className={cn(
-          'text-xs font-bold px-2.5 py-1 rounded-full tabular-nums',
-          value === 1 ? 'bg-white/8 text-white/40' :
-          value === 2 ? 'bg-blue-500/15 text-blue-400' :
-          value === 3 ? 'bg-blue-600/20 text-blue-300' :
-          value === 4 ? 'bg-amber-500/15 text-amber-400' :
-                        'bg-red-500/15 text-red-400',
-        )}>
-          ×{value} — {current?.label}
-        </span>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-white/60">{label}</span>
+        <span className="text-xs font-bold text-blue-400 tabular-nums">{value}/5</span>
       </div>
-      <div className="flex gap-1.5">
-        {LEVELS.map(({ v, label: lbl }) => (
-          <button
-            key={v}
-            type="button"
-            onClick={() => onChange(v)}
-            className={cn(
-              'flex-1 h-9 rounded-lg text-xs font-bold transition-all border',
-              value === v
-                ? `bg-gradient-to-b ${LEVELS[v - 1].color} text-white border-transparent shadow-sm`
-                : 'bg-white/4 text-white/30 border-white/8 hover:border-white/20 hover:text-white/60',
-            )}
-          >
-            ×{v}
-          </button>
-        ))}
+      <div className="relative h-1.5 bg-white/8 rounded-full">
+        <div className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-200"
+          style={{ width: `${pct}%` }} />
+        <input type="range" min={1} max={5} step={1} value={value}
+          onChange={e => onChange(Number(e.target.value))}
+          className="absolute inset-0 w-full opacity-0 cursor-pointer h-full"
+        />
+      </div>
+      <div className="flex justify-between text-[9px] text-white/20">
+        <span>Faible</span><span>Fort</span>
       </div>
     </div>
   )
 }
 
-// ── Sector selector card ──────────────────────────────────────────────────────
-
-function SectorPicker({
-  value, onChange,
-}: { value: string | undefined; onChange: (v: string) => void }) {
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-      {SECTOR_KEYS.map(key => {
-        const cfg = SECTOR_CONFIG[key]
-        const Icon = cfg.icon
-        const active = value === key
-        return (
-          <button
-            key={key}
-            type="button"
-            onClick={() => onChange(key)}
-            className={cn(
-              'relative flex flex-col items-center gap-2 p-3.5 rounded-xl border transition-all text-center',
-              active
-                ? cn('border-white/20', cfg.activeCard)
-                : 'border-white/7 bg-white/3 hover:bg-white/6 hover:border-white/15',
-            )}
-          >
-            {active && (
-              <span className="absolute top-2 right-2 w-4 h-4 bg-white/90 rounded-full flex items-center justify-center">
-                <Check size={9} className="text-black" />
-              </span>
-            )}
-            <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', cfg.iconColor)}>
-              <Icon size={15} />
-            </div>
-            <span className={cn('text-[11px] font-semibold leading-tight', active ? 'text-white' : 'text-white/55')}>
-              {cfg.label}
-            </span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-// ── Sector context banner (shown in non-profil tabs) ─────────────────────────
-
-function SectorBanner({ secteur }: { secteur: string | undefined }) {
-  if (!secteur) return null
-  const cfg = getSector(secteur)
-  const Icon = cfg.icon
-  return (
-    <div className={cn(
-      'flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-xs font-medium',
-      cfg.badgeCls,
-    )}>
-      <Icon size={13} />
-      <span>Critères adaptés pour le secteur <strong>{cfg.label}</strong> — unité : <strong>{cfg.cap_unit}</strong></span>
-    </div>
-  )
-}
-
-// ── Main component ────────────────────────────────────────────────────────────
-
-type Tab = 'profil' | 'perimetre' | 'capacites' | 'scoring' | 'import'
+// ── Main component ─────────────────────────────────────────────────────────────
 
 interface CriteriaFormProps {
-  criteria: CompanyCriteria
-  activeTab: Tab
-  onUpdate: <K extends keyof CompanyCriteria>(key: K, value: CompanyCriteria[K]) => void
+  criteria:   CompanyCriteria
+  activeTab:  'profil' | 'perimetre' | 'capacites' | 'scoring'
+  onUpdate:   <K extends keyof CompanyCriteria>(key: K, value: CompanyCriteria[K]) => void
 }
 
-// ── Universal suggestions (sector-agnostic) ───────────────────────────────────
-
-const TYPES_PROJETS_SUGGESTIONS = [
-  'Construction neuve', 'Réhabilitation / rénovation', 'Maintenance & exploitation',
-  'Études & ingénierie', 'Fourniture de matériels', 'Prestations de services',
-  'Audit & diagnostic', 'Formation', 'Assistance à maîtrise d\'ouvrage (AMO)',
-  'Maîtrise d\'œuvre (MOE)', 'Travaux spéciaux', 'Terrassement / VRD',
-  'Installation électrique', 'CVC / plomberie', 'Désamiantage / dépollution',
-  'Photovoltaïque / ENR', 'IRVE / mobilité', 'Numérique & IT', 'Conseil & stratégie',
-]
-
-const SECTEURS_CLIENTS_UNIVERSAL = [
-  'Collectivités territoriales', 'État / Administration', 'Industrie',
-  'Tertiaire / bureaux', 'Grande distribution', 'Logistique / entrepôts',
-  'Santé / hôpitaux', 'Enseignement', 'Hôtellerie / tourisme',
-  'Agriculture', 'Promoteurs immobiliers', 'Bailleurs sociaux',
-  'Syndics de copropriété', 'Particuliers', 'Entreprises privées',
-]
-
-const CERTIFICATIONS_SUGGESTIONS = [
-  'ISO 9001', 'ISO 14001', 'ISO 45001', 'ISO 50001',
-  'RGE', 'Qualibat', 'Qualifelec', 'MASE', 'COFRAC',
-  'BREEAM', 'HQE', 'BIM', 'CEFRI', 'QualiPV', 'IRVE P1 / P2',
-  'Certification SS3 / SS4', 'APSAD', 'Agrément préfectoral',
-]
-
 export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProps) {
-  if (activeTab === 'import') return null
-
-  const totalPoids = criteria.poids_rentabilite + criteria.poids_complexite +
-    criteria.poids_alignement + criteria.poids_probabilite + criteria.poids_charge
-
-  // Helper: add/remove from a suggestion list, keeping free-form ones
-  const knownTypes  = TYPES_PROJETS_SUGGESTIONS
-  const knownCerts  = CERTIFICATIONS_SUGGESTIONS
-
   return (
-    <div className="p-5 md:p-8 space-y-5 animate-fade-in">
+    <div className="p-5 md:p-8 max-w-3xl space-y-6">
 
-      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {/* ── PROFIL ENTREPRISE ─────────────────────────────────────────────── */}
       {activeTab === 'profil' && (
         <>
-          {/* Company identity */}
+          <SectionHeader icon={Building2} color="bg-blue-500/15 text-blue-400" label="Profil entreprise" sub="Identité et informations générales" />
+
           <Card>
-            <SectionHeader icon={Building2} color="bg-blue-500/15 text-blue-400" label="Identité de l'entreprise" sub="Informations légales et administratives" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-4">Identité légale</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label>Raison sociale</Label>
-                <TextInput value={criteria.raison_sociale ?? ''} onChange={v => onUpdate('raison_sociale', v)} placeholder="Acme SAS" />
+                <FieldLabel>Raison sociale</FieldLabel>
+                <TextInput value={criteria.raison_sociale ?? ''} onChange={v => onUpdate('raison_sociale', v)} placeholder="Ex: ACME SAS" />
               </div>
               <div>
-                <Label tooltip="Numéro SIREN (9 chiffres) ou SIRET (14 chiffres)">SIREN / SIRET</Label>
+                <FieldLabel>SIREN</FieldLabel>
                 <TextInput value={criteria.siren ?? ''} onChange={v => onUpdate('siren', v)} placeholder="123 456 789" />
               </div>
               <div>
-                <Label>Site web</Label>
-                <TextInput value={criteria.site_web ?? ''} onChange={v => onUpdate('site_web', v)} placeholder="https://www.acme.fr" prefix="🌐" />
+                <FieldLabel>Secteur d'activité</FieldLabel>
+                <TextInput value={criteria.secteur_principal ?? ''} onChange={v => onUpdate('secteur_principal', v)} placeholder="Ex: BTP, Énergie, IT, Conseil…" />
               </div>
               <div>
-                <Label>Année de création</Label>
-                <TextInput value={criteria.annee_creation ?? ''} onChange={v => onUpdate('annee_creation', v)} placeholder="2012" type="number" />
+                <FieldLabel>Année de création</FieldLabel>
+                <TextInput value={criteria.annee_creation ?? ''} onChange={v => onUpdate('annee_creation', v)} placeholder="Ex: 2012" />
               </div>
               <div>
-                <Label>Effectifs</Label>
-                <SelectInput value={criteria.effectifs ?? ''} onChange={v => onUpdate('effectifs', v)} options={EFFECTIFS_OPTIONS} placeholder="Nombre de salariés…" />
+                <FieldLabel>Site web</FieldLabel>
+                <TextInput type="url" value={criteria.site_web ?? ''} onChange={v => onUpdate('site_web', v)} placeholder="https://www.acme.fr" />
+              </div>
+            </div>
+          </Card>
+
+          <Card>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-4">Taille & Chiffre d'affaires</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <FieldLabel>Effectifs</FieldLabel>
+                <SelectInput value={criteria.effectifs ?? ''} onChange={v => onUpdate('effectifs', v)} options={EFFECTIFS_OPTIONS} placeholder="Choisir…" />
               </div>
               <div>
-                <Label tooltip="Chiffre d'affaires annuel (dernier exercice clos)">CA annuel</Label>
-                <SelectInput value={criteria.ca_annuel ?? ''} onChange={v => onUpdate('ca_annuel', v)} options={CA_OPTIONS} placeholder="Tranche de CA…" />
+                <FieldLabel>CA annuel</FieldLabel>
+                <SelectInput value={criteria.ca_annuel ?? ''} onChange={v => onUpdate('ca_annuel', v)} options={CA_OPTIONS} placeholder="Choisir…" />
               </div>
-              <div className="sm:col-span-2">
-                <Label tooltip="Décrivez votre secteur d'activité principal. Ce champ est utilisé par l'IA pour contextualiser le scoring.">
-                  Secteur d'activité
-                </Label>
-                <TextInput
-                  value={criteria.secteur_principal ?? ''}
-                  onChange={v => onUpdate('secteur_principal', v)}
-                  placeholder="Ex : BTP, photovoltaïque, informatique, conseil, désamiantage…"
+            </div>
+          </Card>
+
+          <Card>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-4">Description</p>
+            <FieldLabel>Présentation courte <span className="normal-case font-normal tracking-normal ml-1 text-white/20">(utilisée dans le scoring IA)</span></FieldLabel>
+            <textarea
+              value={criteria.description_courte ?? ''}
+              onChange={e => onUpdate('description_courte', e.target.value)}
+              rows={4}
+              placeholder="Décrivez votre entreprise, vos métiers principaux, vos points différenciants…"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-white/4 border border-white/8 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/40 focus:border-blue-500/30 transition-all resize-none"
+            />
+          </Card>
+        </>
+      )}
+
+      {/* ── PÉRIMÈTRE ─────────────────────────────────────────────────────── */}
+      {activeTab === 'perimetre' && (
+        <>
+          <SectionHeader icon={MapPin} color="bg-emerald-500/15 text-emerald-400" label="Périmètre & marchés" sub="Zones géographiques, types de projets et clients cibles" />
+
+          <Card>
+            <FieldLabel>
+              <Globe size={11} />Zones géographiques
+              <span className="ml-auto text-[10px] text-white/20 normal-case font-normal tracking-normal">
+                {criteria.zones_geo.length} sélectionnée{criteria.zones_geo.length > 1 ? 's' : ''}
+              </span>
+            </FieldLabel>
+            <ChipGrid
+              options={ZONES_GEO}
+              selected={criteria.zones_geo}
+              onChange={v => onUpdate('zones_geo', v)}
+              colorActive="bg-emerald-600/80 text-white border-emerald-500/80"
+            />
+          </Card>
+
+          <Card>
+            <FieldLabel>
+              <Briefcase size={11} />Types de marchés ciblés
+            </FieldLabel>
+            <div className="mb-4">
+              <ChipGrid
+                options={['Public', 'Privé', 'Mixte']}
+                selected={criteria.marche_type === 'public' ? ['Public'] : criteria.marche_type === 'prive' ? ['Privé'] : ['Mixte']}
+                onChange={v => {
+                  const last = v[v.length - 1]
+                  onUpdate('marche_type', last === 'Public' ? 'public' : last === 'Privé' ? 'prive' : 'mixte')
+                }}
+                colorActive="bg-blue-600/80 text-white border-blue-500/80"
+              />
+            </div>
+
+            <FieldLabel><Star size={11} />Types de projets / prestations</FieldLabel>
+            <TagsInput
+              values={criteria.types_projets}
+              onChange={v => onUpdate('types_projets', v)}
+              placeholder="Ajouter un type de projet…"
+              suggestions={TYPES_PROJETS_SUGGESTIONS}
+            />
+          </Card>
+
+          <Card>
+            <FieldLabel>
+              <Users size={11} />Secteurs clients cibles
+            </FieldLabel>
+            <ChipGrid
+              options={SECTEURS_CLIENTS}
+              selected={criteria.secteurs_clients}
+              onChange={v => onUpdate('secteurs_clients', v)}
+              colorActive="bg-violet-600/80 text-white border-violet-500/80"
+            />
+            {/* Custom secteur client */}
+            <div className="mt-4">
+              <TagsInput
+                values={criteria.secteurs_clients.filter(s => !SECTEURS_CLIENTS.includes(s))}
+                onChange={v => {
+                  const standard = criteria.secteurs_clients.filter(s => SECTEURS_CLIENTS.includes(s))
+                  onUpdate('secteurs_clients', [...standard, ...v])
+                }}
+                placeholder="Ajouter un secteur spécifique…"
+              />
+            </div>
+          </Card>
+        </>
+      )}
+
+      {/* ── CAPACITÉS ─────────────────────────────────────────────────────── */}
+      {activeTab === 'capacites' && (
+        <>
+          <SectionHeader icon={Zap} color="bg-amber-500/15 text-amber-400" label="Capacités" sub="Taille de marchés, délais et volume d'activité" />
+
+          <Card>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-4">Taille de contrat acceptée</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <FieldLabel tooltip="Budget minimum en dessous duquel vous ne répondez pas aux appels d'offres">
+                  <Euro size={11} />Budget min (€)
+                </FieldLabel>
+                <NumberInput
+                  value={criteria.budget_min_eur ?? 0}
+                  onChange={v => onUpdate('budget_min_eur', v)}
+                  placeholder="ex: 50000"
+                  suffix="€"
+                />
+              </div>
+              <div>
+                <FieldLabel tooltip="Budget maximum au-delà duquel vous ne répondez pas (0 = pas de limite)">
+                  <Euro size={11} />Budget max (€)
+                </FieldLabel>
+                <NumberInput
+                  value={criteria.budget_max_eur ?? 0}
+                  onChange={v => onUpdate('budget_max_eur', v)}
+                  placeholder="ex: 5000000"
+                  suffix="€"
+                />
+              </div>
+            </div>
+            <p className="text-[10px] text-white/20 mt-2">Laissez à 0 pour indiquer pas de limite. Ces valeurs influencent directement le score Go/No Go.</p>
+          </Card>
+
+          <Card>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-4">Capacité de production</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <FieldLabel tooltip="Nombre de projets actifs que vous pouvez gérer en parallèle">
+                  <BarChart3 size={11} />Projets simultanés max
+                </FieldLabel>
+                <NumberInput
+                  value={criteria.nb_projets_simultanees ?? 3}
+                  onChange={v => onUpdate('nb_projets_simultanees', v)}
+                  placeholder="ex: 5"
+                  min={1}
+                />
+              </div>
+              <div>
+                <FieldLabel>
+                  <BarChart3 size={11} />Volume mensuel cible
+                </FieldLabel>
+                <NumberInput
+                  value={criteria.capacite_mensuelle_kwc ?? 0}
+                  onChange={v => onUpdate('capacite_mensuelle_kwc', v)}
+                  placeholder="ex: 1000"
+                  suffix="k€"
+                />
+              </div>
+              <div>
+                <FieldLabel>Délai d'exécution habituel</FieldLabel>
+                <SelectInput
+                  value={criteria.delai_execution ?? ''}
+                  onChange={v => onUpdate('delai_execution', v)}
+                  options={DELAI_OPTIONS}
+                  placeholder="Choisir…"
                 />
               </div>
             </div>
           </Card>
 
-          {/* Company description */}
           <Card>
-            <SectionHeader icon={FileText} color="bg-violet-500/15 text-violet-400" label="Présentation de l'entreprise" sub="Description transmise à l'IA à chaque scoring" />
-            <div className="space-y-2">
-              <Label tooltip="Ce texte est lu par l'IA lors de chaque scoring. Décrivez votre positionnement, vos forces et votre stratégie.">
-                Description & positionnement
-              </Label>
-              <textarea
-                value={criteria.description_courte ?? ''}
-                onChange={e => onUpdate('description_courte', e.target.value)}
-                rows={5}
-                placeholder="Ex : Entreprise spécialisée dans la réhabilitation de bâtiments tertiaires depuis 2010. Présente en Île-de-France et Grand Est. Certifiée ISO 9001 et Qualibat. Nos points forts : délais maîtrisés, équipe dédiée de 45 personnes, références solides auprès des collectivités."
-                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/8 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/30 resize-none leading-relaxed transition-all"
-              />
-              <p className="text-[10px] text-white/25 text-right tabular-nums">
-                {(criteria.description_courte ?? '').length} / 600 caractères
-              </p>
-            </div>
-          </Card>
-        </>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'perimetre' && (
-        <>
-          <Card>
-            <SectionHeader icon={MapPin} color="bg-blue-500/15 text-blue-400" label="Périmètre géographique" sub="Régions où votre entreprise intervient habituellement" />
-            <Chips options={ZONES_GEO} selected={criteria.zones_geo} onChange={v => onUpdate('zones_geo', v)} />
-            {criteria.zones_geo.length > 0 && (
-              <p className="text-[11px] text-white/30 mt-3">
-                {criteria.zones_geo.length} région{criteria.zones_geo.length > 1 ? 's' : ''} sélectionnée{criteria.zones_geo.length > 1 ? 's' : ''}
-              </p>
-            )}
-          </Card>
-
-          <Card>
-            <SectionHeader icon={Wrench} color="bg-violet-500/15 text-violet-400" label="Types de projets maîtrisés" sub="Typologies sur lesquelles vous avez des références et une expertise reconnue" />
-            {/* Suggestions */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {knownTypes.filter(t => !criteria.types_projets.includes(t)).map(t => (
-                <button key={t} type="button"
-                  onClick={() => onUpdate('types_projets', [...criteria.types_projets, t])}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium border bg-white/4 text-white/45 border-white/8 hover:border-blue-400/40 hover:text-white/75 hover:bg-white/8 transition-all">
-                  + {t}
-                </button>
-              ))}
-            </div>
-            {criteria.types_projets.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                {criteria.types_projets.map(t => (
-                  <span key={t} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-blue-600 text-white border border-blue-600">
-                    {t}
-                    <button type="button" onClick={() => onUpdate('types_projets', criteria.types_projets.filter(x => x !== t))} className="hover:text-red-300 transition-colors"><X size={10} /></button>
-                  </span>
-                ))}
-              </div>
-            )}
-            <Divider />
-            <p className="text-[11px] text-white/30 mb-2 font-medium">Ajouter un type de projet personnalisé</p>
-            <TagsInput
-              values={criteria.types_projets.filter(t => !knownTypes.includes(t))}
-              onChange={custom => onUpdate('types_projets', [
-                ...criteria.types_projets.filter(t => knownTypes.includes(t)),
-                ...custom,
-              ])}
-              placeholder="Décrivez votre type de projet… (Entrée)"
-            />
-          </Card>
-
-          <Card>
-            <SectionHeader icon={Users} color="bg-emerald-500/15 text-emerald-400" label="Secteurs clients ciblés" sub="Segments de marché où vous êtes le plus compétitif" />
-            <Chips options={SECTEURS_CLIENTS_UNIVERSAL} selected={criteria.secteurs_clients} onChange={v => onUpdate('secteurs_clients', v)} />
-          </Card>
-
-          <Card>
-            <SectionHeader icon={Briefcase} color="bg-amber-500/15 text-amber-400" label="Type de marché" sub="Nature des appels d'offres que vous ciblez" />
-            <div className="flex gap-3">
-              {([
-                { value: 'public',  label: 'Marchés publics',  sub: 'Collectivités, État, EPCI' },
-                { value: 'prive',   label: 'Marchés privés',   sub: 'Entreprises, promoteurs' },
-                { value: 'mixte',   label: 'Les deux',         sub: 'Sans préférence' },
-              ] as const).map(({ value, label, sub }) => (
-                <button key={value} type="button" onClick={() => onUpdate('marche_type', value)}
-                  className={cn(
-                    'flex-1 flex flex-col items-center gap-1.5 px-3 py-3.5 rounded-xl border text-center transition-all',
-                    criteria.marche_type === value
-                      ? 'bg-blue-600/15 border-blue-500/40 text-blue-400'
-                      : 'bg-white/3 border-white/8 text-white/40 hover:border-white/20 hover:text-white/70',
-                  )}
-                >
-                  <p className="text-sm font-semibold">{label}</p>
-                  <p className="text-[10px] text-white/35">{sub}</p>
-                </button>
-              ))}
-            </div>
-          </Card>
-        </>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'capacites' && (
-        <>
-          {/* Contract value range */}
-          <Card>
-            <SectionHeader icon={Euro} color="bg-emerald-500/15 text-emerald-400" label="Taille des marchés visés" sub="Fourchette de valeur des contrats que vous pouvez adresser" />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <Label tooltip="Montant minimal en-dessous duquel le projet n'est pas rentable">Montant min / contrat</Label>
-                <NumberInput value={criteria.budget_min_eur ?? 0} onChange={v => onUpdate('budget_min_eur', v)} suffix="€" min={0} />
-              </div>
-              <div>
-                <Label tooltip="Montant maximal au-delà duquel le projet dépasse vos capacités">Montant max / contrat</Label>
-                <NumberInput value={criteria.budget_max_eur ?? 0} onChange={v => onUpdate('budget_max_eur', v)} suffix="€" min={0} />
-              </div>
-              <div>
-                <Label tooltip="Volume d'affaires que vous pouvez signer par mois">Volume mensuel cible</Label>
-                <NumberInput value={criteria.capacite_mensuelle_kwc} onChange={v => onUpdate('capacite_mensuelle_kwc', v)} suffix="k€" min={0} />
-              </div>
-            </div>
-            {(criteria.budget_max_eur ?? 0) > (criteria.budget_min_eur ?? 0) && (
-              <div className="mt-4 p-3 bg-white/3 rounded-xl border border-white/6">
-                <p className="text-[10px] text-white/35 mb-2">Fenêtre d'acceptation</p>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-white/40 tabular-nums">{(criteria.budget_min_eur ?? 0).toLocaleString('fr-FR')} €</span>
-                  <div className="flex-1 h-2 bg-white/8 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-emerald-500/60 to-emerald-400 rounded-full w-full" />
-                  </div>
-                  <span className="text-white/40 tabular-nums">{(criteria.budget_max_eur ?? 0).toLocaleString('fr-FR')} €</span>
-                </div>
-              </div>
-            )}
-          </Card>
-
-          {/* Operations */}
-          <Card>
-            <SectionHeader icon={Layers} color="bg-indigo-500/15 text-indigo-400" label="Organisation & charge" sub="Contraintes opérationnelles de votre équipe" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-4">Capacités techniques</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label tooltip="Combien de projets en parallèle votre équipe peut-elle gérer ?">Projets simultanés max</Label>
-                <NumberInput value={criteria.nb_projets_simultanees ?? 3} onChange={v => onUpdate('nb_projets_simultanees', v)} min={1} max={50} />
+                <FieldLabel tooltip="Valeur minimale d'un contrat exprimée dans l'unité principale de votre activité">
+                  Capacité min / projet
+                </FieldLabel>
+                <NumberInput
+                  value={criteria.puissance_min_kwc ?? 0}
+                  onChange={v => onUpdate('puissance_min_kwc', v)}
+                  placeholder="ex: 50"
+                />
               </div>
               <div>
-                <Label tooltip="Délai moyen entre la signature et la livraison">Délai moyen d'exécution</Label>
-                <SelectInput value={criteria.delai_execution ?? ''} onChange={v => onUpdate('delai_execution', v)} options={DELAI_OPTIONS} placeholder="Choisir une durée…" />
+                <FieldLabel tooltip="Capacité maximale par projet (0 = pas de limite)">
+                  Capacité max / projet
+                </FieldLabel>
+                <NumberInput
+                  value={criteria.puissance_max_kwc ?? 0}
+                  onChange={v => onUpdate('puissance_max_kwc', v)}
+                  placeholder="ex: 5000"
+                />
               </div>
             </div>
+            <p className="text-[10px] text-white/20 mt-2">Ces champs sont libres — utilisez-les pour toute unité : kWc, m², bornes, jours/homme, etc.</p>
           </Card>
         </>
       )}
 
-      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {/* ── SCORING GO/NO GO ──────────────────────────────────────────────── */}
       {activeTab === 'scoring' && (
         <>
-          {/* Certifications */}
-          <Card>
-            <SectionHeader icon={Award} color="bg-emerald-500/15 text-emerald-400" label="Certifications & qualifications" sub="Qualifications actuellement détenues par votre entreprise" />
-            {/* Common suggestions */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {knownCerts.filter(c => !criteria.certifications.includes(c)).map(c => (
-                <button key={c} type="button"
-                  onClick={() => onUpdate('certifications', [...criteria.certifications, c])}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium border bg-white/4 text-white/45 border-white/8 hover:border-emerald-400/40 hover:text-white/75 hover:bg-white/8 transition-all">
-                  + {c}
-                </button>
-              ))}
-            </div>
-            {criteria.certifications.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                {criteria.certifications.map(c => (
-                  <span key={c} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/40">
-                    {c}
-                    <button type="button" onClick={() => onUpdate('certifications', criteria.certifications.filter(x => x !== c))} className="hover:text-red-300 transition-colors"><X size={10} /></button>
-                  </span>
-                ))}
-              </div>
-            )}
-            <Divider />
-            <p className="text-[11px] text-white/30 mb-2 font-medium">Ajouter une certification personnalisée</p>
-            <TagsInput
-              values={criteria.certifications.filter(c => !knownCerts.includes(c))}
-              onChange={custom => onUpdate('certifications', [
-                ...criteria.certifications.filter(c => knownCerts.includes(c)),
-                ...custom,
-              ])}
-              placeholder="Autre certification… (Entrée)"
-            />
-          </Card>
+          <SectionHeader icon={Target} color="bg-violet-500/15 text-violet-400" label="Scoring Go/No Go" sub="Certifications, pondérations et critères de sélection" />
 
-          {/* Min margin */}
           <Card>
-            <SectionHeader icon={TrendingUp} color="bg-rose-500/15 text-rose-400" label="Marge minimale acceptée" sub="Un projet sous ce seuil pénalisera le score Rentabilité" />
-            <div className="flex items-center gap-5">
-              <input type="range" min={2} max={35} step={0.5}
-                value={criteria.rentabilite_min_pct}
-                onChange={e => onUpdate('rentabilite_min_pct', Number(e.target.value))}
-                className="flex-1 h-2 rounded-full cursor-pointer accent-rose-500"
+            <FieldLabel>
+              <Award size={11} />Certifications & Agréments
+            </FieldLabel>
+            <div className="mb-3">
+              <ChipGrid
+                options={CERTIFICATIONS_SUGGESTIONS}
+                selected={criteria.certifications}
+                onChange={v => onUpdate('certifications', v)}
+                colorActive="bg-violet-600/80 text-white border-violet-500/80"
               />
-              <div className="flex items-baseline gap-1 w-24 justify-end flex-shrink-0">
-                <span className="text-4xl font-extrabold text-rose-400 tabular-nums">{criteria.rentabilite_min_pct}</span>
-                <span className="text-xl font-bold text-rose-500/60">%</span>
+            </div>
+            <TagsInput
+              values={criteria.certifications.filter(c => !CERTIFICATIONS_SUGGESTIONS.includes(c))}
+              onChange={v => {
+                const standard = criteria.certifications.filter(c => CERTIFICATIONS_SUGGESTIONS.includes(c))
+                onUpdate('certifications', [...standard, ...v])
+              }}
+              placeholder="Autre certification…"
+            />
+          </Card>
+
+          <Card>
+            <FieldLabel>
+              <Star size={11} />Points forts & différenciateurs
+            </FieldLabel>
+            <div className="mb-3">
+              <ChipGrid
+                options={POINTS_FORTS_SUGGESTIONS}
+                selected={criteria.points_forts}
+                onChange={v => onUpdate('points_forts', v)}
+                colorActive="bg-amber-600/80 text-white border-amber-500/80"
+              />
+            </div>
+            <TagsInput
+              values={criteria.points_forts.filter(p => !POINTS_FORTS_SUGGESTIONS.includes(p))}
+              onChange={v => {
+                const standard = criteria.points_forts.filter(p => POINTS_FORTS_SUGGESTIONS.includes(p))
+                onUpdate('points_forts', [...standard, ...v])
+              }}
+              placeholder="Autre point fort…"
+            />
+          </Card>
+
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <FieldLabel><SlidersHorizontal size={11} />Pondérations scoring</FieldLabel>
+              <span className="text-[10px] text-white/25 normal-case font-normal tracking-normal">Importance de chaque critère de 1 à 5</span>
+            </div>
+            <div className="space-y-5">
+              <WeightSlider label="Rentabilité / Marges" value={criteria.poids_rentabilite} onChange={v => onUpdate('poids_rentabilite', v)} />
+              <WeightSlider label="Complexité technique" value={criteria.poids_complexite} onChange={v => onUpdate('poids_complexite', v)} />
+              <WeightSlider label="Alignement stratégique" value={criteria.poids_alignement} onChange={v => onUpdate('poids_alignement', v)} />
+              <WeightSlider label="Probabilité de gain" value={criteria.poids_probabilite} onChange={v => onUpdate('poids_probabilite', v)} />
+              <WeightSlider label="Charge de travail" value={criteria.poids_charge} onChange={v => onUpdate('poids_charge', v)} />
+            </div>
+          </Card>
+
+          <Card>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-4">Seuils & Filtres</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <FieldLabel tooltip="En dessous de ce taux de marge, le projet sera signalé en rouge dans le scoring">
+                  Rentabilité minimum (%)
+                </FieldLabel>
+                <NumberInput
+                  value={criteria.rentabilite_min_pct}
+                  onChange={v => onUpdate('rentabilite_min_pct', v)}
+                  placeholder="ex: 8"
+                  min={0} max={100}
+                  suffix="%"
+                />
               </div>
             </div>
-            <div className="flex justify-between text-[10px] text-white/25 mt-1"><span>2 %</span><span>35 %</span></div>
           </Card>
 
-          {/* Key strengths */}
           <Card>
-            <SectionHeader icon={Star} color="bg-amber-500/15 text-amber-400" label="Points forts de l'entreprise" sub="Arguments différenciants pris en compte pour la probabilité de gain" />
-            <TagsInput values={criteria.points_forts} onChange={v => onUpdate('points_forts', v)} placeholder="Ex : Délais courts, SAV réactif, référence locale… (Entrée)" />
-          </Card>
-
-          {/* Exclusion keywords */}
-          <Card>
-            <SectionHeader icon={AlertTriangle} color="bg-red-500/15 text-red-400" label="Mots-clés d'exclusion" sub="Termes dans un DCE qui déclenchent automatiquement un NO GO" />
-            <TagsInput values={criteria.mots_cles_exclusion ?? []} onChange={v => onUpdate('mots_cles_exclusion', v)} placeholder="Ex : nucléaire, offshore, sous-traitance seule… (Entrée)" />
-          </Card>
-
-          {/* Score weights */}
-          <Card>
-            <SectionHeader icon={SlidersHorizontal} color="bg-indigo-500/15 text-indigo-400" label="Pondérations des critères" sub="Ajustez l'importance relative de chaque critère dans le score final" />
-            <div className="space-y-5">
-              <WeightSelector label="Rentabilité"         value={criteria.poids_rentabilite}  onChange={v => onUpdate('poids_rentabilite', v)}  tooltip="Importance du potentiel de marge dans la décision" />
-              <WeightSelector label="Complexité"          value={criteria.poids_complexite}   onChange={v => onUpdate('poids_complexite', v)}   tooltip="Importance de la simplicité d'exécution (score inversé : complexe = pénalisé)" />
-              <WeightSelector label="Alignement capacité" value={criteria.poids_alignement}   onChange={v => onUpdate('poids_alignement', v)}   tooltip="Adéquation entre les exigences du projet et vos capacités réelles" />
-              <WeightSelector label="Probabilité de gain" value={criteria.poids_probabilite}  onChange={v => onUpdate('poids_probabilite', v)}  tooltip="Vos chances de remporter le marché (références, position concurrentielle)" />
-              <WeightSelector label="Charge interne"      value={criteria.poids_charge}       onChange={v => onUpdate('poids_charge', v)}       tooltip="Légèreté en ressources humaines requises (score inversé : charge lourde = pénalisé)" />
-            </div>
-            <Divider />
-            <p className="text-[10px] text-white/30 font-semibold uppercase tracking-wider mb-3">Répartition des poids</p>
-            <div className="flex gap-2 items-end h-20">
-              {[
-                { key: 'Rent.',   poids: criteria.poids_rentabilite,  color: 'bg-rose-500' },
-                { key: 'Compl.',  poids: criteria.poids_complexite,   color: 'bg-amber-500' },
-                { key: 'Align.',  poids: criteria.poids_alignement,   color: 'bg-blue-500' },
-                { key: 'Prob.',   poids: criteria.poids_probabilite,  color: 'bg-emerald-500' },
-                { key: 'Charge',  poids: criteria.poids_charge,       color: 'bg-violet-500' },
-              ].map(({ key, poids, color }) => {
-                const pct = Math.round((poids / totalPoids) * 100)
-                return (
-                  <div key={key} className="flex-1 flex flex-col items-center justify-end gap-1">
-                    <span className="text-[10px] font-bold text-white/60 tabular-nums">{pct}%</span>
-                    <div className={cn('w-full rounded-t-md transition-all duration-300 opacity-80', color)} style={{ height: `${Math.max(6, pct * 0.6)}px` }} />
-                    <span className="text-[9px] text-white/30 truncate w-full text-center">{key}</span>
-                  </div>
-                )
-              })}
-            </div>
-          </Card>
-
-          {/* AI notes */}
-          <Card>
-            <SectionHeader icon={BarChart3} color="bg-blue-500/15 text-blue-400" label="Notes pour l'IA" sub="Contexte supplémentaire transmis à Claude lors de chaque scoring" />
-            <textarea value={criteria.notes} onChange={e => onUpdate('notes', e.target.value)} rows={5}
-              placeholder="Ex : Nous sommes en forte croissance, ciblons des marchés publics supérieurs à 1 M€, avons des difficultés de recrutement et n'acceptons plus les projets à plus de 300 km de notre siège."
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/8 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/30 resize-none leading-relaxed transition-all"
+            <FieldLabel>
+              <X size={11} />Mots-clés d'exclusion
+              <span className="ml-1 text-[10px] text-white/20 normal-case font-normal tracking-normal">Les projets contenant ces mots ne seront pas recommandés</span>
+            </FieldLabel>
+            <TagsInput
+              values={criteria.mots_cles_exclusion ?? []}
+              onChange={v => onUpdate('mots_cles_exclusion', v)}
+              placeholder="Ex: amiante, nucléaire, export…"
             />
-            <p className="text-[10px] text-white/25 text-right mt-1 tabular-nums">{criteria.notes.length} / 800 caractères</p>
+          </Card>
+
+          <Card>
+            <FieldLabel><FileText size={11} />Notes internes</FieldLabel>
+            <textarea
+              value={criteria.notes ?? ''}
+              onChange={e => onUpdate('notes', e.target.value)}
+              rows={4}
+              placeholder="Notes libres sur votre stratégie commerciale, contraintes particulières…"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-white/4 border border-white/8 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/40 focus:border-blue-500/30 transition-all resize-none"
+            />
           </Card>
         </>
       )}

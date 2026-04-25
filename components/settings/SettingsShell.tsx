@@ -65,15 +65,16 @@ export function SettingsShell({ initialCriteria, initialMode, initialDocName }: 
     switch (tab) {
       case 'profil': {
         const fields = [criteria.raison_sociale, criteria.siren, criteria.description_courte, criteria.effectifs, criteria.secteur_principal]
-        return Math.round((fields.filter(f => f && f.trim()).length / fields.length) * 100)
+        return Math.round((fields.filter(f => f && String(f).trim()).length / fields.length) * 100)
       }
       case 'perimetre': {
         const score = (criteria.zones_geo.length > 0 ? 34 : 0) + (criteria.types_projets.length > 0 ? 33 : 0) + (criteria.secteurs_clients.length > 0 ? 33 : 0)
         return score
       }
       case 'capacites': {
-        const fields = [criteria.puissance_min_kwc, criteria.puissance_max_kwc, criteria.capacite_mensuelle_kwc]
-        return fields.every(f => f > 0) ? 100 : 40
+        const hasBudget = (criteria.budget_min_eur ?? 0) > 0 || (criteria.budget_max_eur ?? 0) > 0
+        const hasVol    = criteria.capacite_mensuelle_kwc > 0
+        return hasBudget && hasVol ? 100 : hasBudget || hasVol ? 50 : 20
       }
       case 'scoring': {
         const score = (criteria.certifications.length > 0 ? 25 : 0) + (criteria.points_forts.length > 0 ? 25 : 0) + 50
