@@ -5,8 +5,8 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils/cn'
 import {
   Home, FolderOpen, PlusCircle, BarChart3, Building2,
-  LogOut, User, CreditCard, Radio, HelpCircle, Zap,
-  ChevronRight, Settings2, ExternalLink,
+  LogOut, User, CreditCard, Radio, HelpCircle,
+  ChevronRight, ExternalLink, Users,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -24,6 +24,7 @@ const TOOLS_NAV = [
   { href: '/dashboard', label: 'Dashboard',      icon: BarChart3,  badge: null },
   { href: '/veille',    label: 'Veille BOAMP',   icon: Radio,      badge: 'Live' },
   { href: '/settings',  label: 'Mon entreprise', icon: Building2,  badge: null },
+  { href: '/team',      label: 'Équipe',          icon: Users,      badge: null },
 ]
 
 const BOTTOM_NAV = [

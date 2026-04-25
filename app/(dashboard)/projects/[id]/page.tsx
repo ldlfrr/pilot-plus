@@ -11,18 +11,21 @@ import { PiecesTab }        from '@/components/project/tabs/PiecesTab'
 import { SpecificitesTab }  from '@/components/project/tabs/SpecificitesTab'
 import { ActionsTab }       from '@/components/project/tabs/ActionsTab'
 import { MapTab }           from '@/components/project/tabs/MapTab'
+import { ResponsePlanTab }  from '@/components/project/tabs/ResponsePlanTab'
+import { CommentsTab }      from '@/components/project/tabs/CommentsTab'
 import {
   Cpu, Target, Trash2, Pencil, Loader2, AlertCircle, CheckCircle,
   Download, Share2, FilePlus, Calendar, MapPin, Building, Hash,
   FileText, Users, ListChecks, Wrench, BarChart3, Layers,
   Copy, X, ExternalLink, Link as LinkIcon, Lock, ArrowRight,
   ClipboardList, Map, Trophy, XCircle, Flag, TrendingUp,
+  BookOpen, MessageSquare,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
 import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates, SubscriptionTier, ProjectOutcome } from '@/types'
 
-type Tab = 'synthese' | 'corp' | 'map' | 'besoin' | 'pieces' | 'specificites' | 'gonogo' | 'actions' | 'documents'
+type Tab = 'synthese' | 'corp' | 'map' | 'besoin' | 'pieces' | 'specificites' | 'gonogo' | 'actions' | 'documents' | 'plan' | 'comments'
 
 interface ProjectData {
   project: Project
@@ -262,6 +265,8 @@ export default function ProjectPage() {
     { id: 'gonogo',       label: 'Go / No Go',          icon: BarChart3 },
     { id: 'actions',      label: 'Actions',              icon: Target },
     { id: 'documents',    label: 'Documents',            icon: Layers },
+    { id: 'plan',         label: 'Plan de réponse',      icon: BookOpen },
+    { id: 'comments',     label: 'Commentaires',         icon: MessageSquare },
   ]
 
   return (
@@ -671,6 +676,17 @@ export default function ProjectPage() {
             existingFiles={files}
             onFilesChange={updated => setData(prev => prev ? { ...prev, files: updated } : prev)}
           />
+        </div>
+
+        <div style={{ display: activeTab === 'plan' ? 'block' : 'none' }} className="p-4 md:p-6">
+          <ResponsePlanTab
+            projectId={id}
+            hasAnalysis={latestAnalysis !== null}
+          />
+        </div>
+
+        <div style={{ display: activeTab === 'comments' ? 'block' : 'none' }} className="p-4 md:p-6">
+          <CommentsTab projectId={id} />
         </div>
 
       </div>

@@ -4,14 +4,15 @@ import { useState } from 'react'
 import {
   Building2, Map, Zap, Target, FileText,
   CheckCircle, AlertCircle, Loader2, Save,
-  ChevronRight,
+  ChevronRight, BookMarked,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { CriteriaForm } from './CriteriaForm'
 import { CompanyDocImport } from './CompanyDocImport'
+import { CriteriaTemplates } from './CriteriaTemplates'
 import type { CompanyCriteria } from '@/types'
 
-type Tab = 'profil' | 'perimetre' | 'capacites' | 'scoring' | 'import'
+type Tab = 'profil' | 'perimetre' | 'capacites' | 'scoring' | 'import' | 'templates'
 
 const TABS: { id: Tab; label: string; icon: React.ElementType; description: string }[] = [
   { id: 'profil',    label: 'Profil entreprise',  icon: Building2, description: 'Identité & informations' },
@@ -19,6 +20,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType; description: stri
   { id: 'capacites', label: 'Capacités',           icon: Zap,       description: 'Techniques & commerciales' },
   { id: 'scoring',   label: 'Scoring Go/No Go',    icon: Target,    description: 'Critères & pondérations' },
   { id: 'import',    label: 'Import document',     icon: FileText,  description: 'PDF ou Word comme base' },
+  { id: 'templates', label: 'Templates',           icon: BookMarked, description: 'Profils sauvegardés' },
 ]
 
 interface SettingsShellProps {
@@ -78,6 +80,7 @@ export function SettingsShell({ initialCriteria, initialMode, initialDocName }: 
         return score
       }
       case 'import': return initialDocName ? 100 : 0
+      case 'templates': return 100
     }
   }
 
@@ -94,7 +97,7 @@ export function SettingsShell({ initialCriteria, initialMode, initialDocName }: 
             </p>
           </div>
           {/* Global save button */}
-          {activeTab !== 'import' && (
+          {activeTab !== 'import' && activeTab !== 'templates' && (
             <button
               onClick={handleSave}
               disabled={saving}
@@ -169,11 +172,11 @@ export function SettingsShell({ initialCriteria, initialMode, initialDocName }: 
               <div className="flex-1 h-1.5 bg-white/8 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-500"
-                  style={{ width: `${Math.round(TABS.filter(t => t.id !== 'import').reduce((acc, t) => acc + tabCompletion(t.id), 0) / 4)}%` }}
+                  style={{ width: `${Math.round(TABS.filter(t => t.id !== 'import' && t.id !== 'templates').reduce((acc, t) => acc + tabCompletion(t.id), 0) / 4)}%` }}
                 />
               </div>
               <span className="text-[10px] font-bold text-white/40 tabular-nums">
-                {Math.round(TABS.filter(t => t.id !== 'import').reduce((acc, t) => acc + tabCompletion(t.id), 0) / 4)}%
+                {Math.round(TABS.filter(t => t.id !== 'import' && t.id !== 'templates').reduce((acc, t) => acc + tabCompletion(t.id), 0) / 4)}%
               </span>
             </div>
           </div>
@@ -199,15 +202,26 @@ export function SettingsShell({ initialCriteria, initialMode, initialDocName }: 
 
         {/* ── Content ───────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto scrollbar-hide">
-          <CriteriaForm
-            criteria={criteria}
-            activeTab={activeTab}
-            onUpdate={updateCriteria}
-          />
+          {activeTab !== 'import' && activeTab !== 'templates' && (
+            <CriteriaForm
+              criteria={criteria}
+              activeTab={activeTab}
+              onUpdate={updateCriteria}
+            />
+          )}
           {activeTab === 'import' && (
             <div className="p-5 md:p-8">
               <CompanyDocImport initialDocName={initialDocName} />
             </div>
+          )}
+          {activeTab === 'templates' && (
+            <CriteriaTemplates
+              currentCriteria={criteria}
+              onLoad={(loaded) => {
+                setCriteria(loaded)
+                setSaved(false)
+              }}
+            />
           )}
         </div>
       </div>

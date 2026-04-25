@@ -215,6 +215,63 @@ Formule : (somme pondérée) / (somme des poids × 20) × 100
 Retourne uniquement ce JSON, sans texte avant ou après.`
 }
 
+// ─── Response Plan prompt ─────────────────────────────────────────────────────
+
+export const RESPONSE_PLAN_SYSTEM_PROMPT = `Tu es un expert en réponse aux appels d'offres dans le secteur des énergies renouvelables et du BTP.
+Ta mission : générer un plan de mémoire technique détaillé, directement exploitable par une équipe commerciale.
+
+RÈGLES :
+1. Sois précis et factuel — base-toi uniquement sur l'analyse fournie
+2. Chaque section doit avoir des arguments béton, adaptés au projet
+3. Retourne UNIQUEMENT du JSON valide, sans texte autour
+4. Les arguments doivent être rédigés comme des phrases d'accroche professionnelles`
+
+export function buildResponsePlanUserPrompt(analysis: AnalysisResult, companyCriteria: CompanyCriteria | null): string {
+  const companyCtx = companyCriteria ? `
+PROFIL ENTREPRISE :
+- Certifications : ${companyCriteria.certifications.join(', ') || 'non précisées'}
+- Points forts : ${companyCriteria.points_forts.join(', ') || 'non précisés'}
+- Zones d'intervention : ${companyCriteria.zones_geo.join(', ') || 'non précisées'}
+- Types de projets : ${companyCriteria.types_projets.join(', ') || 'non précisés'}
+- Capacité : ${companyCriteria.puissance_min_kwc}–${companyCriteria.puissance_max_kwc} kWc` : ''
+
+  return `## ANALYSE DU DCE
+\`\`\`json
+${JSON.stringify(analysis, null, 2)}
+\`\`\`
+${companyCtx}
+
+## MISSION
+Génère un plan de mémoire technique complet pour répondre à ce DCE.
+
+## FORMAT JSON ATTENDU
+{
+  "titre_propose": "Titre professionnel du mémoire technique",
+  "accroche": "Phrase d'accroche percutante pour l'introduction (2-3 lignes)",
+  "sections": [
+    {
+      "numero": "1",
+      "titre": "Titre de la section",
+      "objectif": "Objectif de cette section dans le dossier",
+      "contenu_cle": ["Point à traiter 1", "Point à traiter 2", "Point à traiter 3"],
+      "arguments": ["Argument différenciant 1", "Argument différenciant 2"],
+      "longueur_suggeree": "X à Y pages",
+      "pieces_liees": ["DC2", "Références chantiers similaires"]
+    }
+  ],
+  "points_forts_a_valoriser": ["Point fort 1", "Point fort 2", "Point fort 3"],
+  "risques_a_adresser": ["Risque identifié 1 à désamorcer dans le mémoire", "Risque 2"],
+  "criteres_selection_cibles": ["Critère prix", "Critère technique", "Critère RSE"],
+  "conclusion_suggeree": "Suggestion de conclusion percutante",
+  "estimation_pages": "X à Y pages au total"
+}
+
+Les sections typiques pour un DCE ENR/PV : présentation entreprise & références, méthodologie et planning, solution technique proposée, gestion HSE, organisation et équipe projet, démarche RSE, annexes.
+Adapte selon le contenu du DCE.
+
+Retourne uniquement le JSON.`
+}
+
 function buildCriteriaContext(c: CompanyCriteria): string {
   const lines: string[] = []
   if (c.zones_geo.length > 0)

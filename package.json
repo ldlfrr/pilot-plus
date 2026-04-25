@@ -29,6 +29,7 @@
     "autoprefixer": "^10.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "docx": "^9.6.1",
     "docxtemplater": "^3.68.5",
     "html2canvas": "^1.4.1",
@@ -43,6 +44,7 @@
     "react-dom": "^19.0.0",
     "react-leaflet": "^5.0.0",
     "recharts": "^2.13.3",
+    "resend": "^6.12.2",
     "stripe": "^22.1.0",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7"
