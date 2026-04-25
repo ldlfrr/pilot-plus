@@ -7,6 +7,7 @@ import {
   Home, FolderOpen, PlusCircle, BarChart3, Building2,
   LogOut, User, CreditCard, Radio, HelpCircle,
   ChevronRight, ExternalLink, Users, Mail, UserSearch, FileDown,
+  Kanban, CalendarDays,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -20,13 +21,15 @@ const MAIN_NAV = [
 ]
 
 const TOOLS_NAV = [
-  { href: '/dashboard',        label: 'Dashboard',        icon: BarChart3,   badge: null  },
-  { href: '/veille',           label: 'Veille BOAMP',     icon: Radio,       badge: 'Live' },
-  { href: '/enrichment',       label: 'Find contacts',    icon: UserSearch,  badge: 'IA'  },
-  { href: '/email-campaigns',  label: 'Campagnes email',  icon: Mail,        badge: 'IA'  },
-  { href: '/export',           label: 'Export',            icon: FileDown,    badge: null  },
-  { href: '/settings',         label: 'Mon entreprise',   icon: Building2,   badge: null  },
-  { href: '/team',             label: 'Équipe',            icon: Users,       badge: null  },
+  { href: '/dashboard',        label: 'Dashboard',        icon: BarChart3,    badge: null   },
+  { href: '/pipeline',         label: 'Pipeline',         icon: Kanban,       badge: null   },
+  { href: '/calendrier',       label: 'Calendrier',       icon: CalendarDays, badge: null   },
+  { href: '/veille',           label: 'Veille BOAMP',     icon: Radio,        badge: 'Live' },
+  { href: '/enrichment',       label: 'Find contacts',    icon: UserSearch,   badge: 'IA'   },
+  { href: '/email-campaigns',  label: 'Campagnes email',  icon: Mail,         badge: 'IA'   },
+  { href: '/export',           label: 'Export',            icon: FileDown,     badge: null   },
+  { href: '/settings',         label: 'Mon entreprise',   icon: Building2,    badge: null   },
+  { href: '/team',             label: 'Équipe',            icon: Users,        badge: null   },
 ]
 
 const BOTTOM_NAV = [

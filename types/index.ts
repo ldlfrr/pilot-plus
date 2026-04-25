@@ -143,11 +143,63 @@ export interface ProjectScore {
   created_at: string
 }
 
-// ─── Task states (pièces à fournir + actions) ────────────────────────────────
+// ─── Commercial pipeline ──────────────────────────────────────────────────────
+
+export type PipelineStage =
+  | 'veille'
+  | 'analyse'
+  | 'go'
+  | 'brief'
+  | 'chiffrage'
+  | 'relecture'
+  | 'remis'
+  | 'cloture'
+
+export type IntervenantRole =
+  | 'commercial'
+  | 'directeur_agence'
+  | 'charge_affaires'
+  | 'avant_vente'
+
+export interface Intervenant {
+  role:   IntervenantRole
+  name:   string
+  email?: string
+  phone?: string
+}
+
+export type ChiffrageStatus = 'a_chiffrer' | 'en_cours' | 'chiffre' | 'valide'
+
+export interface ChiffrageData {
+  status:      ChiffrageStatus
+  montant?:    number
+  deadline?:   string   // ISO date
+  notes?:      string
+  updated_at?: string
+}
+
+export interface ChecklistRemise {
+  memoire_technique:    boolean
+  chiffrage_valide:     boolean
+  dc1_dc2_dc4:          boolean
+  references_chantiers: boolean
+  attestations:         boolean
+  relecture_commerciale: boolean
+  remise_effectuee:     boolean
+}
+
+// ─── Task states (pièces à fournir + actions + pipeline) ─────────────────────
 
 export interface TaskStates {
-  pieces: Record<string, boolean>   // clé = nom pièce, valeur = true si prête
+  pieces:  Record<string, boolean>  // clé = nom pièce, valeur = true si prête
   actions: Record<string, boolean>  // clé = action, valeur = true si faite
+  // ── Pipeline commercial ──────────────────────────────────────────────────
+  pipeline_stage?:                 PipelineStage
+  intervenants?:                   Intervenant[]
+  chiffrage?:                      ChiffrageData
+  checklist?:                      ChecklistRemise
+  memoire_technique?:              string   // texte IA généré
+  brief_avant_vente_generated_at?: string   // ISO datetime
 }
 
 // ─── API payload types ────────────────────────────────────────────────────────

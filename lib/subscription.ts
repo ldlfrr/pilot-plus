@@ -32,7 +32,8 @@ export const FEATURE_MIN_TIER: Record<string, string> = {
   email_campaigns:   'pro',
   partage_projets:   'pro',
   // Enterprise only
-  api_access:        'enterprise',
+  api_access:          'enterprise',
+  brief_avant_vente:   'enterprise',
 }
 
 /**
@@ -59,7 +60,8 @@ export function checkFeatureGate(
     veille_boamp:     'La veille BOAMP',
     email_campaigns:  'Les campagnes email IA',
     partage_projets:  'Le partage de projets',
-    api_access:       "L'accès API PILOT+",
+    api_access:         "L'accès API PILOT+",
+    brief_avant_vente:  'Le Brief Avant-Vente IA',
   }
 
   return {

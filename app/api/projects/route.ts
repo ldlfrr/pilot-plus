@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { CreateProjectPayload } from '@/types'
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -18,6 +18,34 @@ export async function GET() {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Enrich with latest score per project (best-effort)
+  try {
+    const ids = (projects ?? []).map((p: { id: string }) => p.id)
+    if (ids.length > 0) {
+      const { data: scores } = await supabase
+        .from('project_scores')
+        .select('project_id, total_score, verdict, created_at')
+        .in('project_id', ids)
+        .order('created_at', { ascending: false })
+
+      // Keep only the latest score per project
+      const latestScore = new Map<string, { total_score: number; verdict: string }>()
+      for (const s of (scores ?? [])) {
+        if (!latestScore.has(s.project_id)) {
+          latestScore.set(s.project_id, { total_score: s.total_score, verdict: s.verdict })
+        }
+      }
+
+      const enriched = (projects ?? []).map((p: { id: string }) => ({
+        ...p,
+        score: latestScore.get(p.id) ?? null,
+      }))
+      return NextResponse.json({ projects: enriched })
+    }
+  } catch {
+    // Ignore score enrichment errors — return raw projects
   }
 
   return NextResponse.json({ projects })

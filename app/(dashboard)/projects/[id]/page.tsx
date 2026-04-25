@@ -4,29 +4,33 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { FileUpload } from '@/components/projects/FileUpload'
 import { ScoreDisplay } from '@/components/analysis/ScoreDisplay'
-import { SyntheseTab }      from '@/components/project/tabs/SyntheseTab'
-import { SyntheseCorpTab }  from '@/components/project/tabs/SyntheseCorpTab'
-import { BesoinClientTab }  from '@/components/project/tabs/BesoinClientTab'
-import { PiecesTab }        from '@/components/project/tabs/PiecesTab'
-import { SpecificitesTab }  from '@/components/project/tabs/SpecificitesTab'
-import { ActionsTab }       from '@/components/project/tabs/ActionsTab'
-import { MapTab }           from '@/components/project/tabs/MapTab'
-import { ResponsePlanTab }  from '@/components/project/tabs/ResponsePlanTab'
-import { CommentsTab }      from '@/components/project/tabs/CommentsTab'
+import { SyntheseTab }         from '@/components/project/tabs/SyntheseTab'
+import { SyntheseCorpTab }     from '@/components/project/tabs/SyntheseCorpTab'
+import { BesoinClientTab }     from '@/components/project/tabs/BesoinClientTab'
+import { PiecesTab }           from '@/components/project/tabs/PiecesTab'
+import { SpecificitesTab }     from '@/components/project/tabs/SpecificitesTab'
+import { ActionsTab }          from '@/components/project/tabs/ActionsTab'
+import { MapTab }              from '@/components/project/tabs/MapTab'
+import { ResponsePlanTab }     from '@/components/project/tabs/ResponsePlanTab'
+import { CommentsTab }         from '@/components/project/tabs/CommentsTab'
+import { IntervenantsTab }     from '@/components/project/tabs/IntervenantsTab'
+import { ChiffrageTab }        from '@/components/project/tabs/ChiffrageTab'
+import { ChecklistRemiseTab }  from '@/components/project/tabs/ChecklistRemiseTab'
+import { MemoireTechniqueTab } from '@/components/project/tabs/MemoireTechniqueTab'
 import {
   Cpu, Target, Trash2, Pencil, Loader2, AlertCircle, CheckCircle,
   Share2, FilePlus, Calendar, MapPin, Building, Hash,
   FileText, Users, ListChecks, Wrench, BarChart3, Layers,
   Copy, X, ExternalLink, Link as LinkIcon, Lock, ArrowRight,
   ClipboardList, Map, Trophy, XCircle, Flag, TrendingUp,
-  BookOpen, MessageSquare,
+  BookOpen, MessageSquare, Calculator, ClipboardCheck, FileDown,
 } from 'lucide-react'
 import { ExportMenu } from '@/components/projects/ExportMenu'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
-import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates, SubscriptionTier, ProjectOutcome } from '@/types'
+import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates, SubscriptionTier, ProjectOutcome, Intervenant, ChiffrageData, ChecklistRemise } from '@/types'
 
-type Tab = 'synthese' | 'corp' | 'map' | 'besoin' | 'pieces' | 'specificites' | 'gonogo' | 'actions' | 'documents' | 'plan' | 'comments'
+type Tab = 'synthese' | 'corp' | 'map' | 'besoin' | 'pieces' | 'specificites' | 'gonogo' | 'actions' | 'documents' | 'plan' | 'comments' | 'intervenants' | 'chiffrage' | 'checklist' | 'memoire'
 
 interface ProjectData {
   project: Project
@@ -36,6 +40,8 @@ interface ProjectData {
 }
 
 const EMPTY_TASK_STATES: TaskStates = { pieces: {}, actions: {} }
+
+const ENTERPRISE_TIERS = new Set(['enterprise', 'lifetime'])
 
 const VERDICT_CFG = {
   GO:       { label: 'GO',         bg: 'bg-emerald-500/20 border-emerald-500/40', text: 'text-emerald-400' },
@@ -71,6 +77,14 @@ export default function ProjectPage() {
   interface UserLimits { tier: SubscriptionTier; analyses_used: number; analyses_limit: number | null }
   const [userLimits, setUserLimits] = useState<UserLimits | null>(null)
 
+  // ── Pipeline state (synced from task_states) ─────────────────────────────────
+  const [intervenants, setIntervenants] = useState<Intervenant[]>([])
+  const [chiffrage,    setChiffrage]    = useState<ChiffrageData | null>(null)
+  const [checklist,    setChecklist]    = useState<ChecklistRemise | null>(null)
+  const [memoireText,  setMemoireText]  = useState<string>('')
+  const [briefLoading, setBriefLoading] = useState(false)
+  const [briefError,   setBriefError]   = useState<string | null>(null)
+
   const fetchProject = useCallback(async () => {
     try {
       const res = await fetch(`/api/projects/${id}`)
@@ -88,6 +102,16 @@ export default function ProjectPage() {
     fetchProject()
     fetch('/api/user/limits').then(r => r.json()).then(setUserLimits).catch(() => {})
   }, [fetchProject])
+
+  // Sync pipeline fields from task_states after load
+  useEffect(() => {
+    if (!data) return
+    const ts = (data.project.task_states ?? {}) as TaskStates
+    setIntervenants(ts.intervenants   ?? [])
+    setChiffrage   (ts.chiffrage      ?? null)
+    setChecklist   (ts.checklist      ?? null)
+    setMemoireText (ts.memoire_technique ?? '')
+  }, [data])
 
   async function callApi(url: string) {
     const res  = await fetch(url, { method: 'POST' })
@@ -190,6 +214,28 @@ export default function ProjectPage() {
     } finally { setCloturing(false) }
   }
 
+  async function handleBriefAvantVente() {
+    setBriefLoading(true); setBriefError(null)
+    try {
+      const res = await fetch(`/api/projects/${id}/brief-avant-vente`, { method: 'POST' })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({})) as { error?: string }
+        throw new Error(json.error ?? 'Erreur génération')
+      }
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `Brief_AvantVente_${id.slice(0, 8)}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setBriefError(err instanceof Error ? err.message : 'Erreur')
+    } finally {
+      setBriefLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col min-h-0 animate-pulse">
@@ -260,10 +306,15 @@ export default function ProjectPage() {
     { id: 'pieces',       label: 'Pièces à fournir',    icon: ListChecks },
     { id: 'specificites', label: 'Spécificités',        icon: Wrench },
     { id: 'gonogo',       label: 'Go / No Go',          icon: BarChart3 },
-    { id: 'actions',      label: 'Actions',              icon: Target },
-    { id: 'documents',    label: 'Documents',            icon: Layers },
-    { id: 'plan',         label: 'Plan de réponse',      icon: BookOpen },
-    { id: 'comments',     label: 'Commentaires',         icon: MessageSquare },
+    { id: 'actions',      label: 'Actions',             icon: Target },
+    { id: 'documents',    label: 'Documents',           icon: Layers },
+    { id: 'plan',         label: 'Plan de réponse',     icon: BookOpen },
+    { id: 'comments',     label: 'Commentaires',        icon: MessageSquare },
+    // ── Pipeline commercial ──────────────────────────────────────────────────
+    { id: 'intervenants', label: 'Intervenants',        icon: Users },
+    { id: 'chiffrage',    label: 'Chiffrage',           icon: Calculator },
+    { id: 'checklist',    label: 'Checklist remise',    icon: ClipboardCheck },
+    { id: 'memoire',      label: 'Mémoire technique',   icon: BookOpen },
   ]
 
   return (
@@ -318,6 +369,18 @@ export default function ProjectPage() {
               projectName={project.name}
               userTier={userLimits?.tier ?? 'free'}
             />
+            {/* Brief Avant-Vente — enterprise only */}
+            {ENTERPRISE_TIERS.has(userLimits?.tier ?? '') ? (
+              <button
+                onClick={handleBriefAvantVente}
+                disabled={briefLoading || analyses.length === 0}
+                title="Générer le Brief Avant-Vente (1 page PDF)"
+                className="flex items-center gap-1.5 px-3 py-2 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-400 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {briefLoading ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
+                Brief AV
+              </button>
+            ) : null}
             <button
               onClick={handleShare}
               disabled={shareLoading}
@@ -549,6 +612,13 @@ export default function ProjectPage() {
         )}
 
         {/* Feedback */}
+        {briefError && (
+          <div className="mb-3 flex items-center gap-2 text-sm text-red-400 bg-red-950/30 border border-red-800/40 rounded-lg px-3.5 py-2.5">
+            <AlertCircle size={14} className="flex-shrink-0" />
+            {briefError}
+            <button onClick={() => setBriefError(null)} className="ml-auto text-white/30 hover:text-white/60"><X size={12} /></button>
+          </div>
+        )}
         {actionError && (
           <div className={cn(
             'mb-3 flex items-center gap-2 text-sm rounded-lg px-3.5 py-2.5',
@@ -683,6 +753,42 @@ export default function ProjectPage() {
 
         <div style={{ display: activeTab === 'comments' ? 'block' : 'none' }} className="p-4 md:p-6">
           <CommentsTab projectId={id} />
+        </div>
+
+        {/* ── Pipeline commercial tabs ──────────────────────────────────── */}
+        <div style={{ display: activeTab === 'intervenants' ? 'block' : 'none' }} className="p-4 md:p-6">
+          <IntervenantsTab
+            projectId={id}
+            intervenants={intervenants}
+            onChange={setIntervenants}
+          />
+        </div>
+
+        <div style={{ display: activeTab === 'chiffrage' ? 'block' : 'none' }} className="p-4 md:p-6">
+          <ChiffrageTab
+            projectId={id}
+            chiffrage={chiffrage}
+            onChange={setChiffrage}
+          />
+        </div>
+
+        <div style={{ display: activeTab === 'checklist' ? 'block' : 'none' }} className="p-4 md:p-6">
+          <ChecklistRemiseTab
+            projectId={id}
+            checklist={checklist}
+            offerDeadline={project.offer_deadline}
+            onChange={setChecklist}
+          />
+        </div>
+
+        <div style={{ display: activeTab === 'memoire' ? 'block' : 'none' }} className="p-4 md:p-6">
+          <MemoireTechniqueTab
+            projectId={id}
+            hasAnalysis={latestAnalysis !== null}
+            initialText={memoireText}
+            userTier={userLimits?.tier ?? 'free'}
+            onChange={setMemoireText}
+          />
         </div>
 
       </div>
