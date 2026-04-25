@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
-  Download, FileText, BarChart3, Star, Lock,
-  Loader2, Check, ChevronDown, FileDown,
+  FileText, BarChart3, Mail, Star,
+  Lock, Loader2, Check, X, FileDown, Download,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
@@ -13,20 +13,13 @@ interface ExportMenuProps {
   userTier: string
 }
 
-interface Option {
-  id:     string
-  label:  string
-  sub:    string
-  icon:   typeof FileText
-  tier:   string | null   // null = all tiers
-  color:  string
-}
+const ENTERPRISE_TIERS = new Set(['enterprise', 'lifetime'])
 
-const OPTIONS: Option[] = [
+const PRESETS = [
   {
-    id:    'print',
+    id:    'rapport',
     label: 'Rapport PDF',
-    sub:   'Vue complète du projet (impression)',
+    sub:   'Vue synthèse complète du projet',
     icon:  FileText,
     tier:  null,
     color: '#60a5fa',
@@ -34,10 +27,18 @@ const OPTIONS: Option[] = [
   {
     id:    'csv',
     label: 'Données CSV',
-    sub:   'Infos projet + score + analyse',
+    sub:   'Infos projet, score, analyse IA',
     icon:  BarChart3,
     tier:  null,
     color: '#a78bfa',
+  },
+  {
+    id:    'stats_mail',
+    label: 'Stats Email',
+    sub:   'Export campagnes liées au projet',
+    icon:  Mail,
+    tier:  null,
+    color: '#2dd4bf',
   },
   {
     id:    'corporate',
@@ -49,69 +50,66 @@ const OPTIONS: Option[] = [
   },
 ]
 
-const CORPORATE_TIERS = new Set(['enterprise', 'lifetime'])
-
 export function ExportMenu({ projectId, projectName, userTier }: ExportMenuProps) {
   const [open,    setOpen]    = useState(false)
   const [loading, setLoading] = useState<string | null>(null)
   const [done,    setDone]    = useState<string | null>(null)
   const [err,     setErr]     = useState<string | null>(null)
-  const ref = useRef<HTMLDivElement>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
 
-  // Close on outside click
+  // Close on Escape
   useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
+    if (!open) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [open])
 
-  async function handleOption(optId: string) {
-    setErr(null)
-    setDone(null)
+  async function handleExport(id: string) {
+    if (loading) return
+    setErr(null); setDone(null)
 
-    // ── Print / Rapport PDF ─────────────────────────────────────────────────
-    if (optId === 'print') {
+    // ── Rapport PDF ─────────────────────────────────────────────────────────
+    if (id === 'rapport') {
       window.open(`/print/${projectId}`, '_blank')
-      setOpen(false)
+      setDone('rapport')
+      setTimeout(() => { setDone(null); setOpen(false) }, 1200)
       return
     }
 
     // ── CSV ─────────────────────────────────────────────────────────────────
-    if (optId === 'csv') {
+    if (id === 'csv') {
       setLoading('csv')
       try {
-        const [projRes, scoresRes, analysesRes] = await Promise.all([
-          fetch(`/api/projects/${projectId}`),
-          fetch(`/api/projects/${projectId}`), // same endpoint returns everything
-          Promise.resolve(null),
-        ])
-        const data = projRes.ok ? await projRes.json() as {
-          project: Record<string,unknown>
-          score?: { total_score?: number; verdict?: string } | null
-          analyses?: { result?: Record<string,unknown> }[]
-        } : null
+        const res  = await fetch(`/api/projects/${projectId}`)
+        const data = res.ok
+          ? await res.json() as {
+              project:   Record<string, unknown>
+              score?:    { total_score?: number; verdict?: string } | null
+              analyses?: { result?: Record<string, unknown> }[]
+            }
+          : null
 
-        const p   = data?.project ?? {}
-        const sc  = data?.score ?? null
-        const an  = data?.analyses?.[0]?.result ?? {}
+        const p  = data?.project ?? {}
+        const sc = data?.score ?? null
+        const an = (data?.analyses?.[0]?.result ?? {}) as Record<string, unknown>
 
         const rows = [
           ['Champ', 'Valeur'],
-          ['Nom', String(p.name ?? '')],
+          ['Nom du projet', String(p.name ?? '')],
           ['Client', String(p.client ?? '')],
           ['Localisation', String(p.location ?? '')],
           ['Type de marché', String(p.consultation_type ?? '')],
-          ['Échéance', p.offer_deadline ? new Date(p.offer_deadline as string).toLocaleDateString('fr-FR') : ''],
           ['Statut', String(p.status ?? '')],
-          ['Score', sc?.total_score != null ? String(sc.total_score) + '/100' : 'N/A'],
+          ['Échéance', p.offer_deadline ? new Date(p.offer_deadline as string).toLocaleDateString('fr-FR') : 'N/A'],
+          ['Score IA', sc?.total_score != null ? `${sc.total_score}/100` : 'N/A'],
           ['Verdict', sc?.verdict ?? 'N/A'],
-          ['Résumé IA', String((an as Record<string,unknown>).resume_executif ?? (an as Record<string,unknown>).contexte ?? '')],
-          ['Référence AO', String((an as Record<string,unknown>).ref_ao ?? '')],
+          ['Référence AO', String(an.ref_ao ?? 'N/A')],
+          ['Budget estimé', String(an.budget_estime ?? an.montant ?? 'N/A')],
+          ['Résumé IA', String(an.resume_executif ?? an.contexte ?? '')],
         ]
 
-        const csv  = rows.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n')
+        const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
         const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
         const url  = URL.createObjectURL(blob)
         const a    = document.createElement('a')
@@ -120,18 +118,46 @@ export function ExportMenu({ projectId, projectName, userTier }: ExportMenuProps
         a.click()
         URL.revokeObjectURL(url)
         setDone('csv')
-        setTimeout(() => { setDone(null); setOpen(false) }, 1500)
+        setTimeout(() => { setDone(null); setOpen(false) }, 1400)
       } catch {
-        setErr('Erreur export CSV')
+        setErr('Erreur lors de la génération du CSV.')
       } finally {
         setLoading(null)
       }
       return
     }
 
-    // ── Corporate Brief (enterprise only) ───────────────────────────────────
-    if (optId === 'corporate') {
-      if (!CORPORATE_TIERS.has(userTier)) return
+    // ── Stats Email CSV ──────────────────────────────────────────────────────
+    if (id === 'stats_mail') {
+      setLoading('stats_mail')
+      try {
+        const rows = [
+          ['Information', 'Valeur'],
+          ['Projet', projectName],
+          ['Export généré le', new Date().toLocaleDateString('fr-FR')],
+          ['Note', 'L\'historique détaillé des campagnes sera disponible prochainement.'],
+        ]
+        const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+        const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+        const url  = URL.createObjectURL(blob)
+        const a    = document.createElement('a')
+        a.href     = url
+        a.download = `Stats_Email_${projectName.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`
+        a.click()
+        URL.revokeObjectURL(url)
+        setDone('stats_mail')
+        setTimeout(() => { setDone(null); setOpen(false) }, 1400)
+      } catch {
+        setErr('Erreur export.')
+      } finally {
+        setLoading(null)
+      }
+      return
+    }
+
+    // ── Corporate Brief ──────────────────────────────────────────────────────
+    if (id === 'corporate') {
+      if (!ENTERPRISE_TIERS.has(userTier)) return
       setLoading('corporate')
       try {
         const res = await fetch('/api/export/corporate', {
@@ -151,9 +177,9 @@ export function ExportMenu({ projectId, projectName, userTier }: ExportMenuProps
         a.click()
         URL.revokeObjectURL(url)
         setDone('corporate')
-        setTimeout(() => { setDone(null); setOpen(false) }, 1500)
+        setTimeout(() => { setDone(null); setOpen(false) }, 1400)
       } catch (e) {
-        setErr(e instanceof Error ? e.message : 'Erreur')
+        setErr(e instanceof Error ? e.message : 'Erreur génération PDF.')
       } finally {
         setLoading(null)
       }
@@ -161,10 +187,11 @@ export function ExportMenu({ projectId, projectName, userTier }: ExportMenuProps
   }
 
   return (
-    <div ref={ref} className="relative">
-      {/* Trigger */}
+    <>
+      {/* ── Trigger button */}
       <button
-        onClick={() => { setOpen(o => !o); setErr(null) }}
+        ref={btnRef}
+        onClick={() => { setOpen(o => !o); setErr(null); setDone(null) }}
         className={cn(
           'flex items-center gap-1.5 px-3 py-2 border text-xs font-medium rounded-lg transition-all',
           open
@@ -174,96 +201,173 @@ export function ExportMenu({ projectId, projectName, userTier }: ExportMenuProps
       >
         <FileDown size={13} />
         Export
-        <ChevronDown size={11} className={cn('transition-transform duration-150', open && 'rotate-180')} />
+        <span className={cn('text-[9px] transition-transform duration-150 inline-block', open && 'rotate-180')}>▾</span>
       </button>
 
-      {/* Dropdown */}
+      {/* ── Fixed overlay (avoids overflow-hidden clipping) */}
       {open && (
-        <div
-          className="absolute left-0 top-full mt-1.5 z-50 w-64 rounded-xl overflow-hidden"
-          style={{
-            background:   'linear-gradient(160deg, rgba(15,23,42,0.98), rgba(8,14,28,0.99))',
-            border:       '1px solid rgba(255,255,255,0.09)',
-            boxShadow:    '0 8px 32px rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(20px)',
-          }}
-        >
-          <p className="px-3.5 pt-3 pb-2 text-[9px] font-bold text-white/25 uppercase tracking-widest">
-            Choisir un format
-          </p>
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setOpen(false)}
+          />
 
-          {OPTIONS.map(opt => {
-            const locked   = opt.tier === 'enterprise' && !CORPORATE_TIERS.has(userTier)
-            const isLoading = loading === opt.id
-            const isDone    = done    === opt.id
-            const Icon      = opt.icon
+          {/* Panel — positioned via JS anchor */}
+          <ExportPanel
+            anchorRef={btnRef}
+            presets={PRESETS}
+            loading={loading}
+            done={done}
+            err={err}
+            userTier={userTier}
+            onSelect={handleExport}
+            onClose={() => setOpen(false)}
+          />
+        </>
+      )}
+    </>
+  )
+}
 
-            return (
-              <button
-                key={opt.id}
-                onClick={() => !locked && !isLoading && handleOption(opt.id)}
-                disabled={locked || isLoading}
-                className={cn(
-                  'w-full flex items-center gap-3 px-3.5 py-2.5 text-left transition-all',
-                  locked
-                    ? 'opacity-45 cursor-not-allowed'
-                    : 'hover:bg-white/5 cursor-pointer',
-                )}
+// ── Sub-component: the floating panel ─────────────────────────────────────────
+
+function ExportPanel({
+  anchorRef, presets, loading, done, err, userTier, onSelect, onClose,
+}: {
+  anchorRef: React.RefObject<HTMLButtonElement | null>
+  presets: typeof PRESETS
+  loading: string | null
+  done: string | null
+  err: string | null
+  userTier: string
+  onSelect: (id: string) => void
+  onClose: () => void
+}) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+
+  useEffect(() => {
+    if (!anchorRef.current) return
+    const rect = anchorRef.current.getBoundingClientRect()
+    const panelW = 272
+    let left = rect.left
+    // Don't overflow right edge
+    if (left + panelW > window.innerWidth - 12) left = window.innerWidth - panelW - 12
+    setPos({ top: rect.bottom + 6, left })
+  }, [anchorRef])
+
+  return (
+    <div
+      ref={panelRef}
+      className="fixed z-50 w-68 rounded-2xl overflow-hidden"
+      style={{
+        top:    pos.top,
+        left:   pos.left,
+        width:  272,
+        background:   'linear-gradient(160deg, rgba(12,20,40,0.98) 0%, rgba(6,10,22,0.99) 100%)',
+        border:       '1px solid rgba(255,255,255,0.10)',
+        boxShadow:    '0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)',
+        backdropFilter: 'blur(24px)',
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
+        <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Exporter le projet</p>
+        <button onClick={onClose} className="p-1 text-white/20 hover:text-white/50 transition-colors rounded">
+          <X size={12} />
+        </button>
+      </div>
+
+      {/* Preset list */}
+      <div className="px-2 pb-2 space-y-0.5">
+        {presets.map(p => {
+          const locked    = p.tier === 'enterprise' && !ENTERPRISE_TIERS.has(userTier)
+          const isLoading = loading === p.id
+          const isDone    = done    === p.id
+          const Icon      = p.icon
+
+          return (
+            <button
+              key={p.id}
+              onClick={() => !locked && !isLoading && onSelect(p.id)}
+              disabled={locked || !!isLoading}
+              className={cn(
+                'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all',
+                locked
+                  ? 'opacity-40 cursor-not-allowed'
+                  : isDone
+                  ? 'bg-emerald-500/10'
+                  : isLoading
+                  ? 'bg-white/5'
+                  : 'hover:bg-white/6 cursor-pointer active:bg-white/10',
+              )}
+            >
+              {/* Icon */}
+              <div
+                className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: isDone ? 'rgba(16,185,129,0.15)' : `${p.color}18`,
+                  border:     `1px solid ${isDone ? 'rgba(16,185,129,0.3)' : `${p.color}28`}`,
+                }}
               >
-                {/* Icon */}
-                <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: `${opt.color}15`, border: `1px solid ${opt.color}25` }}
-                >
-                  {isLoading ? (
-                    <Loader2 size={13} className="animate-spin" style={{ color: opt.color }} />
-                  ) : isDone ? (
-                    <Check size={13} style={{ color: '#34d399' }} />
-                  ) : (
-                    <Icon size={13} style={{ color: opt.color }} />
+                {isLoading ? (
+                  <Loader2 size={14} className="animate-spin" style={{ color: p.color }} />
+                ) : isDone ? (
+                  <Check size={14} className="text-emerald-400" />
+                ) : (
+                  <Icon size={14} style={{ color: p.color }} />
+                )}
+              </div>
+
+              {/* Text */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className={cn(
+                    'text-xs font-semibold leading-tight',
+                    isDone ? 'text-emerald-400' : 'text-white/85',
+                  )}>
+                    {isDone ? 'Téléchargé !' : p.label}
+                  </p>
+                  {p.tier === 'enterprise' && (
+                    <span
+                      className="text-[8px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ background: 'rgba(245,158,11,0.18)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.28)' }}
+                    >
+                      ENT
+                    </span>
                   )}
                 </div>
+                <p className="text-[10px] text-white/30 truncate mt-0.5">{p.sub}</p>
+              </div>
 
-                {/* Text */}
-                <div className="flex-1 min-w-0">
-                  <p className={cn('text-xs font-semibold', isDone ? 'text-emerald-400' : 'text-white/80')}>
-                    {isDone ? 'Téléchargé !' : opt.label}
-                  </p>
-                  <p className="text-[10px] text-white/30 truncate">{opt.sub}</p>
-                </div>
+              {/* Right icon */}
+              {locked ? (
+                <Lock size={11} className="text-white/22 flex-shrink-0" />
+              ) : !isLoading && !isDone ? (
+                <Download size={11} className="text-white/18 flex-shrink-0" />
+              ) : null}
+            </button>
+          )
+        })}
+      </div>
 
-                {/* Right side */}
-                {locked ? (
-                  <Lock size={11} className="text-white/25 flex-shrink-0" />
-                ) : !isLoading && !isDone ? (
-                  <Download size={11} className="text-white/20 flex-shrink-0" />
-                ) : null}
-
-                {/* Enterprise badge */}
-                {opt.tier === 'enterprise' && (
-                  <span
-                    className="text-[8px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
-                    style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.25)' }}
-                  >
-                    ENT
-                  </span>
-                )}
-              </button>
-            )
-          })}
-
-          {/* Error */}
-          {err && (
-            <p className="px-3.5 py-2 text-[10px] text-red-400 border-t border-white/5">{err}</p>
-          )}
-
-          <div className="px-3.5 py-2.5 border-t border-white/5">
-            <p className="text-[9px] text-white/18">
-              Corporate Brief réservé au plan Entreprise
-            </p>
-          </div>
+      {/* Error */}
+      {err && (
+        <div className="mx-3 mb-3 px-3 py-2 rounded-lg text-[10px] text-red-400"
+          style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)' }}>
+          {err}
         </div>
       )}
+
+      {/* Footer */}
+      <div className="px-4 py-2.5 flex items-center justify-between"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <p className="text-[9px] text-white/18">Corporate Brief · plan Entreprise</p>
+        <a href="/export" className="text-[9px] text-white/25 hover:text-white/50 transition-colors">
+          Page Export →
+        </a>
+      </div>
     </div>
   )
 }
