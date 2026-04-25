@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
+export const runtime    = 'nodejs'
+export const dynamic    = 'force-dynamic'
 export const maxDuration = 30
 
 export interface LinkedInProfile {
@@ -84,22 +84,129 @@ async function searchViaRapidApi(company: string, jobTitle: string, maxResults: 
   }
 }
 
-// ── 3. ScraperAPI — Google SERP with proper URL extraction ───────────────────
-// Google wraps all links as /url?q=https://linkedin.com/in/... — we parse that.
+// ── 3. Free DuckDuckGo Lite scraper (no key needed) ─────────────────────────
+// DDG lite returns simple HTML with DIRECT LinkedIn href values — no redirect wrapping
+
+async function searchViaDuckDuckGo(company: string, jobTitle: string, maxResults: number): Promise<LinkedInProfile[]> {
+  try {
+    const q       = `site:linkedin.com/in "${company}" "${jobTitle}"`
+    const formUrl = `https://lite.duckduckgo.com/lite/`
+
+    // DDG lite requires a POST form submission
+    const body = new URLSearchParams({ q, s: '0', o: 'json', dc: '0', api: '/d.js', kl: 'fr-fr' })
+    const res  = await fetch(formUrl, {
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent':   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept':       'text/html,application/xhtml+xml',
+        'Accept-Language': 'fr-FR,fr;q=0.9',
+        'Referer':      'https://lite.duckduckgo.com/',
+      },
+      body,
+      signal: AbortSignal.timeout(10000),
+    })
+    if (!res.ok) {
+      console.warn('[linkedin] DDG lite HTTP', res.status)
+      return []
+    }
+    const html     = await res.text()
+    const profiles = parseDuckDuckGoHtml(html, company, jobTitle)
+    console.log(`[linkedin] DuckDuckGo → ${profiles.length} results`)
+    return profiles.slice(0, maxResults)
+  } catch (e) {
+    console.warn('[linkedin] DuckDuckGo failed:', e)
+    return []
+  }
+}
+
+function parseDuckDuckGoHtml(html: string, company: string, jobTitle: string): LinkedInProfile[] {
+  const profiles: LinkedInProfile[] = []
+  const seen = new Set<string>()
+
+  // DDG lite: links appear as <a href="https://www.linkedin.com/in/slug" class="result-link">
+  // Also as: href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fwww.linkedin.com%2Fin%2F..."
+  const directPattern  = /href="(https?:\/\/(?:www\.)?linkedin\.com\/in\/([^"?#]+))"/gi
+  const redirectPattern = /href="\/\/duckduckgo\.com\/l\/\?[^"]*uddg=(https?%3A%2F%2F(?:www\.)?linkedin\.com%2Fin%2F[^"&]+)/gi
+
+  const allMatches: Array<{ url: string; slug: string; index: number }> = []
+
+  let m: RegExpExecArray | null
+  while ((m = directPattern.exec(html)) !== null) {
+    const url  = m[1].split('?')[0].replace(/\/$/, '')
+    const slug = m[2].replace(/\/$/, '')
+    if (!seen.has(url)) { seen.add(url); allMatches.push({ url, slug, index: m.index }) }
+  }
+  while ((m = redirectPattern.exec(html)) !== null) {
+    try {
+      const url  = decodeURIComponent(m[1]).split('?')[0].replace(/\/$/, '')
+      const slug = url.replace(/^https?:\/\/(?:www\.)?linkedin\.com\/in\//, '').replace(/\/$/, '')
+      if (!seen.has(url)) { seen.add(url); allMatches.push({ url, slug, index: m.index }) }
+    } catch { /* skip */ }
+  }
+
+  for (const { url, slug, index } of allMatches) {
+    // Backtrack for nearest link text or <td> title
+    const before  = html.slice(Math.max(0, index - 1500), index)
+    const tdMatch = [...before.matchAll(/<td[^>]*class="result-snippet"[^>]*>([\s\S]*?)<\/td>/gi)].pop()
+                 ?? [...before.matchAll(/<a[^>]*>([\s\S]*?)<\/a>/gi)].pop()
+
+    let name      = ''
+    let title     = jobTitle
+    let parsedCo  = company
+
+    if (tdMatch) {
+      const rawText = tdMatch[1]
+        .replace(/<[^>]+>/g, '')
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"')
+        .replace(/\s*\|\s*LinkedIn\s*/i, '')
+        .trim()
+      const parts = rawText.split(/\s*[-–—]\s+/)
+      name = parts[0]?.trim() ?? ''
+      const rest = parts.slice(1).join(' - ').trim()
+      if (rest) {
+        const atMatch = rest.match(/^(.+?)\s+(?:chez|at|@)\s+(.+)$/i)
+        title    = atMatch ? atMatch[1].trim() : rest
+        parsedCo = atMatch ? atMatch[2].trim() : company
+      }
+    }
+
+    if (!name) {
+      const nameParts = slug.split('-').filter(p => p.length > 1 && !/^\d+$/.test(p)).slice(0, 3)
+      name = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
+    }
+
+    if (!name || name.length < 3) continue
+
+    profiles.push({ name, title, company: parsedCo, linkedin_url: url })
+    if (profiles.length >= 20) break
+  }
+
+  return profiles
+}
+
+// ── 4. ScraperAPI — scrapes Bing (no /url?q= redirect, direct LinkedIn URLs) ──
+// Bing is far more scraping-friendly than Google and returns direct href values
 
 async function searchViaScraperApi(company: string, jobTitle: string, maxResults: number): Promise<LinkedInProfile[]> {
   const key = process.env.SCRAPERAPI_KEY
   if (!key) return []
   try {
-    const googleQuery = encodeURIComponent(`site:linkedin.com/in "${company}" "${jobTitle}"`)
-    const targetUrl   = `https://www.google.com/search?q=${googleQuery}&num=${Math.min(maxResults * 2, 20)}&hl=fr`
-    const scraperUrl  = `https://api.scraperapi.com/?api_key=${key}&url=${encodeURIComponent(targetUrl)}&render=false&country_code=fr`
+    // Use Bing instead of Google — Bing has direct href, Google wraps in /url?q=
+    const bingQuery  = encodeURIComponent(`site:linkedin.com/in "${company}" "${jobTitle}"`)
+    const targetUrl  = `https://www.bing.com/search?q=${bingQuery}&count=${Math.min(maxResults * 2, 20)}&setlang=fr`
+    const scraperUrl = `https://api.scraperapi.com/?api_key=${key}&url=${encodeURIComponent(targetUrl)}&render=false&country_code=fr`
 
-    const res = await fetch(scraperUrl, { signal: AbortSignal.timeout(20000) })
-    if (!res.ok) return []
-    const html = await res.text()
-    const profiles = parseGoogleHtmlFull(html, company, jobTitle)
-    console.log(`[linkedin] ScraperAPI → ${profiles.length} results`)
+    console.log('[linkedin] ScraperAPI targeting Bing:', targetUrl)
+    const res = await fetch(scraperUrl, { signal: AbortSignal.timeout(25000) })
+    if (!res.ok) {
+      console.warn('[linkedin] ScraperAPI HTTP', res.status)
+      return []
+    }
+    const html     = await res.text()
+    console.log('[linkedin] ScraperAPI HTML length:', html.length, '| first 200:', html.slice(0, 200))
+    const profiles = parseBingHtml(html, company, jobTitle)
+    console.log(`[linkedin] ScraperAPI/Bing → ${profiles.length} results`)
     return profiles.slice(0, maxResults)
   } catch (e) {
     console.warn('[linkedin] ScraperAPI failed:', e)
@@ -116,14 +223,12 @@ function parseGoogleJsonResult(result: Record<string, unknown>, company: string)
   const rawTitle  = (result.title as string) ?? ''
   const snippet   = (result.snippet as string) ?? ''
 
-  // Title patterns: "John Doe - Engineer at Acme | LinkedIn" or "John Doe | LinkedIn"
   const titleClean = rawTitle.replace(/\s*\|\s*LinkedIn\s*/i, '').trim()
   const parts      = titleClean.split(/\s*[-–—]\s+/)
   const name       = parts[0]?.trim() ?? ''
   const rest       = parts.slice(1).join(' - ').trim()
 
-  // Extract job title and company from "Engineer at Acme Corp"
-  const atMatch = rest.match(/^(.+?)\s+(?:chez|at|@)\s+(.+)$/i)
+  const atMatch   = rest.match(/^(.+?)\s+(?:chez|at|@)\s+(.+)$/i)
   const jobTitle  = atMatch ? atMatch[1].trim() : rest
   const companyName = atMatch ? atMatch[2].trim() : company
 
@@ -138,63 +243,65 @@ function parseGoogleJsonResult(result: Record<string, unknown>, company: string)
   }
 }
 
-// ── Parse raw Google HTML — handles /url?q= redirects + <h3> titles ──────────
+// ── Parse Bing HTML — direct href values, no redirect wrapping ────────────────
 
-function parseGoogleHtmlFull(html: string, company: string, jobTitle: string): LinkedInProfile[] {
+function parseBingHtml(html: string, company: string, jobTitle: string): LinkedInProfile[] {
   const profiles: LinkedInProfile[] = []
   const seen = new Set<string>()
 
-  // Google wraps all links as: href="/url?q=https://www.linkedin.com/in/john-doe/&amp;sa=..."
-  // We extract both the LinkedIn URL and the preceding <h3> text (the page title)
+  // Bing wraps links in <h2><a href="https://www.linkedin.com/in/slug"> directly
+  // Also possible: data-href or cite attributes
+  const patterns = [
+    /href="(https?:\/\/(?:www\.)?linkedin\.com\/in\/([^"?#/][^"?#]*)(?:\/[^"?#]*)?)"/gi,
+    /<cite[^>]*>(https?:\/\/(?:www\.)?linkedin\.com\/in\/([^<\s?#]+))/gi,
+  ]
 
-  // Match each Google result block: <h3>title</h3>...<a href="/url?q=linkedin_url">
-  // Strategy: find all /url?q= with a linkedin.com/in URL, then backtrack for the title
-  const urlPattern = /\/url\?q=(https?:\/\/(?:www\.)?linkedin\.com\/in\/([^&"]+))/g
-  let m: RegExpExecArray | null
+  for (const pattern of patterns) {
+    let m: RegExpExecArray | null
+    while ((m = pattern.exec(html)) !== null) {
+      const rawUrl = m[1]
+      const url    = rawUrl.split('?')[0].replace(/\/$/, '')
+      if (!url.includes('/in/') || seen.has(url)) continue
+      seen.add(url)
 
-  while ((m = urlPattern.exec(html)) !== null) {
-    const linkedinUrl = decodeURIComponent(m[1]).split('?')[0].replace(/\/$/, '')
-    if (seen.has(linkedinUrl)) continue
-    seen.add(linkedinUrl)
+      const slug  = m[2]?.replace(/\/$/, '') ?? ''
 
-    // Backtrack up to 2000 chars to find the nearest <h3> before this URL
-    const start   = Math.max(0, m.index - 2000)
-    const before  = html.slice(start, m.index)
-    const h3Match = [...before.matchAll(/<h3[^>]*>([\s\S]*?)<\/h3>/gi)].pop()
+      // Backtrack up to 2000 chars for the nearest <h2> or <a> title text
+      const start  = Math.max(0, m.index - 2000)
+      const before = html.slice(start, m.index)
+      const h2Match = [...before.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)].pop()
+               ?? [...before.matchAll(/<a[^>]*class="[^"]*tilk[^"]*"[^>]*>([\s\S]*?)<\/a>/gi)].pop()
 
-    let name      = ''
-    let title     = jobTitle
-    let parsedCompany = company
+      let name      = ''
+      let title     = jobTitle
+      let parsedCo  = company
 
-    if (h3Match) {
-      // Strip HTML tags and decode entities
-      const rawText = h3Match[1]
-        .replace(/<[^>]+>/g, '')
-        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-        .replace(/\s*\|\s*LinkedIn\s*/i, '')
-        .trim()
-
-      // "John Doe - Engineer at Acme" or "John Doe | LinkedIn"
-      const parts = rawText.split(/\s*[-–—]\s+/)
-      name = parts[0]?.trim() ?? ''
-      const rest = parts.slice(1).join(' - ').trim()
-      if (rest) {
-        const atMatch = rest.match(/^(.+?)\s+(?:chez|at|@)\s+(.+)$/i)
-        title         = atMatch ? atMatch[1].trim() : rest
-        parsedCompany = atMatch ? atMatch[2].trim() : company
+      if (h2Match) {
+        const rawText = h2Match[1]
+          .replace(/<[^>]+>/g, '')
+          .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"')
+          .replace(/\s*\|\s*LinkedIn\s*/i, '')
+          .trim()
+        const parts = rawText.split(/\s*[-–—]\s+/)
+        name = parts[0]?.trim() ?? ''
+        const rest = parts.slice(1).join(' - ').trim()
+        if (rest) {
+          const atMatch = rest.match(/^(.+?)\s+(?:chez|at|@)\s+(.+)$/i)
+          title    = atMatch ? atMatch[1].trim() : rest
+          parsedCo = atMatch ? atMatch[2].trim() : company
+        }
       }
+
+      if (!name) {
+        const nameParts = slug.split('-').filter(p => p.length > 1 && !/^\d+$/.test(p)).slice(0, 3)
+        name = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
+      }
+
+      if (!name || name.length < 3) continue
+
+      profiles.push({ name, title, company: parsedCo, linkedin_url: url })
+      if (profiles.length >= 20) break
     }
-
-    if (!name) {
-      // Fall back to slug-based name
-      const slug     = m[2]?.replace(/\/$/, '') ?? ''
-      const nameParts = slug.split('-').filter(p => p.length > 1 && !/^\d+$/.test(p))
-      name = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
-    }
-
-    if (!name) continue
-
-    profiles.push({ name, title, company: parsedCompany, linkedin_url: linkedinUrl })
     if (profiles.length >= 20) break
   }
 
@@ -231,19 +338,23 @@ function generateMockProfiles(company: string, jobTitle: string, count: number):
 // ── Main search cascade ───────────────────────────────────────────────────────
 
 async function searchLinkedInProfiles(company: string, jobTitle: string, maxResults: number): Promise<{ profiles: LinkedInProfile[]; source: string }> {
-  // 1. SerpAPI
+  // 1. SerpAPI (structured JSON, best quality)
   const serpResults = await searchViaSerpApi(company, jobTitle, maxResults)
   if (serpResults.length > 0) return { profiles: serpResults, source: 'serpapi' }
 
-  // 2. RapidAPI
+  // 2. RapidAPI (direct LinkedIn API)
   const rapidResults = await searchViaRapidApi(company, jobTitle, maxResults)
   if (rapidResults.length > 0) return { profiles: rapidResults, source: 'rapidapi' }
 
-  // 3. ScraperAPI
+  // 3. DuckDuckGo Lite (free, no key, direct LinkedIn hrefs)
+  const ddgResults = await searchViaDuckDuckGo(company, jobTitle, maxResults)
+  if (ddgResults.length > 0) return { profiles: ddgResults, source: 'duckduckgo' }
+
+  // 4. ScraperAPI → Bing (Bing has direct hrefs, more scraping-friendly)
   const scraperResults = await searchViaScraperApi(company, jobTitle, maxResults)
   if (scraperResults.length > 0) return { profiles: scraperResults, source: 'scraperapi' }
 
-  // 4. Mock fallback
+  // 5. Mock fallback
   const mock = generateMockProfiles(company, jobTitle, Math.min(maxResults, 10))
   return { profiles: mock, source: 'demo' }
 }
@@ -272,15 +383,13 @@ export async function POST(req: NextRequest) {
       Math.min(max_results ?? 15, 20),
     )
 
-    const isDemo = source === 'demo'
+    const isDemo  = source === 'demo'
     const hasKeys = !!(process.env.SERPAPI_KEY || process.env.RAPIDAPI_KEY || process.env.SCRAPERAPI_KEY)
 
-    // If keys are configured but scraping returned 0, ScraperAPI couldn't find anything real
-    // In this case we still return mock but flag it
     return NextResponse.json({
       profiles,
-      total:  profiles.length,
-      demo:   isDemo,
+      total:    profiles.length,
+      demo:     isDemo,
       source,
       has_keys: hasKeys,
     })

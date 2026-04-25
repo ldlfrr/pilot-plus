@@ -304,6 +304,7 @@ function LinkedInSearchSection() {
   const [error, setError]         = useState<string | null>(null)
   const [searched, setSearched]   = useState(false)
   const [isDemo, setIsDemo]       = useState(false)
+  const [source, setSource]       = useState<string>('')
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
 
   async function handleSearch() {
@@ -319,6 +320,7 @@ function LinkedInSearchSection() {
       if (!res.ok) throw new Error(data.error ?? 'Erreur de recherche')
       setProfiles(data.profiles ?? [])
       setIsDemo(data.demo ?? false)
+      setSource(data.source ?? '')
       setSearched(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue')
@@ -496,10 +498,15 @@ function LinkedInSearchSection() {
             <div className="flex items-center gap-2.5 flex-wrap">
               <span className="text-sm font-bold text-white">{profiles.length} profil{profiles.length > 1 ? 's' : ''} trouvé{profiles.length > 1 ? 's' : ''}</span>
               <span className="text-xs text-white/30">{jobTitle} · {company}</span>
-              {isDemo && (
+              {isDemo ? (
                 <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
                   style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#fcd34d' }}>
-                  ✦ Démo — configurez SERPAPI_KEY pour les vrais profils
+                  ✦ Démo — aucun résultat réel trouvé
+                </span>
+              ) : source && (
+                <span className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full"
+                  style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: '#34d399' }}>
+                  ✓ {source === 'duckduckgo' ? 'DuckDuckGo' : source === 'scraperapi' ? 'Bing · ScraperAPI' : source === 'serpapi' ? 'Google · SerpAPI' : source === 'rapidapi' ? 'LinkedIn API' : source}
                 </span>
               )}
             </div>
