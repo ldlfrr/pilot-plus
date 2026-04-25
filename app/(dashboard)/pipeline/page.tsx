@@ -275,7 +275,6 @@ function KanbanColumn({
         )}
         style={isOver ? {
           background: stage.bg,
-          ringColor:  stage.color,
           boxShadow:  `inset 0 0 0 2px ${stage.color}`,
         } : {
           background: 'rgba(255,255,255,0.02)',

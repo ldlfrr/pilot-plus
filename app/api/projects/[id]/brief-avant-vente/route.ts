@@ -3,8 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getUserTier, checkFeatureGate } from '@/lib/subscription'
 import { getAnthropicClient } from '@/lib/ai/client'
 import { renderToBuffer } from '@react-pdf/renderer'
+import type { DocumentProps } from '@react-pdf/renderer'
 import { BriefAvantVentePDF } from '@/components/pdf/BriefAvantVentePDF'
-import React from 'react'
+import React, { type ReactElement, type JSXElementConstructor } from 'react'
 import type { TaskStates } from '@/types'
 
 interface Params { params: Promise<{ id: string }> }
@@ -95,7 +96,8 @@ L'instruction doit préciser : ce qu'il faut chiffrer en priorité, les points t
       generatedAt:   new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
     }
 
-    const buffer = await renderToBuffer(React.createElement(BriefAvantVentePDF, pdfProps))
+    const element = React.createElement(BriefAvantVentePDF, pdfProps) as unknown as ReactElement<DocumentProps, string | JSXElementConstructor<unknown>>
+    const buffer  = await renderToBuffer(element)
 
     // Mark as generated in task_states
     await supabase
@@ -103,7 +105,7 @@ L'instruction doit préciser : ce qu'il faut chiffrer en priorité, les points t
       .update({ task_states: { ...ts, brief_avant_vente_generated_at: new Date().toISOString() } })
       .eq('id', id)
 
-    return new Response(buffer, {
+    return new Response(new Uint8Array(buffer), {
       headers: {
         'Content-Type':        'application/pdf',
         'Content-Disposition': `attachment; filename="Brief_AvantVente_${project.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf"`,
