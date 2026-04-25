@@ -25,7 +25,22 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  let query = supabase.from('projects').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+  // Fetch project IDs where user is a member (not owner)
+  const { data: memberRows } = await supabase
+    .from('project_members')
+    .select('project_id')
+    .eq('user_id', user.id)
+  const memberProjectIds = (memberRows ?? []).map(r => r.project_id as string)
+
+  // Build query: owned projects OR projects where user is a member
+  let query = memberProjectIds.length > 0
+    ? supabase.from('projects').select('*')
+        .or(`user_id.eq.${user.id},id.in.(${memberProjectIds.join(',')})`)
+        .order('created_at', { ascending: false })
+    : supabase.from('projects').select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
   if (status === 'closed') {
     query = query.neq('outcome', 'pending')
   } else if (status && status !== 'all') {
@@ -66,7 +81,7 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
     ...p,
     score:        scoreMap.get(p.id) ?? null,
     file_count:   fileCounts.get(p.id) ?? 0,
-    member_count: memberCounts.get(p.id) ?? 0,
+    member_count: (memberCounts.get(p.id) ?? 0) + 1, // +1 for the owner
   }))
 
   const filtered = q

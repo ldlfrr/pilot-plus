@@ -10,7 +10,8 @@ interface Member {
   role:       string
   full_name:  string | null
   email:      string
-  created_at: string
+  created_at: string | null
+  is_owner?:  boolean
 }
 
 interface PendingInvitation {
@@ -55,6 +56,7 @@ export function MembresProjetTab({ projectId, currentRole }: MembresProjetTabPro
 
   const [members,     setMembers]     = useState<Member[]>([])
   const [pending,     setPending]     = useState<PendingInvitation[]>([])
+  const [myUserId,    setMyUserId]    = useState<string | null>(null)
   const [loading,     setLoading]     = useState(true)
   const [error,       setError]       = useState<string | null>(null)
   const [success,     setSuccess]     = useState<string | null>(null)
@@ -69,16 +71,18 @@ export function MembresProjetTab({ projectId, currentRole }: MembresProjetTabPro
   const [roleMenuId,  setRoleMenuId]  = useState<string | null>(null)
   const [changingId,  setChangingId]  = useState<string | null>(null)
 
-  // Remove
-  const [removingId,  setRemovingId]  = useState<string | null>(null)
-  const [cancellingToken, setCancellingToken] = useState<string | null>(null)
+  // Remove / leave
+  const [removingId,       setRemovingId]       = useState<string | null>(null)
+  const [cancellingToken,  setCancellingToken]   = useState<string | null>(null)
+  const [leaving,          setLeaving]           = useState(false)
 
   async function load() {
     setLoading(true); setError(null)
     try {
-      const [membersRes, invRes] = await Promise.all([
+      const [membersRes, invRes, profileRes] = await Promise.all([
         fetch(`/api/projects/${projectId}/members`),
         isOwner ? fetch(`/api/projects/${projectId}/invitations`) : Promise.resolve(null),
+        fetch('/api/user/profile'),
       ])
       if (!membersRes.ok) throw new Error('Impossible de charger les membres')
       const membersJson = await membersRes.json()
@@ -87,6 +91,11 @@ export function MembresProjetTab({ projectId, currentRole }: MembresProjetTabPro
       if (invRes?.ok) {
         const invJson = await invRes.json()
         setPending(invJson.invitations ?? [])
+      }
+
+      if (profileRes?.ok) {
+        const profileJson = await profileRes.json()
+        setMyUserId(profileJson.id ?? null)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur')
@@ -162,7 +171,27 @@ export function MembresProjetTab({ projectId, currentRole }: MembresProjetTabPro
     finally { setCancellingToken(null) }
   }
 
-  const totalCount = members.length + 1 // +1 for owner
+  async function handleLeaveProject() {
+    const myRow = members.find(m => !m.is_owner && m.role !== 'owner' && m.user_id === myUserId)
+    if (!myRow) return
+    if (!confirm('Quitter ce projet ? Vous perdrez l\'accès immédiatement.')) return
+    setLeaving(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/members`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId: myRow.id }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Erreur')
+      // Redirect to projects list
+      window.location.href = '/projects'
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur')
+      setLeaving(false)
+    }
+  }
+
+  const totalCount = members.length // members now includes the owner from API
 
   return (
     <div className="max-w-2xl">
@@ -238,23 +267,34 @@ export function MembresProjetTab({ projectId, currentRole }: MembresProjetTabPro
         </div>
       ) : (
         <div className="space-y-2">
-          {/* Owner row */}
-          <div className="flex items-center gap-3 bg-[var(--bg-card)] border border-amber-500/15 rounded-xl px-4 py-3">
-            <div className="w-8 h-8 rounded-full bg-amber-500/15 border border-amber-500/25 flex items-center justify-center flex-shrink-0">
-              <Crown size={14} className="text-amber-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white/80 truncate">Vous (propriétaire)</p>
-            </div>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400">Propriétaire</span>
-          </div>
-
-          {/* Confirmed members */}
+          {/* All members (owner first, then others) */}
           {members.map(member => {
+            const isOwnerRow = member.is_owner || member.role === 'owner'
             const cfg = roleCfg(member.role)
             const RoleIcon = cfg.icon
             const displayName = member.full_name ?? member.email
             const isChanging = changingId === member.id
+            const isMe = !isOwnerRow && !isOwner && member.user_id === myUserId
+
+            if (isOwnerRow) {
+              return (
+                <div key={member.id} className="flex items-center gap-3 bg-[var(--bg-card)] border border-amber-500/15 rounded-xl px-4 py-3">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/15 border border-amber-500/25 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-amber-400">
+                    {initials(member.full_name, member.email) || <Crown size={14} className="text-amber-400" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white/80 truncate">
+                      {member.full_name ?? member.email ?? 'Propriétaire'}
+                      {isOwner && <span className="ml-1.5 text-xs text-white/30">(vous)</span>}
+                    </p>
+                    {member.email && <p className="text-xs text-white/35 truncate">{member.email}</p>}
+                  </div>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400">
+                    <Crown size={10} className="inline mr-1" />Propriétaire
+                  </span>
+                </div>
+              )
+            }
 
             return (
               <div key={member.id} className="flex items-center gap-3 bg-[var(--bg-card)] border border-white/6 rounded-xl px-4 py-3 hover:border-white/10 transition-colors">
@@ -262,11 +302,14 @@ export function MembresProjetTab({ projectId, currentRole }: MembresProjetTabPro
                   {initials(member.full_name, member.email)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white/80 truncate">{member.full_name ?? <span className="text-white/40 italic">Sans nom</span>}</p>
+                  <p className="text-sm font-medium text-white/80 truncate">
+                    {member.full_name ?? <span className="text-white/40 italic">Sans nom</span>}
+                    {isMe && <span className="ml-1.5 text-xs text-white/30">(vous)</span>}
+                  </p>
                   <p className="text-xs text-white/35 truncate">{member.email}</p>
                 </div>
 
-                {/* Role dropdown — owner only */}
+                {/* Role dropdown — owner can change others' roles */}
                 {isOwner ? (
                   <div className="relative">
                     <button
@@ -302,12 +345,21 @@ export function MembresProjetTab({ projectId, currentRole }: MembresProjetTabPro
                   </span>
                 )}
 
-                {isOwner && (
+                {/* Owner removes others; member can leave themselves */}
+                {isOwner ? (
                   <button onClick={() => handleRemove(member.id, displayName)} disabled={removingId === member.id}
-                    className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-all disabled:opacity-40">
+                    className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-all disabled:opacity-40"
+                    title="Retirer du projet">
                     {removingId === member.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                   </button>
-                )}
+                ) : isMe ? (
+                  <button onClick={handleLeaveProject} disabled={leaving}
+                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white/30 hover:text-red-400 hover:bg-red-950/30 border border-white/8 hover:border-red-500/30 rounded-lg transition-all disabled:opacity-40"
+                    title="Quitter le projet">
+                    {leaving ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
+                    Quitter
+                  </button>
+                ) : null}
               </div>
             )
           })}
@@ -342,9 +394,9 @@ export function MembresProjetTab({ projectId, currentRole }: MembresProjetTabPro
             </>
           )}
 
-          {members.length === 0 && pending.length === 0 && (
-            <div className="text-center py-10 text-white/30 text-sm">
-              Aucun membre ajouté pour l&apos;instant.
+          {members.filter(m => !m.is_owner && m.role !== 'owner').length === 0 && pending.length === 0 && (
+            <div className="text-center py-6 text-white/30 text-sm">
+              Aucun collaborateur ajouté pour l&apos;instant.
               {isOwner && <p className="text-xs mt-1 text-white/20">Utilisez le formulaire ci-dessus pour inviter des collaborateurs.</p>}
             </div>
           )}

@@ -9,7 +9,7 @@ import {
   Radio, UserSearch, Mail, BarChart3, FileDown,
   Building2, Users, User, CreditCard, HelpCircle,
   LogOut, Plus, ChevronRight, ExternalLink, Sparkles,
-  TrendingUp, Zap,
+  TrendingUp, Zap, Home,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -20,6 +20,7 @@ const NAV_SECTIONS = [
     id: 'projets',
     label: 'Projets',
     items: [
+      { href: '/accueil',    label: 'Accueil',     icon: Home,         sub: 'Vue d\'ensemble'   },
       { href: '/projects',   label: 'Mes projets', icon: FolderKanban, sub: 'Tous vos dossiers' },
       { href: '/pipeline',   label: 'Pipeline',    icon: Kanban,       sub: 'Vue kanban'        },
       { href: '/calendrier', label: 'Calendrier',  icon: CalendarDays, sub: 'Échéances'         },

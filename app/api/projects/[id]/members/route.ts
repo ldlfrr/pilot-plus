@@ -4,7 +4,7 @@ import { getProjectAccess } from '@/lib/project-access'
 
 interface Params { params: Promise<{ id: string }> }
 
-// GET — list project members
+// GET — list project members (including owner)
 export async function GET(_req: Request, { params }: Params) {
   const { id } = await params
   const supabase = await createClient()
@@ -15,6 +15,24 @@ export async function GET(_req: Request, { params }: Params) {
   const access = await getProjectAccess(supabase, id, user.id)
   if (!access) return NextResponse.json({ error: 'Projet introuvable' }, { status: 404 })
 
+  // Fetch project + owner profile
+  const { data: project } = await supabase
+    .from('projects')
+    .select('user_id, profiles(full_name, email)')
+    .eq('id', id)
+    .single()
+
+  const ownerProfile = project?.profiles as { full_name?: string; email?: string } | null
+  const owner = project ? {
+    id:         'owner-' + project.user_id,
+    user_id:    project.user_id,
+    role:       'owner' as const,
+    full_name:  ownerProfile?.full_name ?? null,
+    email:      ownerProfile?.email ?? '',
+    created_at: null,
+    is_owner:   true,
+  } : null
+
   const { data: members } = await supabase
     .from('project_members')
     .select('id, user_id, role, created_at, profiles(full_name, email)')
@@ -24,16 +42,19 @@ export async function GET(_req: Request, { params }: Params) {
   const formatted = (members ?? []).map((m: Record<string, unknown>) => {
     const p = m.profiles as { full_name?: string; email?: string } | null
     return {
-      id:         m.id,
-      user_id:    m.user_id,
-      role:       m.role,
+      id:         m.id as string,
+      user_id:    m.user_id as string,
+      role:       m.role as string,
       full_name:  p?.full_name ?? null,
       email:      p?.email ?? '',
-      created_at: m.created_at,
+      created_at: m.created_at as string,
+      is_owner:   false,
     }
   })
 
-  return NextResponse.json({ members: formatted })
+  const all = owner ? [owner, ...formatted] : formatted
+
+  return NextResponse.json({ members: all })
 }
 
 // POST — add a member by email
@@ -118,7 +139,7 @@ export async function PATCH(req: Request, { params }: Params) {
   return NextResponse.json({ ok: true })
 }
 
-// DELETE — remove a member
+// DELETE — remove a member (owner can remove anyone; members can leave themselves)
 export async function DELETE(req: Request, { params }: Params) {
   const { id } = await params
   const supabase = await createClient()
@@ -127,13 +148,27 @@ export async function DELETE(req: Request, { params }: Params) {
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
   const access = await getProjectAccess(supabase, id, user.id)
-  if (!access || access.role !== 'owner') {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
-  }
+  if (!access) return NextResponse.json({ error: 'Projet introuvable' }, { status: 404 })
 
   const { memberId } = await req.json() as { memberId: string }
 
-  await supabase.from('project_members').delete().eq('id', memberId).eq('project_id', id)
+  if (access.role === 'owner') {
+    // Owner can remove anyone
+    await supabase.from('project_members').delete().eq('id', memberId).eq('project_id', id)
+    return NextResponse.json({ ok: true })
+  }
 
+  // Non-owner: can only remove their own membership (self-leave)
+  const { data: ownRow } = await supabase
+    .from('project_members')
+    .select('id')
+    .eq('id', memberId)
+    .eq('project_id', id)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!ownRow) return NextResponse.json({ error: 'Vous ne pouvez retirer que vous-même' }, { status: 403 })
+
+  await supabase.from('project_members').delete().eq('id', memberId).eq('project_id', id)
   return NextResponse.json({ ok: true })
 }
