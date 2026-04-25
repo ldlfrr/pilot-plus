@@ -18,6 +18,11 @@ import { ChiffrageTab }        from '@/components/project/tabs/ChiffrageTab'
 import { ChecklistRemiseTab }  from '@/components/project/tabs/ChecklistRemiseTab'
 import { MemoireTechniqueTab } from '@/components/project/tabs/MemoireTechniqueTab'
 import { MembresProjetTab }    from '@/components/project/tabs/MembresProjetTab'
+import { ProspectionTab }      from '@/components/project/tabs/ProspectionTab'
+import { VenteInterneTab }     from '@/components/project/tabs/VenteInterneTab'
+import { EchangesClientTab }   from '@/components/project/tabs/EchangesClientTab'
+import { JuridiqueTab }        from '@/components/project/tabs/JuridiqueTab'
+import { SignatureTab }        from '@/components/project/tabs/SignatureTab'
 import { WorkflowStepper }     from '@/components/project/WorkflowStepper'
 import {
   Cpu, Target, Trash2, Pencil, Loader2, AlertCircle, CheckCircle,
@@ -26,14 +31,14 @@ import {
   Copy, X, ExternalLink, Link as LinkIcon, Lock, ArrowRight,
   ClipboardList, Map, Trophy, XCircle, Flag, TrendingUp,
   BookOpen, MessageSquare, Calculator, ClipboardCheck, FileDown,
-  FolderOpen,
+  FolderOpen, Search, Building2, Scale, PenLine,
 } from 'lucide-react'
 import { ExportMenu } from '@/components/projects/ExportMenu'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
-import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates, SubscriptionTier, ProjectOutcome, Intervenant, ChiffrageData, ChecklistRemise } from '@/types'
+import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates, SubscriptionTier, ProjectOutcome, Intervenant, ChiffrageData, ChecklistRemise, ProspectionData, VenteInterneData, EchangesClientData, JuridiqueData, SignatureData } from '@/types'
 
-type Tab = 'synthese' | 'corp' | 'map' | 'besoin' | 'pieces' | 'specificites' | 'gonogo' | 'actions' | 'documents' | 'plan' | 'comments' | 'intervenants' | 'chiffrage' | 'checklist' | 'memoire' | 'membres'
+type Tab = 'synthese' | 'corp' | 'map' | 'besoin' | 'pieces' | 'specificites' | 'gonogo' | 'actions' | 'documents' | 'plan' | 'comments' | 'intervenants' | 'chiffrage' | 'checklist' | 'memoire' | 'membres' | 'prospection' | 'vente_interne' | 'echanges_client' | 'juridique' | 'signature'
 type TabGroup = 'analyse' | 'reponse' | 'commercial' | 'equipe'
 
 interface ProjectData {
@@ -93,10 +98,15 @@ export default function ProjectPage() {
   const [projectRole, setProjectRole] = useState<'owner' | 'editor' | 'viewer' | 'avant_vente'>('owner')
 
   // ── Pipeline state (synced from task_states) ─────────────────────────────────
-  const [intervenants, setIntervenants] = useState<Intervenant[]>([])
-  const [chiffrage,    setChiffrage]    = useState<ChiffrageData | null>(null)
-  const [checklist,    setChecklist]    = useState<ChecklistRemise | null>(null)
-  const [memoireText,  setMemoireText]  = useState<string>('')
+  const [intervenants,   setIntervenants]   = useState<Intervenant[]>([])
+  const [chiffrage,      setChiffrage]      = useState<ChiffrageData | null>(null)
+  const [checklist,      setChecklist]      = useState<ChecklistRemise | null>(null)
+  const [memoireText,    setMemoireText]    = useState<string>('')
+  const [prospection,    setProspection]    = useState<ProspectionData | null>(null)
+  const [venteInterne,   setVenteInterne]   = useState<VenteInterneData | null>(null)
+  const [echangesClient, setEchangesClient] = useState<EchangesClientData | null>(null)
+  const [juridique,      setJuridique]      = useState<JuridiqueData | null>(null)
+  const [signatureData,  setSignatureData]  = useState<SignatureData | null>(null)
   const [briefLoading,  setBriefLoading]  = useState(false)
   const [briefError,    setBriefError]    = useState<string | null>(null)
   const [pipelineStage, setPipelineStage] = useState<import('@/types').PipelineStage | undefined>(undefined)
@@ -133,6 +143,11 @@ export default function ProjectPage() {
     setChecklist     (ts.checklist         ?? null)
     setMemoireText   (ts.memoire_technique ?? '')
     setPipelineStage (ts.pipeline_stage)
+    setProspection   (ts.prospection       ?? null)
+    setVenteInterne  (ts.vente_interne     ?? null)
+    setEchangesClient(ts.echanges_client   ?? null)
+    setJuridique     (ts.juridique         ?? null)
+    setSignatureData (ts.signature_data    ?? null)
   }, [data])
 
   async function callApi(url: string) {
@@ -399,9 +414,14 @@ export default function ProjectPage() {
       activeGroupCls: 'bg-amber-500/12 border-amber-500/30 text-amber-400',
       activeSubColor: 'text-amber-400',
       tabs: [
-        { id: 'intervenants', label: 'Intervenants',        icon: Users        },
-        { id: 'chiffrage',    label: 'Chiffrage',           icon: Calculator   },
-        { id: 'checklist',    label: 'Checklist remise',    icon: ClipboardCheck },
+        { id: 'prospection',    label: 'Prospection',      icon: Search         },
+        { id: 'vente_interne',  label: 'Vente interne',    icon: Building2      },
+        { id: 'intervenants',   label: 'Intervenants',     icon: Users          },
+        { id: 'echanges_client',label: 'Échanges client',  icon: MessageSquare  },
+        { id: 'juridique',      label: 'Juridique',        icon: Scale          },
+        { id: 'signature',      label: 'Signature',        icon: PenLine        },
+        { id: 'chiffrage',      label: 'Chiffrage',        icon: Calculator     },
+        { id: 'checklist',      label: 'Checklist remise', icon: ClipboardCheck },
       ],
     },
     {
@@ -959,12 +979,52 @@ export default function ProjectPage() {
           <CommentsTab projectId={id} />
         </div>
 
-        {/* ── Pipeline commercial tabs ──────────────────────────────────── */}
+        {/* ── Commercial pipeline tabs ─────────────────────────────────── */}
+        <div style={{ display: activeTab === 'prospection' ? 'block' : 'none' }} className="p-4 md:p-6">
+          <ProspectionTab
+            projectId={id}
+            data={prospection}
+            onChange={setProspection}
+          />
+        </div>
+
+        <div style={{ display: activeTab === 'vente_interne' ? 'block' : 'none' }} className="p-4 md:p-6">
+          <VenteInterneTab
+            projectId={id}
+            data={venteInterne}
+            onChange={setVenteInterne}
+          />
+        </div>
+
         <div style={{ display: activeTab === 'intervenants' ? 'block' : 'none' }} className="p-4 md:p-6">
           <IntervenantsTab
             projectId={id}
             intervenants={intervenants}
             onChange={setIntervenants}
+          />
+        </div>
+
+        <div style={{ display: activeTab === 'echanges_client' ? 'block' : 'none' }} className="p-4 md:p-6">
+          <EchangesClientTab
+            projectId={id}
+            data={echangesClient}
+            onChange={setEchangesClient}
+          />
+        </div>
+
+        <div style={{ display: activeTab === 'juridique' ? 'block' : 'none' }} className="p-4 md:p-6">
+          <JuridiqueTab
+            projectId={id}
+            data={juridique}
+            onChange={setJuridique}
+          />
+        </div>
+
+        <div style={{ display: activeTab === 'signature' ? 'block' : 'none' }} className="p-4 md:p-6">
+          <SignatureTab
+            projectId={id}
+            data={signatureData}
+            onChange={setSignatureData}
           />
         </div>
 

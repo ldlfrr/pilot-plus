@@ -22,14 +22,14 @@ interface StageCfg {
 }
 
 const STAGES: StageCfg[] = [
-  { value: 'veille',    label: 'Veille',        color: '#94a3b8', bg: 'rgba(148,163,184,0.07)', border: 'rgba(148,163,184,0.15)', dot: '#64748b' },
-  { value: 'analyse',   label: 'Analyse',       color: '#60a5fa', bg: 'rgba(96,165,250,0.07)',  border: 'rgba(96,165,250,0.18)',  dot: '#3b82f6' },
-  { value: 'go',        label: 'GO',            color: '#34d399', bg: 'rgba(52,211,153,0.07)',  border: 'rgba(52,211,153,0.20)',  dot: '#10b981' },
-  { value: 'brief',     label: 'Brief envoyé',  color: '#a78bfa', bg: 'rgba(167,139,250,0.07)', border: 'rgba(167,139,250,0.18)', dot: '#7c3aed' },
-  { value: 'chiffrage', label: 'En chiffrage',  color: '#fbbf24', bg: 'rgba(251,191,36,0.07)',  border: 'rgba(251,191,36,0.18)',  dot: '#f59e0b' },
-  { value: 'relecture', label: 'Relecture',     color: '#f97316', bg: 'rgba(249,115,22,0.07)',  border: 'rgba(249,115,22,0.18)',  dot: '#ea580c' },
-  { value: 'remis',     label: 'Remis',         color: '#2dd4bf', bg: 'rgba(45,212,191,0.07)',  border: 'rgba(45,212,191,0.18)',  dot: '#0d9488' },
-  { value: 'cloture',   label: 'Clôturé',       color: '#6b7280', bg: 'rgba(107,114,128,0.07)', border: 'rgba(107,114,128,0.12)', dot: '#4b5563' },
+  { value: 'prospection',     label: 'Prospection',    color: '#60a5fa', bg: 'rgba(96,165,250,0.07)',   border: 'rgba(96,165,250,0.18)',   dot: '#3b82f6' },
+  { value: 'qualification',   label: 'Qualification',  color: '#a78bfa', bg: 'rgba(167,139,250,0.07)',  border: 'rgba(167,139,250,0.18)',  dot: '#7c3aed' },
+  { value: 'vente_interne',   label: 'Vente interne',  color: '#34d399', bg: 'rgba(52,211,153,0.07)',   border: 'rgba(52,211,153,0.20)',   dot: '#10b981' },
+  { value: 'avant_vente',     label: 'Avant-vente',    color: '#fb923c', bg: 'rgba(251,146,60,0.07)',   border: 'rgba(251,146,60,0.18)',   dot: '#ea580c' },
+  { value: 'echanges_client', label: 'Échanges client',color: '#f472b6', bg: 'rgba(244,114,182,0.07)',  border: 'rgba(244,114,182,0.18)',  dot: '#db2777' },
+  { value: 'juridique',       label: 'Juridique',      color: '#facc15', bg: 'rgba(250,204,21,0.07)',   border: 'rgba(250,204,21,0.18)',   dot: '#ca8a04' },
+  { value: 'signature',       label: 'Signature',      color: '#4ade80', bg: 'rgba(74,222,128,0.07)',   border: 'rgba(74,222,128,0.18)',   dot: '#16a34a' },
+  { value: 'cloture',         label: 'Clôturé',        color: '#6b7280', bg: 'rgba(107,114,128,0.07)',  border: 'rgba(107,114,128,0.12)',  dot: '#4b5563' },
 ]
 
 function stageCfg(stage: PipelineStage | undefined): StageCfg {
@@ -326,7 +326,7 @@ export default function PipelinePage() {
         location:       p.location,
         offer_deadline: p.offer_deadline,
         outcome:        p.outcome,
-        pipeline_stage: (p.task_states?.pipeline_stage ?? 'veille') as PipelineStage,
+        pipeline_stage: (p.task_states?.pipeline_stage ?? 'prospection') as PipelineStage,
         score:          p.score?.total_score ?? null,
         verdict:        p.score?.verdict ?? null,
         chiffrage_montant: p.task_states?.chiffrage?.montant ?? null,
@@ -373,8 +373,8 @@ export default function PipelinePage() {
 
   // Pipeline value stats
   const totalValue   = displayed.reduce((s, p) => s + (p.chiffrage_montant ?? 0), 0)
-  const totalGo      = displayed.filter(p => p.pipeline_stage === 'go' || p.pipeline_stage === 'brief' || p.pipeline_stage === 'chiffrage' || p.pipeline_stage === 'relecture' || p.pipeline_stage === 'remis').length
-  const totalRemis   = displayed.filter(p => p.pipeline_stage === 'remis').length
+  const totalGo      = displayed.filter(p => ['vente_interne', 'avant_vente', 'echanges_client', 'juridique', 'signature'].includes(p.pipeline_stage)).length
+  const totalRemis   = displayed.filter(p => p.pipeline_stage === 'signature').length
 
   if (loading) {
     return (

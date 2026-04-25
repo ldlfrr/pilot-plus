@@ -143,17 +143,17 @@ export interface ProjectScore {
   created_at: string
 }
 
-// ─── Commercial pipeline ──────────────────────────────────────────────────────
+// ─── Commercial pipeline (7 stages A→Z) ─────────────────────────────────────
 
 export type PipelineStage =
-  | 'veille'
-  | 'analyse'
-  | 'go'
-  | 'brief'
-  | 'chiffrage'
-  | 'relecture'
-  | 'remis'
-  | 'cloture'
+  | 'prospection'       // Étape 1 — Prospection & détection
+  | 'qualification'     // Étape 2 — Qualification / Scoring Go/No Go
+  | 'vente_interne'     // Étape 3 — Vente interne / approbation direction
+  | 'avant_vente'       // Étape 4 — Mobilisation avant-vente / technique
+  | 'echanges_client'   // Étape 5 — Échanges client
+  | 'juridique'         // Étape 6 — Analyse juridique
+  | 'signature'         // Étape 7 — Signature finale (Docusign)
+  | 'cloture'           // Pipeline terminé
 
 export type IntervenantRole =
   | 'commercial'
@@ -188,6 +188,74 @@ export interface ChecklistRemise {
   remise_effectuee:     boolean
 }
 
+// ─── Stage-specific data structures ──────────────────────────────────────────
+
+export type ProspectionSource = 'boamp' | 'marches_publics' | 'reseau' | 'inbound' | 'autre'
+
+export interface ProspectionData {
+  source?:            ProspectionSource
+  contact_nom?:       string
+  contact_poste?:     string
+  contact_email?:     string
+  contact_phone?:     string
+  budget_estime?:     number
+  notes?:             string
+  detected_at?:       string   // ISO date
+}
+
+export type VenteInterneStatus = 'en_attente' | 'en_cours' | 'approuve' | 'refuse'
+
+export interface VenteInterneData {
+  status?:           VenteInterneStatus
+  date_reunion?:     string   // ISO date
+  participants?:     string[]
+  notes_direction?:  string
+  decision_at?:      string   // ISO datetime
+  decideur?:         string
+}
+
+export type EchangeType = 'email' | 'reunion' | 'appel' | 'visio' | 'autre'
+
+export interface EchangeClient {
+  id:         string
+  date:       string
+  type:       EchangeType
+  sujet:      string
+  participants?: string
+  notes?:     string
+  next_step?: string
+}
+
+export interface EchangesClientData {
+  echanges: EchangeClient[]
+}
+
+export type JuridiqueRisque = 'faible' | 'moyen' | 'eleve'
+
+export interface JuridiqueData {
+  risque_global?:       JuridiqueRisque
+  clauses_penalites?:   boolean
+  conditions_paiement?: string
+  sous_traitance?:      boolean
+  assurances?:          boolean
+  duree_contrat?:       string
+  notes_juridiques?:    string
+  revu_par?:            string
+  revue_at?:            string   // ISO date
+}
+
+export type SignatureStatus = 'en_attente' | 'envoye' | 'signe' | 'refuse'
+
+export interface SignatureData {
+  status?:           SignatureStatus
+  docusign_url?:     string
+  envoye_at?:        string
+  signe_at?:         string
+  signataires?:      string[]
+  montant_final?:    number
+  notes?:            string
+}
+
 // ─── Task states (pièces à fournir + actions + pipeline) ─────────────────────
 
 export interface TaskStates {
@@ -200,6 +268,12 @@ export interface TaskStates {
   checklist?:                      ChecklistRemise
   memoire_technique?:              string   // texte IA généré
   brief_avant_vente_generated_at?: string   // ISO datetime
+  // ── Stage-specific data ───────────────────────────────────────────────────
+  prospection?:                    ProspectionData
+  vente_interne?:                  VenteInterneData
+  echanges_client?:                EchangesClientData
+  juridique?:                      JuridiqueData
+  signature_data?:                 SignatureData
 }
 
 // ─── API payload types ────────────────────────────────────────────────────────

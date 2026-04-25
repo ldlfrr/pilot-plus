@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getProjectAccess } from '@/lib/project-access'
-import type { TaskStates, PipelineStage, Intervenant, ChiffrageData, ChecklistRemise } from '@/types'
+import type { TaskStates, PipelineStage, Intervenant, ChiffrageData, ChecklistRemise, ProspectionData, VenteInterneData, EchangesClientData, JuridiqueData, SignatureData } from '@/types'
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -12,6 +12,12 @@ interface PipelinePatchBody {
   checklist?:                      ChecklistRemise
   memoire_technique?:              string
   brief_avant_vente_generated_at?: string
+  // Stage-specific data
+  prospection?:                    ProspectionData
+  vente_interne?:                  VenteInterneData
+  echanges_client?:                EchangesClientData
+  juridique?:                      JuridiqueData
+  signature_data?:                 SignatureData
 }
 
 export async function PATCH(req: Request, { params }: Params) {
@@ -43,6 +49,12 @@ export async function PATCH(req: Request, { params }: Params) {
     if (body.brief_avant_vente_generated_at !== undefined) {
       updated.brief_avant_vente_generated_at = body.brief_avant_vente_generated_at
     }
+    // Stage-specific data
+    if (body.prospection   !== undefined) updated.prospection    = body.prospection
+    if (body.vente_interne !== undefined) updated.vente_interne  = body.vente_interne
+    if (body.echanges_client !== undefined) updated.echanges_client = body.echanges_client
+    if (body.juridique     !== undefined) updated.juridique      = body.juridique
+    if (body.signature_data !== undefined) updated.signature_data = body.signature_data
 
     const { error } = await supabase
       .from('projects').update({ task_states: updated }).eq('id', id)
@@ -80,6 +92,11 @@ export async function GET(_req: Request, { params }: Params) {
       checklist:                      ts.checklist      ?? null,
       memoire_technique:              ts.memoire_technique,
       brief_avant_vente_generated_at: ts.brief_avant_vente_generated_at,
+      prospection:                    ts.prospection    ?? null,
+      vente_interne:                  ts.vente_interne  ?? null,
+      echanges_client:                ts.echanges_client ?? null,
+      juridique:                      ts.juridique      ?? null,
+      signature_data:                 ts.signature_data ?? null,
     })
   } catch (err) {
     console.error('[pipeline GET]', err)

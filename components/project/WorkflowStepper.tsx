@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Loader2, ArrowRight, ChevronRight } from 'lucide-react'
+import { Check, Loader2, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { PipelineStage } from '@/types'
 
@@ -12,17 +12,82 @@ interface Step {
   color:      string
   roles:      ('owner' | 'editor' | 'avant_vente' | 'viewer')[]
   ctaLabel:   string
+  emoji:      string
 }
 
 const STEPS: Step[] = [
-  { id: 'veille',    label: 'Veille',          shortLabel: 'Veille',    color: '#60a5fa', roles: ['owner','editor'],               ctaLabel: 'Démarrer l\'analyse' },
-  { id: 'analyse',   label: 'Analyse IA',      shortLabel: 'Analyse',   color: '#a78bfa', roles: ['owner','editor'],               ctaLabel: 'Valider — passer en décision' },
-  { id: 'go',        label: 'Go / No Go',      shortLabel: 'Go/No-Go',  color: '#34d399', roles: ['owner','editor'],               ctaLabel: 'GO — envoyer le Brief AV' },
-  { id: 'brief',     label: 'Brief AV',        shortLabel: 'Brief AV',  color: '#fb923c', roles: ['owner','editor','avant_vente'], ctaLabel: 'Brief transmis — AV commence' },
-  { id: 'chiffrage', label: 'Chiffrage',       shortLabel: 'Chiffrage', color: '#f472b6', roles: ['owner','editor','avant_vente'], ctaLabel: 'Chiffrage déposé ✓' },
-  { id: 'relecture', label: 'Relecture',       shortLabel: 'Relecture', color: '#facc15', roles: ['owner','editor'],               ctaLabel: 'Relecture validée ✓' },
-  { id: 'remis',     label: 'Dossier remis',   shortLabel: 'Remis',     color: '#4ade80', roles: ['owner','editor'],               ctaLabel: 'Dossier remis — clôture ✓' },
-  { id: 'cloture',   label: 'Clôturé',         shortLabel: 'Clôturé',   color: '#94a3b8', roles: [],                               ctaLabel: '' },
+  {
+    id: 'prospection',
+    label: 'Prospection',
+    shortLabel: 'Prospect',
+    color: '#60a5fa',
+    roles: ['owner', 'editor'],
+    ctaLabel: 'Opportunité qualifiée — scorer',
+    emoji: '🔍',
+  },
+  {
+    id: 'qualification',
+    label: 'Qualification',
+    shortLabel: 'Qualif.',
+    color: '#a78bfa',
+    roles: ['owner', 'editor'],
+    ctaLabel: 'GO décidé — présenter en interne',
+    emoji: '📊',
+  },
+  {
+    id: 'vente_interne',
+    label: 'Vente interne',
+    shortLabel: 'Vente int.',
+    color: '#34d399',
+    roles: ['owner', 'editor'],
+    ctaLabel: 'Direction approuve — mobiliser AV',
+    emoji: '🏢',
+  },
+  {
+    id: 'avant_vente',
+    label: 'Avant-vente',
+    shortLabel: 'Avant-vente',
+    color: '#fb923c',
+    roles: ['owner', 'editor', 'avant_vente'],
+    ctaLabel: 'Offre prête — envoyer au client',
+    emoji: '⚙️',
+  },
+  {
+    id: 'echanges_client',
+    label: 'Échanges client',
+    shortLabel: 'Échanges',
+    color: '#f472b6',
+    roles: ['owner', 'editor'],
+    ctaLabel: 'Accord client — revue juridique',
+    emoji: '💬',
+  },
+  {
+    id: 'juridique',
+    label: 'Analyse juridique',
+    shortLabel: 'Juridique',
+    color: '#facc15',
+    roles: ['owner', 'editor'],
+    ctaLabel: 'Validé — envoyer pour signature',
+    emoji: '⚖️',
+  },
+  {
+    id: 'signature',
+    label: 'Signature',
+    shortLabel: 'Signature',
+    color: '#4ade80',
+    roles: ['owner', 'editor'],
+    ctaLabel: 'Signé — clôturer le projet',
+    emoji: '✍️',
+  },
+  {
+    id: 'cloture',
+    label: 'Clôturé',
+    shortLabel: 'Clôturé',
+    color: '#94a3b8',
+    roles: [],
+    ctaLabel: '',
+    emoji: '🏆',
+  },
 ]
 
 const STAGE_INDEX: Record<PipelineStage, number> = Object.fromEntries(
@@ -93,14 +158,12 @@ export function WorkflowStepper({ projectId, stage, currentRole, onStageChange }
             return (
               <div key={step.id} className="flex items-center flex-shrink-0">
                 {/* Node + label */}
-                <div className={cn(
-                  'flex items-center gap-1.5 px-1 py-0.5 rounded-md transition-all',
-                )}>
+                <div className="flex items-center gap-1.5 px-1 py-0.5 rounded-md transition-all">
                   {/* Circle */}
                   <div
                     className={cn(
                       'flex items-center justify-center rounded-full flex-shrink-0 transition-all',
-                      done   ? 'w-4.5 h-4.5 bg-white/10 w-[18px] h-[18px]' : '',
+                      done   ? 'w-[18px] h-[18px] bg-white/10' : '',
                       active ? 'w-[22px] h-[22px] border-[2px]' : '',
                       future ? 'w-[18px] h-[18px] border border-white/10' : '',
                     )}
@@ -138,9 +201,7 @@ export function WorkflowStepper({ projectId, stage, currentRole, onStageChange }
                 {idx < STEPS.length - 1 && (
                   <div className={cn(
                     'flex-shrink-0 h-px mx-1',
-                    idx < currentIndex - 1 ? 'w-5 bg-white/18' :
-                    idx === currentIndex - 1 ? 'w-5 bg-white/18' :
-                    'w-4 bg-white/6',
+                    idx < currentIndex ? 'w-4 bg-white/18' : 'w-4 bg-white/6',
                   )} />
                 )}
               </div>
@@ -149,7 +210,7 @@ export function WorkflowStepper({ projectId, stage, currentRole, onStageChange }
         </div>
       </div>
 
-      {/* ── Bottom bar: current stage + CTA ─────────────────────────────── */}
+      {/* ── Bottom bar: current stage info + CTA ────────────────────────── */}
       <div className="flex items-center justify-between px-4 py-3 mt-2 border-t border-white/5">
         {/* Stage indicator */}
         <div className="flex items-center gap-2.5 min-w-0">
@@ -159,11 +220,11 @@ export function WorkflowStepper({ projectId, stage, currentRole, onStageChange }
           />
           <div className="min-w-0">
             <p className="text-[10px] font-medium text-white/25 uppercase tracking-widest leading-none">
-              Étape actuelle
+              Étape {currentIndex + 1}/{STEPS.length - 1 > currentIndex ? STEPS.length - 1 : STEPS.length}
             </p>
             <p className="text-sm font-bold leading-snug mt-0.5 truncate"
                style={{ color: currentStep.color }}>
-              {currentStep.label}
+              {currentStep.emoji} {currentStep.label}
             </p>
           </div>
         </div>
