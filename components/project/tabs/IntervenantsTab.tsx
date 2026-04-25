@@ -1,20 +1,111 @@
 'use client'
 
-import { useState } from 'react'
-import { Users, Plus, Trash2, Mail, Phone, Briefcase, UserCheck, Loader2, Check } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Users, Loader2, Check, ChevronDown, X, UserCheck } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { Intervenant, IntervenantRole } from '@/types'
 
-const ROLES: { value: IntervenantRole; label: string; color: string; bg: string; icon: typeof Briefcase }[] = [
-  { value: 'commercial',       label: 'Commercial',         color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',  icon: Briefcase  },
-  { value: 'directeur_agence', label: 'Directeur agence',   color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: UserCheck  },
-  { value: 'charge_affaires',  label: "Chargé d'affaires",  color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: Users      },
-  { value: 'avant_vente',      label: 'Avant-vente',        color: '#fbbf24', bg: 'rgba(251,191,36,0.12)',  icon: Briefcase  },
+// ── Role config ───────────────────────────────────────────────────────────────
+
+const ROLES: { value: IntervenantRole; label: string; color: string; bg: string; border: string }[] = [
+  { value: 'commercial',       label: 'Commercial',         color: 'text-blue-300',   bg: 'bg-blue-500/12',   border: 'border-blue-500/25'   },
+  { value: 'directeur_agence', label: 'Directeur agence',   color: 'text-violet-300', bg: 'bg-violet-500/12', border: 'border-violet-500/25' },
+  { value: 'charge_affaires',  label: "Chargé d'affaires",  color: 'text-emerald-300',bg: 'bg-emerald-500/12',border: 'border-emerald-500/25'},
+  { value: 'avant_vente',      label: 'Avant-vente',        color: 'text-amber-300',  bg: 'bg-amber-500/12',  border: 'border-amber-500/25'  },
 ]
 
-function getRoleCfg(role: IntervenantRole) {
-  return ROLES.find(r => r.value === role) ?? ROLES[0]
+function getRoleCfg(role: IntervenantRole | null) {
+  return ROLES.find(r => r.value === role) ?? null
 }
+
+// ── Member type ───────────────────────────────────────────────────────────────
+
+interface Member {
+  id:        string
+  user_id:   string
+  role:      string
+  full_name: string | null
+  email:     string
+}
+
+function initials(name: string | null, email: string) {
+  if (name) {
+    const parts = name.trim().split(/\s+/)
+    return parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : name.slice(0, 2).toUpperCase()
+  }
+  return email.slice(0, 2).toUpperCase()
+}
+
+// ── Role dropdown for a member ────────────────────────────────────────────────
+
+interface RolePickerProps {
+  assigned:     IntervenantRole | null
+  onAssign:     (role: IntervenantRole | null) => void
+  saving:       boolean
+}
+
+function RolePicker({ assigned, onAssign, saving }: RolePickerProps) {
+  const [open, setOpen] = useState(false)
+  const cfg = getRoleCfg(assigned)
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        disabled={saving}
+        className={cn(
+          'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all',
+          cfg
+            ? cn(cfg.bg, cfg.border, cfg.color)
+            : 'bg-white/4 border-white/8 text-white/30 hover:text-white/50 hover:border-white/15',
+        )}
+      >
+        {saving
+          ? <Loader2 size={10} className="animate-spin" />
+          : cfg
+          ? <UserCheck size={10} />
+          : <ChevronDown size={10} />}
+        <span>{cfg ? cfg.label : 'Aucun rôle'}</span>
+        {!saving && <ChevronDown size={9} className="opacity-40" />}
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 z-20 bg-[var(--bg-card)] border border-white/10 rounded-xl shadow-2xl overflow-hidden min-w-[170px]"
+            style={{ backdropFilter: 'blur(16px)' }}>
+            {/* Remove role option */}
+            {assigned && (
+              <button
+                onClick={() => { onAssign(null); setOpen(false) }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-xs text-white/40 hover:bg-white/5 hover:text-red-400 transition-colors border-b border-white/6"
+              >
+                <X size={10} />Retirer le rôle
+              </button>
+            )}
+            {ROLES.map(r => (
+              <button
+                key={r.value}
+                onClick={() => { onAssign(r.value); setOpen(false) }}
+                className={cn(
+                  'w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left transition-colors',
+                  assigned === r.value ? cn(r.bg, r.color) : 'text-white/60 hover:bg-white/5',
+                )}
+              >
+                <span className={cn('text-xs font-semibold', assigned === r.value ? r.color : '')}>{r.label}</span>
+                {assigned === r.value && <Check size={11} />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 interface IntervenantsTabProps {
   projectId:    string
@@ -22,22 +113,49 @@ interface IntervenantsTabProps {
   onChange:     (updated: Intervenant[]) => void
 }
 
-const EMPTY_FORM: { role: IntervenantRole; name: string; email: string; phone: string } = {
-  role:  'commercial',
-  name:  '',
-  email: '',
-  phone: '',
-}
-
 export function IntervenantsTab({ projectId, intervenants, onChange }: IntervenantsTabProps) {
-  const [form,    setForm]    = useState({ ...EMPTY_FORM })
-  const [saving,  setSaving]  = useState(false)
-  const [saved,   setSaved]   = useState(false)
-  const [showAdd, setShowAdd] = useState(false)
+  const [members,  setMembers]  = useState<Member[]>([])
+  const [loading,  setLoading]  = useState(true)
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [saved,    setSaved]    = useState(false)
 
-  async function save(next: Intervenant[]) {
-    setSaving(true)
+  useEffect(() => {
+    fetch(`/api/projects/${projectId}/members`)
+      .then(r => r.ok ? r.json() : { members: [] })
+      .then(d => setMembers(d.members ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [projectId])
+
+  // Derive assigned role for a given user (by email or user_id)
+  function getAssignedRole(member: Member): IntervenantRole | null {
+    const iv = intervenants.find(
+      i => i.email === member.email || (i as Intervenant & { user_id?: string }).user_id === member.user_id,
+    )
+    return iv ? iv.role : null
+  }
+
+  async function handleAssign(member: Member, role: IntervenantRole | null) {
+    setSavingId(member.user_id)
     try {
+      // Remove any existing entry for this member
+      let next = intervenants.filter(
+        i => i.email !== member.email &&
+             (i as Intervenant & { user_id?: string }).user_id !== member.user_id,
+      )
+      // Add new role if provided
+      if (role) {
+        next = [
+          ...next,
+          {
+            role,
+            name:    member.full_name ?? member.email,
+            email:   member.email,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            user_id: member.user_id,
+          } as any,
+        ]
+      }
       await fetch(`/api/projects/${projectId}/pipeline`, {
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -47,36 +165,15 @@ export function IntervenantsTab({ projectId, intervenants, onChange }: Intervena
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } finally {
-      setSaving(false)
+      setSavingId(null)
     }
   }
 
-  function handleAdd() {
-    if (!form.name.trim()) return
-    const next: Intervenant[] = [
-      ...intervenants,
-      {
-        role:  form.role,
-        name:  form.name.trim(),
-        ...(form.email.trim() ? { email: form.email.trim() } : {}),
-        ...(form.phone.trim() ? { phone: form.phone.trim() } : {}),
-      },
-    ]
-    save(next)
-    setForm({ ...EMPTY_FORM })
-    setShowAdd(false)
-  }
-
-  function handleRemove(idx: number) {
-    const next = intervenants.filter((_, i) => i !== idx)
-    save(next)
-  }
-
-  // Group by role
+  // Group assigned intervenants by role for the summary view
   const byRole = ROLES.map(r => ({
     ...r,
-    members: intervenants.filter(iv => iv.role === r.value),
-  }))
+    members: members.filter(m => getAssignedRole(m) === r.value),
+  })).filter(g => g.members.length > 0)
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -88,177 +185,97 @@ export function IntervenantsTab({ projectId, intervenants, onChange }: Intervena
             <Users size={16} className="text-blue-400" />
             Intervenants
           </h2>
-          <p className="text-xs text-white/40 mt-0.5">Assignez les rôles clés sur ce projet</p>
+          <p className="text-xs text-white/40 mt-0.5">
+            Assignez un rôle commercial aux membres du projet
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          {saved && (
-            <span className="flex items-center gap-1 text-xs text-emerald-400">
-              <Check size={12} />Sauvegardé
-            </span>
-          )}
-          <button
-            onClick={() => setShowAdd(v => !v)}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all',
-              showAdd
-                ? 'bg-blue-500/20 border border-blue-500/40 text-blue-400'
-                : 'bg-white/6 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white'
-            )}
-          >
-            <Plus size={13} />
-            Ajouter
-          </button>
-        </div>
+        {saved && (
+          <span className="flex items-center gap-1 text-xs text-emerald-400">
+            <Check size={12} />Sauvegardé
+          </span>
+        )}
       </div>
 
-      {/* Add form */}
-      {showAdd && (
-        <div className="bg-[var(--bg-card)] border border-white/10 rounded-xl p-4 space-y-3">
-          <p className="text-xs font-semibold text-white/60 uppercase tracking-wider">Nouvel intervenant</p>
+      {/* Members list */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={18} className="animate-spin text-white/20" />
+        </div>
+      ) : members.length === 0 ? (
+        <div className="bg-[var(--bg-card)] border border-dashed border-white/8 rounded-2xl p-10 text-center">
+          <Users size={24} className="mx-auto text-white/15 mb-3" />
+          <p className="text-sm text-white/35">Aucun membre dans ce projet</p>
+          <p className="text-xs text-white/20 mt-1">
+            Invitez des collaborateurs dans l'onglet <strong className="text-white/30">Équipe → Membres</strong> pour leur assigner un rôle.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {members.map(member => {
+            const assignedRole = getAssignedRole(member)
+            const isSaving     = savingId === member.user_id
+            const ini          = initials(member.full_name, member.email)
+            const roleCfg      = getRoleCfg(assignedRole)
 
-          {/* Role picker */}
-          <div className="grid grid-cols-2 gap-2">
-            {ROLES.map(r => {
-              const Icon = r.icon
-              return (
-                <button
-                  key={r.value}
-                  onClick={() => setForm(f => ({ ...f, role: r.value }))}
-                  className={cn(
-                    'flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-medium transition-all',
-                    form.role === r.value
-                      ? 'text-white'
-                      : 'border-white/8 bg-white/3 text-white/40 hover:text-white/60 hover:border-white/15'
-                  )}
-                  style={form.role === r.value ? { background: r.bg, borderColor: r.color + '40', color: r.color } : {}}
-                >
-                  <Icon size={12} />
-                  {r.label}
-                </button>
-              )
-            })}
-          </div>
+            return (
+              <div
+                key={member.user_id}
+                className={cn(
+                  'flex items-center gap-3.5 px-4 py-3.5 rounded-2xl border transition-all',
+                  roleCfg
+                    ? cn('border-white/8', roleCfg.bg)
+                    : 'bg-[var(--bg-card)] border-white/6 hover:border-white/10',
+                )}
+              >
+                {/* Avatar */}
+                <div className={cn(
+                  'w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 border',
+                  roleCfg
+                    ? cn(roleCfg.bg, roleCfg.border, roleCfg.color)
+                    : 'bg-white/6 border-white/10 text-white/40',
+                )}>
+                  {ini}
+                </div>
 
-          {/* Name */}
-          <div>
-            <label className="text-[10px] text-white/35 uppercase tracking-wider mb-1 block">Nom *</label>
-            <input
-              type="text"
-              placeholder="Prénom NOM"
-              value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-blue-500/50 transition-colors"
-            />
-          </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white/85 truncate">
+                    {member.full_name ?? <span className="italic text-white/35">Sans nom</span>}
+                  </p>
+                  <p className="text-xs text-white/30 truncate">{member.email}</p>
+                </div>
 
-          {/* Email + Phone */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[10px] text-white/35 uppercase tracking-wider mb-1 block">Email</label>
-              <input
-                type="email"
-                placeholder="prenom@entreprise.fr"
-                value={form.email}
-                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-blue-500/50 transition-colors"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-white/35 uppercase tracking-wider mb-1 block">Téléphone</label>
-              <input
-                type="tel"
-                placeholder="06 12 34 56 78"
-                value={form.phone}
-                onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-blue-500/50 transition-colors"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={handleAdd}
-              disabled={!form.name.trim() || saving}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors"
-            >
-              {saving ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-              Ajouter
-            </button>
-            <button
-              onClick={() => { setShowAdd(false); setForm({ ...EMPTY_FORM }) }}
-              className="px-3 py-2 text-white/40 hover:text-white/70 text-xs transition-colors"
-            >
-              Annuler
-            </button>
-          </div>
+                {/* Role picker */}
+                <RolePicker
+                  assigned={assignedRole}
+                  onAssign={role => handleAssign(member, role)}
+                  saving={isSaving}
+                />
+              </div>
+            )
+          })}
         </div>
       )}
 
-      {/* Intervenant cards by role */}
-      {intervenants.length === 0 && !showAdd ? (
-        <div className="bg-[var(--bg-card)] border border-white/6 rounded-xl p-10 text-center">
-          <Users size={28} className="mx-auto text-white/15 mb-3" />
-          <p className="text-sm text-white/30">Aucun intervenant assigné</p>
-          <p className="text-xs text-white/20 mt-1">Cliquez sur « Ajouter » pour assigner des rôles</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {byRole.filter(r => r.members.length > 0).map(roleGroup => (
-            <div key={roleGroup.value}>
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-2"
-                style={{ color: roleGroup.color }}>
-                {roleGroup.label}
-              </p>
-              <div className="space-y-2">
-                {roleGroup.members.map((iv, i) => {
-                  const globalIdx = intervenants.indexOf(iv)
-                  return (
-                    <div
-                      key={i}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl border"
-                      style={{
-                        background:   roleGroup.bg,
-                        borderColor:  roleGroup.color + '22',
-                      }}
-                    >
-                      {/* Avatar */}
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-extrabold flex-shrink-0"
-                        style={{ background: roleGroup.color + '25', color: roleGroup.color }}
-                      >
-                        {iv.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white/90">{iv.name}</p>
-                        <div className="flex items-center gap-3 mt-0.5">
-                          {iv.email && (
-                            <a href={`mailto:${iv.email}`} className="flex items-center gap-1 text-[10px] text-white/35 hover:text-white/70 transition-colors">
-                              <Mail size={9} />{iv.email}
-                            </a>
-                          )}
-                          {iv.phone && (
-                            <a href={`tel:${iv.phone}`} className="flex items-center gap-1 text-[10px] text-white/35 hover:text-white/70 transition-colors">
-                              <Phone size={9} />{iv.phone}
-                            </a>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Remove */}
-                      <button
-                        onClick={() => handleRemove(globalIdx)}
-                        className="p-1.5 text-white/20 hover:text-red-400 transition-colors rounded-lg hover:bg-red-950/20"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  )
-                })}
+      {/* Role summary */}
+      {byRole.length > 0 && (
+        <div className="space-y-3 pt-2 border-t border-white/5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/20">Récapitulatif</p>
+          <div className="grid grid-cols-2 gap-2">
+            {byRole.map(group => (
+              <div key={group.value}
+                className={cn('px-3.5 py-3 rounded-xl border', group.bg, group.border)}>
+                <p className={cn('text-[10px] font-bold uppercase tracking-wider mb-2', group.color)}>
+                  {group.label}
+                </p>
+                {group.members.map(m => (
+                  <p key={m.user_id} className="text-xs text-white/65 truncate">
+                    {m.full_name ?? m.email}
+                  </p>
+                ))}
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>

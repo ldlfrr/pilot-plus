@@ -552,12 +552,41 @@ interface CriteriaFormProps {
   onUpdate: <K extends keyof CompanyCriteria>(key: K, value: CompanyCriteria[K]) => void
 }
 
+// ── Universal suggestions (sector-agnostic) ───────────────────────────────────
+
+const TYPES_PROJETS_SUGGESTIONS = [
+  'Construction neuve', 'Réhabilitation / rénovation', 'Maintenance & exploitation',
+  'Études & ingénierie', 'Fourniture de matériels', 'Prestations de services',
+  'Audit & diagnostic', 'Formation', 'Assistance à maîtrise d\'ouvrage (AMO)',
+  'Maîtrise d\'œuvre (MOE)', 'Travaux spéciaux', 'Terrassement / VRD',
+  'Installation électrique', 'CVC / plomberie', 'Désamiantage / dépollution',
+  'Photovoltaïque / ENR', 'IRVE / mobilité', 'Numérique & IT', 'Conseil & stratégie',
+]
+
+const SECTEURS_CLIENTS_UNIVERSAL = [
+  'Collectivités territoriales', 'État / Administration', 'Industrie',
+  'Tertiaire / bureaux', 'Grande distribution', 'Logistique / entrepôts',
+  'Santé / hôpitaux', 'Enseignement', 'Hôtellerie / tourisme',
+  'Agriculture', 'Promoteurs immobiliers', 'Bailleurs sociaux',
+  'Syndics de copropriété', 'Particuliers', 'Entreprises privées',
+]
+
+const CERTIFICATIONS_SUGGESTIONS = [
+  'ISO 9001', 'ISO 14001', 'ISO 45001', 'ISO 50001',
+  'RGE', 'Qualibat', 'Qualifelec', 'MASE', 'COFRAC',
+  'BREEAM', 'HQE', 'BIM', 'CEFRI', 'QualiPV', 'IRVE P1 / P2',
+  'Certification SS3 / SS4', 'APSAD', 'Agrément préfectoral',
+]
+
 export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProps) {
   if (activeTab === 'import') return null
 
-  const sector = getSector(criteria.secteur_principal)
   const totalPoids = criteria.poids_rentabilite + criteria.poids_complexite +
     criteria.poids_alignement + criteria.poids_probabilite + criteria.poids_charge
+
+  // Helper: add/remove from a suggestion list, keeping free-form ones
+  const knownTypes  = TYPES_PROJETS_SUGGESTIONS
+  const knownCerts  = CERTIFICATIONS_SUGGESTIONS
 
   return (
     <div className="p-5 md:p-8 space-y-5 animate-fade-in">
@@ -565,26 +594,6 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'profil' && (
         <>
-          {/* Sector picker — prominent, at the top */}
-          <Card>
-            <SectionHeader
-              icon={Sparkles}
-              color="bg-blue-500/15 text-blue-400"
-              label="Secteur d'activité"
-              sub="Définit les certifications, types de projets et unités de capacité proposés dans le formulaire"
-            />
-            <SectorPicker
-              value={criteria.secteur_principal}
-              onChange={v => onUpdate('secteur_principal', v)}
-            />
-            {!criteria.secteur_principal && (
-              <p className="mt-3 text-[11px] text-amber-400/70 flex items-center gap-1.5">
-                <AlertTriangle size={11} />
-                Choisissez un secteur pour afficher des critères adaptés à votre activité.
-              </p>
-            )}
-          </Card>
-
           {/* Company identity */}
           <Card>
             <SectionHeader icon={Building2} color="bg-blue-500/15 text-blue-400" label="Identité de l'entreprise" sub="Informations légales et administratives" />
@@ -607,20 +616,20 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
               </div>
               <div>
                 <Label>Effectifs</Label>
-                <SelectInput
-                  value={criteria.effectifs ?? ''}
-                  onChange={v => onUpdate('effectifs', v)}
-                  options={EFFECTIFS_OPTIONS}
-                  placeholder="Nombre de salariés…"
-                />
+                <SelectInput value={criteria.effectifs ?? ''} onChange={v => onUpdate('effectifs', v)} options={EFFECTIFS_OPTIONS} placeholder="Nombre de salariés…" />
               </div>
               <div>
                 <Label tooltip="Chiffre d'affaires annuel (dernier exercice clos)">CA annuel</Label>
-                <SelectInput
-                  value={criteria.ca_annuel ?? ''}
-                  onChange={v => onUpdate('ca_annuel', v)}
-                  options={CA_OPTIONS}
-                  placeholder="Tranche de CA…"
+                <SelectInput value={criteria.ca_annuel ?? ''} onChange={v => onUpdate('ca_annuel', v)} options={CA_OPTIONS} placeholder="Tranche de CA…" />
+              </div>
+              <div className="sm:col-span-2">
+                <Label tooltip="Décrivez votre secteur d'activité principal. Ce champ est utilisé par l'IA pour contextualiser le scoring.">
+                  Secteur d'activité
+                </Label>
+                <TextInput
+                  value={criteria.secteur_principal ?? ''}
+                  onChange={v => onUpdate('secteur_principal', v)}
+                  placeholder="Ex : BTP, photovoltaïque, informatique, conseil, désamiantage…"
                 />
               </div>
             </div>
@@ -637,13 +646,7 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
                 value={criteria.description_courte ?? ''}
                 onChange={e => onUpdate('description_courte', e.target.value)}
                 rows={5}
-                placeholder={
-                  criteria.secteur_principal === 'IRVE'
-                    ? "Ex : Entreprise spécialisée dans l'installation de bornes de recharge pour véhicules électriques. Certifiée IRVE P2. Présente en Île-de-France et PACA."
-                    : criteria.secteur_principal === 'Désamiantage'
-                    ? "Ex : Entreprise certifiée SS3 et SS4 intervenant sur des chantiers de désamiantage industriels et tertiaires depuis 2010. Présente sur toute la région Grand Est."
-                    : "Ex : Entreprise spécialisée dans l'installation de panneaux solaires en toiture industrielle et commerciale depuis 2015. Présente principalement en Île-de-France. Certifiée RGE et QualiPV Elec."
-                }
+                placeholder="Ex : Entreprise spécialisée dans la réhabilitation de bâtiments tertiaires depuis 2010. Présente en Île-de-France et Grand Est. Certifiée ISO 9001 et Qualibat. Nos points forts : délais maîtrisés, équipe dédiée de 45 personnes, références solides auprès des collectivités."
                 className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/8 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/30 resize-none leading-relaxed transition-all"
               />
               <p className="text-[10px] text-white/25 text-right tabular-nums">
@@ -657,8 +660,6 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'perimetre' && (
         <>
-          <SectorBanner secteur={criteria.secteur_principal} />
-
           <Card>
             <SectionHeader icon={MapPin} color="bg-blue-500/15 text-blue-400" label="Périmètre géographique" sub="Régions où votre entreprise intervient habituellement" />
             <Chips options={ZONES_GEO} selected={criteria.zones_geo} onChange={v => onUpdate('zones_geo', v)} />
@@ -670,47 +671,42 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
           </Card>
 
           <Card>
-            <SectionHeader
-              icon={Wrench}
-              color="bg-violet-500/15 text-violet-400"
-              label="Types de projets maîtrisés"
-              sub="Typologies avec références et expertise reconnue"
-            />
-            {!criteria.secteur_principal && (
-              <p className="text-xs text-white/35 mb-3 italic">
-                Sélectionnez un secteur dans l'onglet Profil pour voir des types de projets adaptés.
-              </p>
+            <SectionHeader icon={Wrench} color="bg-violet-500/15 text-violet-400" label="Types de projets maîtrisés" sub="Typologies sur lesquelles vous avez des références et une expertise reconnue" />
+            {/* Suggestions */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {knownTypes.filter(t => !criteria.types_projets.includes(t)).map(t => (
+                <button key={t} type="button"
+                  onClick={() => onUpdate('types_projets', [...criteria.types_projets, t])}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium border bg-white/4 text-white/45 border-white/8 hover:border-blue-400/40 hover:text-white/75 hover:bg-white/8 transition-all">
+                  + {t}
+                </button>
+              ))}
+            </div>
+            {criteria.types_projets.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {criteria.types_projets.map(t => (
+                  <span key={t} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-blue-600 text-white border border-blue-600">
+                    {t}
+                    <button type="button" onClick={() => onUpdate('types_projets', criteria.types_projets.filter(x => x !== t))} className="hover:text-red-300 transition-colors"><X size={10} /></button>
+                  </span>
+                ))}
+              </div>
             )}
-            <Chips
-              options={sector.types_projets}
-              selected={criteria.types_projets}
-              onChange={v => onUpdate('types_projets', v)}
-            />
-            {/* Custom tag input for additional project types */}
             <Divider />
-            <p className="text-[11px] text-white/30 mb-3 font-medium">Ajouter d'autres types de projets</p>
+            <p className="text-[11px] text-white/30 mb-2 font-medium">Ajouter un type de projet personnalisé</p>
             <TagsInput
-              values={criteria.types_projets.filter(t => !sector.types_projets.includes(t))}
+              values={criteria.types_projets.filter(t => !knownTypes.includes(t))}
               onChange={custom => onUpdate('types_projets', [
-                ...criteria.types_projets.filter(t => sector.types_projets.includes(t)),
+                ...criteria.types_projets.filter(t => knownTypes.includes(t)),
                 ...custom,
               ])}
-              placeholder="Autre type de projet… (Entrée)"
+              placeholder="Décrivez votre type de projet… (Entrée)"
             />
           </Card>
 
           <Card>
             <SectionHeader icon={Users} color="bg-emerald-500/15 text-emerald-400" label="Secteurs clients ciblés" sub="Segments de marché où vous êtes le plus compétitif" />
-            {!criteria.secteur_principal && (
-              <p className="text-xs text-white/35 mb-3 italic">
-                Sélectionnez un secteur dans l'onglet Profil pour voir des clients adaptés.
-              </p>
-            )}
-            <Chips
-              options={sector.secteurs_clients}
-              selected={criteria.secteurs_clients}
-              onChange={v => onUpdate('secteurs_clients', v)}
-            />
+            <Chips options={SECTEURS_CLIENTS_UNIVERSAL} selected={criteria.secteurs_clients} onChange={v => onUpdate('secteurs_clients', v)} />
           </Card>
 
           <Card>
@@ -721,10 +717,7 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
                 { value: 'prive',   label: 'Marchés privés',   sub: 'Entreprises, promoteurs' },
                 { value: 'mixte',   label: 'Les deux',         sub: 'Sans préférence' },
               ] as const).map(({ value, label, sub }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => onUpdate('marche_type', value)}
+                <button key={value} type="button" onClick={() => onUpdate('marche_type', value)}
                   className={cn(
                     'flex-1 flex flex-col items-center gap-1.5 px-3 py-3.5 rounded-xl border text-center transition-all',
                     criteria.marche_type === value
@@ -744,78 +737,35 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'capacites' && (
         <>
-          <SectorBanner secteur={criteria.secteur_principal} />
-
-          {/* Technical capacity */}
+          {/* Contract value range */}
           <Card>
-            <SectionHeader
-              icon={sector.icon}
-              color={sector.iconColor}
-              label="Capacités techniques"
-              sub={`Plage de ${sector.cap_unit} et volume mensuel que vous pouvez absorber`}
-            />
+            <SectionHeader icon={Euro} color="bg-emerald-500/15 text-emerald-400" label="Taille des marchés visés" sub="Fourchette de valeur des contrats que vous pouvez adresser" />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <Label tooltip="Taille minimale de projet acceptée">{sector.cap_min_label}</Label>
-                <NumberInput
-                  value={criteria.puissance_min_kwc}
-                  onChange={v => onUpdate('puissance_min_kwc', v)}
-                  suffix={sector.cap_unit}
-                  min={0}
-                />
-              </div>
-              <div>
-                <Label tooltip="Au-delà, le projet dépasse votre capacité ou financement">{sector.cap_max_label}</Label>
-                <NumberInput
-                  value={criteria.puissance_max_kwc}
-                  onChange={v => onUpdate('puissance_max_kwc', v)}
-                  suffix={sector.cap_unit}
-                  min={0}
-                />
-              </div>
-              <div>
-                <Label tooltip="Volume que vous pouvez traiter par mois avec vos équipes">{sector.cap_mensuelle_label}</Label>
-                <NumberInput
-                  value={criteria.capacite_mensuelle_kwc}
-                  onChange={v => onUpdate('capacite_mensuelle_kwc', v)}
-                  suffix={sector.cap_unit}
-                  min={0}
-                />
-              </div>
-            </div>
-
-            {/* Visual range bar */}
-            {criteria.puissance_max_kwc > criteria.puissance_min_kwc && (
-              <div className="mt-4 p-3 bg-white/3 rounded-xl border border-white/6">
-                <p className="text-[10px] text-white/35 mb-2">Fenêtre d&apos;acceptation</p>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-white/40 tabular-nums w-20 text-right truncate">
-                    {criteria.puissance_min_kwc.toLocaleString('fr-FR')} {sector.cap_unit}
-                  </span>
-                  <div className="flex-1 h-2 bg-white/8 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-amber-500/60 to-amber-400 rounded-full" style={{ width: '100%' }} />
-                  </div>
-                  <span className="text-white/40 tabular-nums w-20 truncate">
-                    {criteria.puissance_max_kwc.toLocaleString('fr-FR')} {sector.cap_unit}
-                  </span>
-                </div>
-              </div>
-            )}
-          </Card>
-
-          {/* Financial capacity */}
-          <Card>
-            <SectionHeader icon={Euro} color="bg-emerald-500/15 text-emerald-400" label="Capacité financière" sub="Valeur des marchés que vous pouvez adresser" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label tooltip="Montant minimal de marché acceptable (en €)">Budget min acceptable</Label>
+                <Label tooltip="Montant minimal en-dessous duquel le projet n'est pas rentable">Montant min / contrat</Label>
                 <NumberInput value={criteria.budget_min_eur ?? 0} onChange={v => onUpdate('budget_min_eur', v)} suffix="€" min={0} />
               </div>
               <div>
-                <Label tooltip="Montant maximal de marché que vous pouvez financer et exécuter">Budget max acceptable</Label>
+                <Label tooltip="Montant maximal au-delà duquel le projet dépasse vos capacités">Montant max / contrat</Label>
                 <NumberInput value={criteria.budget_max_eur ?? 0} onChange={v => onUpdate('budget_max_eur', v)} suffix="€" min={0} />
               </div>
+              <div>
+                <Label tooltip="Volume d'affaires que vous pouvez signer par mois">Volume mensuel cible</Label>
+                <NumberInput value={criteria.capacite_mensuelle_kwc} onChange={v => onUpdate('capacite_mensuelle_kwc', v)} suffix="k€" min={0} />
+              </div>
             </div>
+            {(criteria.budget_max_eur ?? 0) > (criteria.budget_min_eur ?? 0) && (
+              <div className="mt-4 p-3 bg-white/3 rounded-xl border border-white/6">
+                <p className="text-[10px] text-white/35 mb-2">Fenêtre d'acceptation</p>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-white/40 tabular-nums">{(criteria.budget_min_eur ?? 0).toLocaleString('fr-FR')} €</span>
+                  <div className="flex-1 h-2 bg-white/8 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-emerald-500/60 to-emerald-400 rounded-full w-full" />
+                  </div>
+                  <span className="text-white/40 tabular-nums">{(criteria.budget_max_eur ?? 0).toLocaleString('fr-FR')} €</span>
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* Operations */}
@@ -827,13 +777,8 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
                 <NumberInput value={criteria.nb_projets_simultanees ?? 3} onChange={v => onUpdate('nb_projets_simultanees', v)} min={1} max={50} />
               </div>
               <div>
-                <Label tooltip="Délai moyen entre la signature et la mise en service">Délai moyen d'exécution</Label>
-                <SelectInput
-                  value={criteria.delai_execution ?? ''}
-                  onChange={v => onUpdate('delai_execution', v)}
-                  options={DELAI_OPTIONS}
-                  placeholder="Choisir une durée…"
-                />
+                <Label tooltip="Délai moyen entre la signature et la livraison">Délai moyen d'exécution</Label>
+                <SelectInput value={criteria.delai_execution ?? ''} onChange={v => onUpdate('delai_execution', v)} options={DELAI_OPTIONS} placeholder="Choisir une durée…" />
               </div>
             </div>
           </Card>
@@ -843,29 +788,35 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'scoring' && (
         <>
-          <SectorBanner secteur={criteria.secteur_principal} />
-
-          {/* Certifications — dynamic per sector */}
+          {/* Certifications */}
           <Card>
             <SectionHeader icon={Award} color="bg-emerald-500/15 text-emerald-400" label="Certifications & qualifications" sub="Qualifications actuellement détenues par votre entreprise" />
-            {!criteria.secteur_principal && (
-              <p className="text-xs text-white/35 mb-3 italic">
-                Sélectionnez un secteur dans l'onglet Profil pour voir des certifications adaptées.
-              </p>
+            {/* Common suggestions */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {knownCerts.filter(c => !criteria.certifications.includes(c)).map(c => (
+                <button key={c} type="button"
+                  onClick={() => onUpdate('certifications', [...criteria.certifications, c])}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium border bg-white/4 text-white/45 border-white/8 hover:border-emerald-400/40 hover:text-white/75 hover:bg-white/8 transition-all">
+                  + {c}
+                </button>
+              ))}
+            </div>
+            {criteria.certifications.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {criteria.certifications.map(c => (
+                  <span key={c} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/40">
+                    {c}
+                    <button type="button" onClick={() => onUpdate('certifications', criteria.certifications.filter(x => x !== c))} className="hover:text-red-300 transition-colors"><X size={10} /></button>
+                  </span>
+                ))}
+              </div>
             )}
-            <Chips
-              options={sector.certifications}
-              selected={criteria.certifications}
-              onChange={v => onUpdate('certifications', v)}
-              colorActive="bg-emerald-600/20 text-emerald-300 border-emerald-500/40"
-            />
-            {/* Custom certifications */}
             <Divider />
-            <p className="text-[11px] text-white/30 mb-3 font-medium">Ajouter d'autres certifications</p>
+            <p className="text-[11px] text-white/30 mb-2 font-medium">Ajouter une certification personnalisée</p>
             <TagsInput
-              values={criteria.certifications.filter(c => !sector.certifications.includes(c))}
+              values={criteria.certifications.filter(c => !knownCerts.includes(c))}
               onChange={custom => onUpdate('certifications', [
-                ...criteria.certifications.filter(c => sector.certifications.includes(c)),
+                ...criteria.certifications.filter(c => knownCerts.includes(c)),
                 ...custom,
               ])}
               placeholder="Autre certification… (Entrée)"
@@ -876,11 +827,7 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
           <Card>
             <SectionHeader icon={TrendingUp} color="bg-rose-500/15 text-rose-400" label="Marge minimale acceptée" sub="Un projet sous ce seuil pénalisera le score Rentabilité" />
             <div className="flex items-center gap-5">
-              <input
-                type="range"
-                min={2}
-                max={35}
-                step={0.5}
+              <input type="range" min={2} max={35} step={0.5}
                 value={criteria.rentabilite_min_pct}
                 onChange={e => onUpdate('rentabilite_min_pct', Number(e.target.value))}
                 className="flex-1 h-2 rounded-full cursor-pointer accent-rose-500"
@@ -890,29 +837,19 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
                 <span className="text-xl font-bold text-rose-500/60">%</span>
               </div>
             </div>
-            <div className="flex justify-between text-[10px] text-white/25 mt-1">
-              <span>2 %</span><span>35 %</span>
-            </div>
+            <div className="flex justify-between text-[10px] text-white/25 mt-1"><span>2 %</span><span>35 %</span></div>
           </Card>
 
           {/* Key strengths */}
           <Card>
             <SectionHeader icon={Star} color="bg-amber-500/15 text-amber-400" label="Points forts de l'entreprise" sub="Arguments différenciants pris en compte pour la probabilité de gain" />
-            <TagsInput
-              values={criteria.points_forts}
-              onChange={v => onUpdate('points_forts', v)}
-              placeholder="Ex : Délais courts, SAV réactif, référence locale… (Entrée)"
-            />
+            <TagsInput values={criteria.points_forts} onChange={v => onUpdate('points_forts', v)} placeholder="Ex : Délais courts, SAV réactif, référence locale… (Entrée)" />
           </Card>
 
           {/* Exclusion keywords */}
           <Card>
             <SectionHeader icon={AlertTriangle} color="bg-red-500/15 text-red-400" label="Mots-clés d'exclusion" sub="Termes dans un DCE qui déclenchent automatiquement un NO GO" />
-            <TagsInput
-              values={criteria.mots_cles_exclusion ?? []}
-              onChange={v => onUpdate('mots_cles_exclusion', v)}
-              placeholder="Ex : Amiante, nucléaire, offshore… (Entrée)"
-            />
+            <TagsInput values={criteria.mots_cles_exclusion ?? []} onChange={v => onUpdate('mots_cles_exclusion', v)} placeholder="Ex : nucléaire, offshore, sous-traitance seule… (Entrée)" />
           </Card>
 
           {/* Score weights */}
@@ -925,8 +862,6 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
               <WeightSelector label="Probabilité de gain" value={criteria.poids_probabilite}  onChange={v => onUpdate('poids_probabilite', v)}  tooltip="Vos chances de remporter le marché (références, position concurrentielle)" />
               <WeightSelector label="Charge interne"      value={criteria.poids_charge}       onChange={v => onUpdate('poids_charge', v)}       tooltip="Légèreté en ressources humaines requises (score inversé : charge lourde = pénalisé)" />
             </div>
-
-            {/* Weight distribution bars */}
             <Divider />
             <p className="text-[10px] text-white/30 font-semibold uppercase tracking-wider mb-3">Répartition des poids</p>
             <div className="flex gap-2 items-end h-20">
@@ -941,10 +876,7 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
                 return (
                   <div key={key} className="flex-1 flex flex-col items-center justify-end gap-1">
                     <span className="text-[10px] font-bold text-white/60 tabular-nums">{pct}%</span>
-                    <div
-                      className={cn('w-full rounded-t-md transition-all duration-300 opacity-80', color)}
-                      style={{ height: `${Math.max(6, pct * 0.6)}px` }}
-                    />
+                    <div className={cn('w-full rounded-t-md transition-all duration-300 opacity-80', color)} style={{ height: `${Math.max(6, pct * 0.6)}px` }} />
                     <span className="text-[9px] text-white/30 truncate w-full text-center">{key}</span>
                   </div>
                 )
@@ -955,16 +887,11 @@ export function CriteriaForm({ criteria, activeTab, onUpdate }: CriteriaFormProp
           {/* AI notes */}
           <Card>
             <SectionHeader icon={BarChart3} color="bg-blue-500/15 text-blue-400" label="Notes pour l'IA" sub="Contexte supplémentaire transmis à Claude lors de chaque scoring" />
-            <textarea
-              value={criteria.notes}
-              onChange={e => onUpdate('notes', e.target.value)}
-              rows={5}
-              placeholder="Ex : Nous sommes en forte croissance, ciblons des marchés publics supérieurs à 1 M€, avons des difficultés de recrutement en 2024 et n'acceptons plus les projets à plus de 300 km de Paris."
+            <textarea value={criteria.notes} onChange={e => onUpdate('notes', e.target.value)} rows={5}
+              placeholder="Ex : Nous sommes en forte croissance, ciblons des marchés publics supérieurs à 1 M€, avons des difficultés de recrutement et n'acceptons plus les projets à plus de 300 km de notre siège."
               className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/8 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/30 resize-none leading-relaxed transition-all"
             />
-            <p className="text-[10px] text-white/25 text-right mt-1 tabular-nums">
-              {criteria.notes.length} / 800 caractères
-            </p>
+            <p className="text-[10px] text-white/25 text-right mt-1 tabular-nums">{criteria.notes.length} / 800 caractères</p>
           </Card>
         </>
       )}

@@ -351,24 +351,16 @@ export function SharedProjectsTab({ teamId, currentUserId, isTeamAdmin }: Shared
   async function handleJoin(projectId: string) {
     setJoiningId(projectId); setFeedback(null)
     try {
-      const res = await fetch(`/api/projects/${projectId}/members`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ email: '', role: 'viewer', selfJoin: true }),
+      const res = await fetch(`/api/projects/${projectId}/join`, {
+        method: 'POST',
       })
-      // For self-join we need a special endpoint. Use project members me endpoint.
-      // Actually, let's use the join endpoint if it exists, else just refresh.
-      if (res.ok || res.status === 400) {
-        // Mark as member locally
-        setItems(prev => prev.map(i =>
-          i.project.id === projectId ? { ...i, is_member: true } : i
-        ))
-        setFeedback({ msg: 'Vous avez rejoint ce projet en lecture.', ok: true })
-        setTimeout(() => setFeedback(null), 3000)
-      } else {
-        const json = await res.json()
-        throw new Error(json.error ?? 'Erreur')
-      }
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erreur')
+      setItems(prev => prev.map(i =>
+        i.project.id === projectId ? { ...i, is_member: true } : i
+      ))
+      setFeedback({ msg: 'Vous avez rejoint ce projet en lecture.', ok: true })
+      setTimeout(() => setFeedback(null), 3000)
     } catch (err) {
       setFeedback({ msg: err instanceof Error ? err.message : 'Erreur', ok: false })
     } finally {

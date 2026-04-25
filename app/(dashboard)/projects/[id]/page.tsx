@@ -373,7 +373,7 @@ export default function ProjectPage() {
         { id: 'synthese',     label: 'Synthèse',           icon: FileText    },
         { id: 'besoin',       label: 'Besoin client',       icon: Users       },
         { id: 'specificites', label: 'Spécificités',        icon: Wrench      },
-        { id: 'pieces',       label: 'Pièces à fournir',    icon: ListChecks  },
+        { id: 'map',          label: 'Carte',               icon: Map         },
         { id: 'gonogo',       label: 'Go / No Go',          icon: BarChart3   },
         { id: 'actions',      label: 'Actions',             icon: Target      },
       ],
@@ -388,8 +388,8 @@ export default function ProjectPage() {
         { id: 'plan',         label: 'Plan de réponse',     icon: BookOpen    },
         { id: 'memoire',      label: 'Mémoire technique',   icon: FileText    },
         { id: 'corp',         label: 'Synthèse Corporate',  icon: ClipboardList },
+        { id: 'pieces',       label: 'Pièces à fournir',    icon: ListChecks  },
         { id: 'documents',    label: 'Documents',           icon: Layers      },
-        { id: 'map',          label: 'Carte',               icon: Map         },
       ],
     },
     {

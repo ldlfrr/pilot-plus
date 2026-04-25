@@ -46,5 +46,19 @@ export async function getProjectAccess(
     }
   } catch { /* project_members table may not exist yet */ }
 
+  // 3. Team share check — viewer access for team members
+  // RLS on team_projects only returns rows for the user's own teams,
+  // so a result here means the project is shared in a team they belong to.
+  try {
+    const { data: teamShare } = await supabase
+      .from('team_projects')
+      .select('id')
+      .eq('project_id', projectId)
+      .limit(1)
+      .maybeSingle()
+
+    if (teamShare) return { role: 'viewer', canEdit: false }
+  } catch { /* team_projects table may not exist */ }
+
   return null
 }
