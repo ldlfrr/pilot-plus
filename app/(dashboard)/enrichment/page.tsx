@@ -9,7 +9,7 @@ import {
   ExternalLink, Plus, Trash2, BarChart3, Hash,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import type { EnrichedContact, ContactInput } from '@/app/api/enrichment/route'
+import type { EnrichedContact, ContactInput } from '@/lib/types/enrichment'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
