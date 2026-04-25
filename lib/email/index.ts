@@ -1,6 +1,8 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY ?? 'placeholder')
+}
 const FROM = process.env.EMAIL_FROM ?? 'PILOT+ <noreply@pilot-plus.fr>'
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://pilot-plus.fr'
 
@@ -68,7 +70,7 @@ export async function sendDeadlineAlert(opts: {
 </body>
 </html>`
 
-  return resend.emails.send({ from: FROM, to: opts.to, subject, html })
+  return getResend().emails.send({ from: FROM, to: opts.to, subject, html })
 }
 
 // ── Weekly summary ────────────────────────────────────────────────────────────
@@ -142,7 +144,7 @@ export async function sendWeeklySummary(opts: {
 </body>
 </html>`
 
-  return resend.emails.send({ from: FROM, to: opts.to, subject, html })
+  return getResend().emails.send({ from: FROM, to: opts.to, subject, html })
 }
 
 // ── BOAMP new match ───────────────────────────────────────────────────────────
@@ -194,5 +196,5 @@ export async function sendBoampAlert(opts: {
 </body>
 </html>`
 
-  return resend.emails.send({ from: FROM, to: opts.to, subject, html })
+  return getResend().emails.send({ from: FROM, to: opts.to, subject, html })
 }
