@@ -50,13 +50,15 @@ export async function POST(req: Request, { params }: Params) {
   }
 
   // Verify the logged-in user matches the invited email
+  // Fall back to auth.users email if profiles.email not yet populated
   const { data: profile } = await supabase
     .from('profiles')
     .select('email')
     .eq('id', user.id)
     .single()
 
-  if (profile?.email?.toLowerCase() !== invitation.invited_email.toLowerCase()) {
+  const userEmail = (profile?.email ?? user.email ?? '').toLowerCase()
+  if (userEmail !== invitation.invited_email.toLowerCase()) {
     return NextResponse.json({
       error: `Cette invitation est destinée à ${invitation.invited_email}. Connectez-vous avec ce compte.`
     }, { status: 403 })

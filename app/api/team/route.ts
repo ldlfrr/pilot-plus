@@ -1,54 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// GET — get current user's team (or null)
-export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-  // Find team where user is owner or member
-  const { data: membership } = await supabase
-    .from('team_members')
-    .select('team_id, role')
-    .eq('user_id', user.id)
-    .order('joined_at', { ascending: true })
-    .limit(1)
-    .single()
-
-  if (!membership) return NextResponse.json({ team: null })
-
+async function getFormattedTeam(supabase: Awaited<ReturnType<typeof createClient>>, teamId: string) {
   const { data: team } = await supabase
     .from('teams')
     .select('id, name, owner_id')
-    .eq('id', membership.team_id)
+    .eq('id', teamId)
     .single()
 
-  if (!team) return NextResponse.json({ team: null })
+  if (!team) return null
 
-  // Get members with profile info
   const { data: members } = await supabase
     .from('team_members')
     .select('id, user_id, role, joined_at, profiles(email, full_name)')
-    .eq('team_id', team.id)
+    .eq('team_id', teamId)
     .order('joined_at', { ascending: true })
 
   const formattedMembers = (members ?? []).map((m: Record<string, unknown>) => {
     const profile = m.profiles as { email: string; full_name: string | null } | null
     return {
-      id: m.id,
-      user_id: m.user_id,
-      email: profile?.email ?? '',
+      id:        m.id,
+      user_id:   m.user_id,
+      email:     profile?.email ?? '',
       full_name: profile?.full_name ?? null,
-      role: m.role,
+      role:      m.role,
       joined_at: m.joined_at,
     }
   })
 
-  return NextResponse.json({ team: { ...team, members: formattedMembers } })
+  return { ...team, members: formattedMembers }
 }
 
-// POST — create team
+// ─── GET — all teams the current user belongs to ──────────────────────────────
+
+export async function GET() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+
+  // All team_ids the user is a member of
+  const { data: memberships } = await supabase
+    .from('team_members')
+    .select('team_id, role, joined_at')
+    .eq('user_id', user.id)
+    .order('joined_at', { ascending: true })
+
+  if (!memberships || memberships.length === 0) {
+    return NextResponse.json({ teams: [] })
+  }
+
+  const teams = await Promise.all(
+    memberships.map(m => getFormattedTeam(supabase, m.team_id as string))
+  )
+
+  return NextResponse.json({ teams: teams.filter(Boolean) })
+}
+
+// ─── POST — create a new team ─────────────────────────────────────────────────
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -56,7 +67,6 @@ export async function POST(req: NextRequest) {
 
   const { name } = await req.json() as { name: string }
 
-  // Create team
   const { data: team, error: teamErr } = await supabase
     .from('teams')
     .insert({ name: name?.trim() || 'Mon équipe', owner_id: user.id })
@@ -66,58 +76,72 @@ export async function POST(req: NextRequest) {
   if (teamErr) return NextResponse.json({ error: teamErr.message }, { status: 500 })
 
   // Add owner as first member
-  await supabase.from('team_members').insert({
-    team_id: team.id,
-    user_id: user.id,
-    role: 'owner',
-  })
+  const { error: memberErr } = await supabase
+    .from('team_members')
+    .insert({ team_id: team.id, user_id: user.id, role: 'owner' })
 
-  // Get owner profile
+  if (memberErr) {
+    // Rollback team creation if member insert fails
+    await supabase.from('teams').delete().eq('id', team.id)
+    return NextResponse.json({ error: memberErr.message }, { status: 500 })
+  }
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('email, full_name')
     .eq('id', user.id)
     .single()
 
-  const ownerMember = {
-    id: team.id + '-owner',
-    user_id: user.id,
-    email: profile?.email ?? user.email ?? '',
-    full_name: profile?.full_name ?? null,
-    role: 'owner' as const,
-    joined_at: new Date().toISOString(),
+  const formattedTeam = {
+    ...team,
+    members: [{
+      id:        `${team.id}-owner`,
+      user_id:   user.id,
+      email:     profile?.email ?? user.email ?? '',
+      full_name: profile?.full_name ?? null,
+      role:      'owner' as const,
+      joined_at: new Date().toISOString(),
+    }],
   }
 
-  return NextResponse.json({ team: { ...team, members: [ownerMember] } }, { status: 201 })
+  return NextResponse.json({ team: formattedTeam }, { status: 201 })
 }
 
-// DELETE — delete team (owner only)
-export async function DELETE() {
+// ─── DELETE — delete a team (owner only) ─────────────────────────────────────
+
+export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
+  const { teamId } = await req.json() as { teamId: string }
+  if (!teamId) return NextResponse.json({ error: 'teamId requis' }, { status: 400 })
+
   const { error } = await supabase
     .from('teams')
     .delete()
+    .eq('id', teamId)
     .eq('owner_id', user.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
 
-// PATCH — rename team
+// ─── PATCH — rename a team (owner only) ──────────────────────────────────────
+
 export async function PATCH(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { name } = await req.json() as { name: string }
+  const { teamId, name } = await req.json() as { teamId: string; name: string }
+  if (!teamId) return NextResponse.json({ error: 'teamId requis' }, { status: 400 })
   if (!name?.trim()) return NextResponse.json({ error: 'Nom requis' }, { status: 400 })
 
   const { error } = await supabase
     .from('teams')
     .update({ name: name.trim() })
+    .eq('id', teamId)
     .eq('owner_id', user.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
