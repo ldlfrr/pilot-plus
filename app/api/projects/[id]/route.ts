@@ -6,6 +6,21 @@ interface Params {
   params: Promise<{ id: string }>
 }
 
+/** Checks if the current user can access a project (owner OR project_member). */
+async function canAccessProject(supabase: Awaited<ReturnType<typeof createClient>>, projectId: string, userId: string) {
+  // Owner check
+  const { data: owned } = await supabase
+    .from('projects').select('id').eq('id', projectId).eq('user_id', userId).single()
+  if (owned) return { project: owned, isOwner: true }
+
+  // Member check
+  const { data: membership } = await supabase
+    .from('project_members').select('role').eq('project_id', projectId).eq('user_id', userId).single()
+  if (membership) return { project: null, isOwner: false, memberRole: membership.role }
+
+  return null
+}
+
 export async function GET(_req: Request, { params }: Params) {
   const { id } = await params
   const supabase = await createClient()
@@ -15,12 +30,12 @@ export async function GET(_req: Request, { params }: Params) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   }
 
+  // Allow owner OR project member
+  const access = await canAccessProject(supabase, id, user.id)
+  if (!access) return NextResponse.json({ error: 'Projet introuvable' }, { status: 404 })
+
   const { data: project, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .single()
+    .from('projects').select('*').eq('id', id).single()
 
   if (error || !project) {
     return NextResponse.json({ error: 'Projet introuvable' }, { status: 404 })
@@ -63,6 +78,14 @@ export async function PUT(request: Request, { params }: Params) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   }
 
+  // Allow owner or editor/avant_vente member
+  const access = await canAccessProject(supabase, id, user.id)
+  if (!access) return NextResponse.json({ error: 'Projet introuvable' }, { status: 404 })
+  const memberRole = 'memberRole' in access ? access.memberRole : null
+  if (!access.isOwner && memberRole === 'viewer') {
+    return NextResponse.json({ error: 'Accès en lecture seule' }, { status: 403 })
+  }
+
   const body: UpdateProjectPayload = await request.json()
 
   const updates: Record<string, unknown> = {}
@@ -74,12 +97,7 @@ export async function PUT(request: Request, { params }: Params) {
   if (body.status) updates.status = body.status
 
   const { data: project, error } = await supabase
-    .from('projects')
-    .update(updates)
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .select()
-    .single()
+    .from('projects').update(updates).eq('id', id).select().single()
 
   if (error || !project) {
     return NextResponse.json({ error: 'Mise à jour impossible' }, { status: 500 })

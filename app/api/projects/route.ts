@@ -10,7 +10,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   }
 
-  const { data: projects, error } = await supabase
+  // Own projects
+  const { data: ownProjects, error } = await supabase
     .from('projects')
     .select('*')
     .eq('user_id', user.id)
@@ -20,9 +21,37 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Projects shared with this user via project_members
+  let memberProjects: typeof ownProjects = []
+  try {
+    const { data: memberships } = await supabase
+      .from('project_members')
+      .select('project_id')
+      .eq('user_id', user.id)
+
+    if (memberships && memberships.length > 0) {
+      const sharedIds = memberships.map((m: { project_id: string }) => m.project_id)
+      const { data: shared } = await supabase
+        .from('projects')
+        .select('*')
+        .in('id', sharedIds)
+        .order('created_at', { ascending: false })
+      memberProjects = shared ?? []
+    }
+  } catch { /* best-effort */ }
+
+  // Deduplicate and merge
+  const ownIds  = new Set((ownProjects ?? []).map((p: { id: string }) => p.id))
+  const allProjects = [
+    ...(ownProjects ?? []),
+    ...(memberProjects ?? []).filter((p: { id: string }) => !ownIds.has(p.id)),
+  ].sort((a: { created_at: string }, b: { created_at: string }) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )
+
   // Enrich with latest score per project (best-effort)
   try {
-    const ids = (projects ?? []).map((p: { id: string }) => p.id)
+    const ids = allProjects.map((p: { id: string }) => p.id)
     if (ids.length > 0) {
       const { data: scores } = await supabase
         .from('project_scores')
@@ -30,7 +59,6 @@ export async function GET(request: Request) {
         .in('project_id', ids)
         .order('created_at', { ascending: false })
 
-      // Keep only the latest score per project
       const latestScore = new Map<string, { total_score: number; verdict: string }>()
       for (const s of (scores ?? [])) {
         if (!latestScore.has(s.project_id)) {
@@ -38,17 +66,15 @@ export async function GET(request: Request) {
         }
       }
 
-      const enriched = (projects ?? []).map((p: { id: string }) => ({
+      const enriched = allProjects.map((p: { id: string }) => ({
         ...p,
         score: latestScore.get(p.id) ?? null,
       }))
       return NextResponse.json({ projects: enriched })
     }
-  } catch {
-    // Ignore score enrichment errors — return raw projects
-  }
+  } catch { /* ignore */ }
 
-  return NextResponse.json({ projects })
+  return NextResponse.json({ projects: allProjects })
 }
 
 export async function POST(request: Request) {

@@ -17,6 +17,8 @@ import { IntervenantsTab }     from '@/components/project/tabs/IntervenantsTab'
 import { ChiffrageTab }        from '@/components/project/tabs/ChiffrageTab'
 import { ChecklistRemiseTab }  from '@/components/project/tabs/ChecklistRemiseTab'
 import { MemoireTechniqueTab } from '@/components/project/tabs/MemoireTechniqueTab'
+import { MembresProjetTab }    from '@/components/project/tabs/MembresProjetTab'
+import { WorkflowStepper }     from '@/components/project/WorkflowStepper'
 import {
   Cpu, Target, Trash2, Pencil, Loader2, AlertCircle, CheckCircle,
   Share2, FilePlus, Calendar, MapPin, Building, Hash,
@@ -30,7 +32,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
 import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates, SubscriptionTier, ProjectOutcome, Intervenant, ChiffrageData, ChecklistRemise } from '@/types'
 
-type Tab = 'synthese' | 'corp' | 'map' | 'besoin' | 'pieces' | 'specificites' | 'gonogo' | 'actions' | 'documents' | 'plan' | 'comments' | 'intervenants' | 'chiffrage' | 'checklist' | 'memoire'
+type Tab = 'synthese' | 'corp' | 'map' | 'besoin' | 'pieces' | 'specificites' | 'gonogo' | 'actions' | 'documents' | 'plan' | 'comments' | 'intervenants' | 'chiffrage' | 'checklist' | 'memoire' | 'membres'
 
 interface ProjectData {
   project: Project
@@ -77,13 +79,17 @@ export default function ProjectPage() {
   interface UserLimits { tier: SubscriptionTier; analyses_used: number; analyses_limit: number | null }
   const [userLimits, setUserLimits] = useState<UserLimits | null>(null)
 
+  // ── Current user role on this project ────────────────────────────────────────
+  const [projectRole, setProjectRole] = useState<'owner' | 'editor' | 'viewer' | 'avant_vente'>('owner')
+
   // ── Pipeline state (synced from task_states) ─────────────────────────────────
   const [intervenants, setIntervenants] = useState<Intervenant[]>([])
   const [chiffrage,    setChiffrage]    = useState<ChiffrageData | null>(null)
   const [checklist,    setChecklist]    = useState<ChecklistRemise | null>(null)
   const [memoireText,  setMemoireText]  = useState<string>('')
-  const [briefLoading, setBriefLoading] = useState(false)
-  const [briefError,   setBriefError]   = useState<string | null>(null)
+  const [briefLoading,  setBriefLoading]  = useState(false)
+  const [briefError,    setBriefError]    = useState<string | null>(null)
+  const [pipelineStage, setPipelineStage] = useState<import('@/types').PipelineStage | undefined>(undefined)
 
   const fetchProject = useCallback(async () => {
     try {
@@ -101,16 +107,22 @@ export default function ProjectPage() {
   useEffect(() => {
     fetchProject()
     fetch('/api/user/limits').then(r => r.json()).then(setUserLimits).catch(() => {})
-  }, [fetchProject])
+    // Detect current user's role on this project
+    fetch(`/api/projects/${id}/members/me`)
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { if (j?.role) setProjectRole(j.role) })
+      .catch(() => {})
+  }, [fetchProject, id])
 
   // Sync pipeline fields from task_states after load
   useEffect(() => {
     if (!data) return
     const ts = (data.project.task_states ?? {}) as TaskStates
-    setIntervenants(ts.intervenants   ?? [])
-    setChiffrage   (ts.chiffrage      ?? null)
-    setChecklist   (ts.checklist      ?? null)
-    setMemoireText (ts.memoire_technique ?? '')
+    setIntervenants  (ts.intervenants      ?? [])
+    setChiffrage     (ts.chiffrage         ?? null)
+    setChecklist     (ts.checklist         ?? null)
+    setMemoireText   (ts.memoire_technique ?? '')
+    setPipelineStage (ts.pipeline_stage)
   }, [data])
 
   async function callApi(url: string) {
@@ -315,6 +327,7 @@ export default function ProjectPage() {
     { id: 'chiffrage',    label: 'Chiffrage',           icon: Calculator },
     { id: 'checklist',    label: 'Checklist remise',    icon: ClipboardCheck },
     { id: 'memoire',      label: 'Mémoire technique',   icon: BookOpen },
+    { id: 'membres',      label: 'Membres',             icon: Users    },
   ]
 
   return (
@@ -643,6 +656,14 @@ export default function ProjectPage() {
           </div>
         )}
 
+        {/* Workflow stepper */}
+        <WorkflowStepper
+          projectId={id}
+          stage={pipelineStage}
+          currentRole={projectRole}
+          onStageChange={setPipelineStage}
+        />
+
         {/* Tabs */}
         <div className="flex gap-0.5 -mb-px overflow-x-auto scrollbar-hide">
           {TABS.map(({ id: tabId, label, icon: Icon }) => {
@@ -788,6 +809,13 @@ export default function ProjectPage() {
             initialText={memoireText}
             userTier={userLimits?.tier ?? 'free'}
             onChange={setMemoireText}
+          />
+        </div>
+
+        <div style={{ display: activeTab === 'membres' ? 'block' : 'none' }} className="p-4 md:p-6">
+          <MembresProjetTab
+            projectId={id}
+            currentRole={projectRole}
           />
         </div>
 

@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils/cn'
@@ -16,20 +17,26 @@ import { useEffect, useState } from 'react'
 // ── Nav definitions ───────────────────────────────────────────────────────────
 
 const MAIN_NAV = [
-  { href: '/accueil',  label: 'Accueil',    icon: Home },
-  { href: '/projects', label: 'Mes projets', icon: FolderOpen },
+  { href: '/accueil',   label: 'Accueil',     icon: Home      },
+  { href: '/projects',  label: 'Mes projets', icon: FolderOpen },
+  { href: '/pipeline',  label: 'Pipeline',    icon: Kanban     },
+  { href: '/calendrier',label: 'Calendrier',  icon: CalendarDays },
 ]
 
-const TOOLS_NAV = [
-  { href: '/dashboard',        label: 'Dashboard',        icon: BarChart3,    badge: null   },
-  { href: '/pipeline',         label: 'Pipeline',         icon: Kanban,       badge: null   },
-  { href: '/calendrier',       label: 'Calendrier',       icon: CalendarDays, badge: null   },
-  { href: '/veille',           label: 'Veille BOAMP',     icon: Radio,        badge: 'Live' },
-  { href: '/enrichment',       label: 'Find contacts',    icon: UserSearch,   badge: 'IA'   },
-  { href: '/email-campaigns',  label: 'Campagnes email',  icon: Mail,         badge: 'IA'   },
-  { href: '/export',           label: 'Export',            icon: FileDown,     badge: null   },
-  { href: '/settings',         label: 'Mon entreprise',   icon: Building2,    badge: null   },
-  { href: '/team',             label: 'Équipe',            icon: Users,        badge: null   },
+const PROSPECTION_NAV = [
+  { href: '/veille',          label: 'Veille BOAMP',    icon: Radio,       badge: 'Live' },
+  { href: '/enrichment',      label: 'Find contacts',   icon: UserSearch,  badge: 'IA'   },
+  { href: '/email-campaigns', label: 'Campagnes email', icon: Mail,        badge: 'IA'   },
+]
+
+const ANALYSE_NAV = [
+  { href: '/dashboard', label: 'Dashboard', icon: BarChart3, badge: null },
+  { href: '/export',    label: 'Export',    icon: FileDown,  badge: null },
+]
+
+const CONFIG_NAV = [
+  { href: '/settings', label: 'Mon entreprise', icon: Building2, badge: null },
+  { href: '/team',     label: 'Équipe',          icon: Users,     badge: null },
 ]
 
 const BOTTOM_NAV = [
@@ -130,97 +137,60 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       </div>
 
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
-      <nav className="flex-1 px-3 pt-4 pb-2 space-y-0.5 overflow-y-auto scrollbar-hide">
+      <nav className="flex-1 px-3 pt-4 pb-2 overflow-y-auto scrollbar-hide">
 
-        <p className="text-[9px] font-bold uppercase tracking-widest text-white/18 px-2 mb-2">Principal</p>
-        {MAIN_NAV.map(({ href, label, icon: Icon }) => {
-          const active = isActive(href)
-          return (
-            <Link
-              key={href}
-              href={href}
-              onClick={onClose}
-              className={cn(
-                'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all relative group',
-                active
-                  ? 'text-white'
-                  : 'text-white/45 hover:text-white/85 hover:bg-white/5',
-              )}
-              style={active ? {
-                background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.06))',
-                border: '1px solid rgba(59,130,246,0.18)',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
-              } : {}}
-            >
-              <div className={cn(
-                'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all',
-                active
-                  ? 'bg-blue-500/20 text-blue-400'
-                  : 'text-white/35 group-hover:text-white/60',
-              )}>
-                <Icon size={14} />
-              </div>
-              <span>{label}</span>
-              {active && (
-                <span
-                  className="ml-auto w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  style={{ background: 'var(--accent)', boxShadow: '0 0 6px rgba(59,130,246,0.8)' }}
-                />
-              )}
-            </Link>
-          )
-        })}
-
-        <p className="text-[9px] font-bold uppercase tracking-widest text-white/18 px-2 pt-4 mb-2">Outils</p>
-        {TOOLS_NAV.map(({ href, label, icon: Icon, badge }) => {
-          const active = isActive(href)
-          return (
-            <Link
-              key={href}
-              href={href}
-              onClick={onClose}
-              className={cn(
-                'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group',
-                active
-                  ? 'text-white'
-                  : 'text-white/45 hover:text-white/85 hover:bg-white/5',
-              )}
-              style={active ? {
-                background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.06))',
-                border: '1px solid rgba(59,130,246,0.18)',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
-              } : {}}
-            >
-              <div className={cn(
-                'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all',
-                active
-                  ? 'bg-blue-500/20 text-blue-400'
-                  : 'text-white/35 group-hover:text-white/60',
-              )}>
-                <Icon size={14} />
-              </div>
-              <span>{label}</span>
-              {badge && (
-                <span
-                  className="ml-auto text-[8px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wide animate-pulse"
-                  style={{
-                    background: 'rgba(16,185,129,0.15)',
-                    color: '#34d399',
-                    border: '1px solid rgba(16,185,129,0.25)',
-                  }}
-                >
-                  {badge}
-                </span>
-              )}
-              {active && !badge && (
-                <span
-                  className="ml-auto w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  style={{ background: 'var(--accent)', boxShadow: '0 0 6px rgba(59,130,246,0.8)' }}
-                />
-              )}
-            </Link>
-          )
-        })}
+        {/* ── Section renderer ───────────────────────────────────────────── */}
+        {([
+          { label: 'Principal',    items: MAIN_NAV },
+          { label: 'Prospection',  items: PROSPECTION_NAV },
+          { label: 'Analyse',      items: ANALYSE_NAV },
+          { label: 'Configuration',items: CONFIG_NAV },
+        ] as const).map(({ label, items }) => (
+          <div key={label} className="mb-4">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-white/18 px-2 mb-1.5">{label}</p>
+            <div className="space-y-0.5">
+              {(items as ReadonlyArray<{ href: string; label: string; icon: React.ElementType; badge?: string | null }>).map(({ href, label: lbl, icon: Icon, badge }) => {
+                const active = isActive(href)
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={onClose}
+                    className={cn(
+                      'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group',
+                      active
+                        ? 'text-white'
+                        : 'text-white/45 hover:text-white/85 hover:bg-white/5',
+                    )}
+                    style={active ? {
+                      background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.06))',
+                      border: '1px solid rgba(59,130,246,0.18)',
+                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+                    } : {}}
+                  >
+                    <div className={cn(
+                      'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all',
+                      active ? 'bg-blue-500/20 text-blue-400' : 'text-white/35 group-hover:text-white/60',
+                    )}>
+                      <Icon size={14} />
+                    </div>
+                    <span>{lbl}</span>
+                    {badge ? (
+                      <span
+                        className="ml-auto text-[8px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wide animate-pulse"
+                        style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399', border: '1px solid rgba(16,185,129,0.25)' }}
+                      >
+                        {badge}
+                      </span>
+                    ) : active ? (
+                      <span className="ml-auto w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--accent)', boxShadow: '0 0 6px rgba(59,130,246,0.8)' }} />
+                    ) : null}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* ── Bottom ──────────────────────────────────────────────────────── */}
