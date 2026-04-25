@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils/cn'
 import {
   Home, FolderOpen, PlusCircle, BarChart3, Building2,
   LogOut, User, CreditCard, Radio, HelpCircle,
-  ChevronRight, ExternalLink, Users, Mail, UserSearch,
+  ChevronRight, ExternalLink, Users, Mail, UserSearch, FileDown,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -24,6 +24,7 @@ const TOOLS_NAV = [
   { href: '/veille',           label: 'Veille BOAMP',     icon: Radio,       badge: 'Live' },
   { href: '/enrichment',       label: 'Find contacts',    icon: UserSearch,  badge: 'IA'  },
   { href: '/email-campaigns',  label: 'Campagnes email',  icon: Mail,        badge: 'IA'  },
+  { href: '/export',           label: 'Export',            icon: FileDown,    badge: null  },
   { href: '/settings',         label: 'Mon entreprise',   icon: Building2,   badge: null  },
   { href: '/team',             label: 'Équipe',            icon: Users,       badge: null  },
 ]
