@@ -16,8 +16,8 @@ import { NotificationBell } from './NotificationBell'
 // ── Nav definitions ───────────────────────────────────────────────────────────
 
 const MAIN_NAV = [
-  { href: '/accueil',  label: 'Accueil',       icon: Home,       shortcut: null },
-  { href: '/projects', label: 'Mes projets',    icon: FolderOpen, shortcut: null },
+  { href: '/accueil',  label: 'Accueil',    icon: Home },
+  { href: '/projects', label: 'Mes projets', icon: FolderOpen },
 ]
 
 const TOOLS_NAV = [
@@ -28,8 +28,8 @@ const TOOLS_NAV = [
 ]
 
 const BOTTOM_NAV = [
-  { href: '/account',      label: 'Mon compte',    icon: User },
-  { href: '/subscription', label: 'Abonnement',    icon: CreditCard },
+  { href: '/account',      label: 'Mon compte', icon: User },
+  { href: '/subscription', label: 'Abonnement', icon: CreditCard },
 ]
 
 // ── Tier helpers ──────────────────────────────────────────────────────────────
@@ -37,46 +37,32 @@ const BOTTOM_NAV = [
 const TIER_LABELS: Record<string, string> = {
   free: 'Gratuit', basic: 'Basic', pro: 'Pro', enterprise: 'Entreprise', lifetime: 'Lifetime',
 }
-const TIER_COLORS: Record<string, string> = {
-  free:       'bg-white/8 text-white/40 border-white/10',
-  basic:      'bg-blue-500/15 text-blue-400 border-blue-500/25',
-  pro:        'bg-blue-600/20 text-blue-300 border-blue-500/35',
-  enterprise: 'bg-purple-500/15 text-purple-400 border-purple-500/25',
-  lifetime:   'bg-amber-500/15 text-amber-400 border-amber-500/25',
+const TIER_COLORS: Record<string, { bg: string; text: string; glow: string }> = {
+  free:       { bg: 'rgba(255,255,255,0.06)', text: 'rgba(255,255,255,0.35)', glow: 'none' },
+  basic:      { bg: 'rgba(59,130,246,0.15)',  text: '#93c5fd', glow: '0 0 8px rgba(59,130,246,0.25)' },
+  pro:        { bg: 'rgba(139,92,246,0.18)',  text: '#c4b5fd', glow: '0 0 8px rgba(139,92,246,0.30)' },
+  enterprise: { bg: 'rgba(139,92,246,0.18)',  text: '#c4b5fd', glow: '0 0 8px rgba(139,92,246,0.30)' },
+  lifetime:   { bg: 'rgba(245,158,11,0.18)',  text: '#fcd34d', glow: '0 0 8px rgba(245,158,11,0.35)' },
 }
 
-// ── Sidebar ───────────────────────────────────────────────────────────────────
-
-interface SidebarProps {
-  open?: boolean
-  onClose?: () => void
-}
-
-interface UserInfo {
-  initials: string
-  name: string
-  email: string
-  tier: string
-}
+interface SidebarProps { open?: boolean; onClose?: () => void }
+interface UserInfo { initials: string; name: string; email: string; tier: string }
 
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [user, setUser] = useState<UserInfo | null>(null)
 
-  // Load user info for the bottom card
   useEffect(() => {
-    async function loadUser() {
-      try {
-        const r = await fetch('/api/user/profile')
-        if (!r.ok) return
-        const d = await r.json()
+    fetch('/api/user/profile')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d) return
         const name: string = d.full_name || d.email?.split('@')[0] || '?'
         const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
         setUser({ initials, name, email: d.email, tier: d.subscription_tier ?? 'free' })
-      } catch { /* silent */ }
-    }
-    loadUser()
+      })
+      .catch(() => {})
   }, [])
 
   async function handleSignOut() {
@@ -93,49 +79,58 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
     return pathname.startsWith(href)
   }
 
-  return (
-    <aside className={cn(
-      'fixed inset-y-0 left-0 w-60 bg-[var(--bg-surface)] border-r border-white/5 flex flex-col z-30',
-      'transition-transform duration-200 ease-out',
-      'md:translate-x-0',
-      open ? 'translate-x-0' : '-translate-x-full',
-    )}>
+  const tierCfg = TIER_COLORS[user?.tier ?? 'free'] ?? TIER_COLORS.free
 
-      {/* ── Logo ──────────────────────────────────────────────────────────── */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-white/5 flex-shrink-0">
+  return (
+    <aside
+      className={cn(
+        'fixed inset-y-0 left-0 w-60 flex flex-col z-30',
+        'transition-transform duration-250 ease-out',
+        'md:translate-x-0',
+        open ? 'translate-x-0' : '-translate-x-full',
+      )}
+      style={{
+        background: 'linear-gradient(180deg, rgba(8,14,34,0.98) 0%, rgba(5,9,20,0.99) 100%)',
+        borderRight: '1px solid rgba(255,255,255,0.055)',
+        backdropFilter: 'blur(24px)',
+      }}
+    >
+
+      {/* ── Logo ────────────────────────────────────────────────────────── */}
+      <div
+        className="h-16 flex items-center justify-between px-4 flex-shrink-0"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+      >
         <Link href="/accueil" onClick={onClose} className="flex flex-col gap-0.5 group">
-          {/* Wordmark */}
           <p className="text-[22px] font-extrabold text-white tracking-tight leading-none">
-            PILOT<span className="text-blue-400">+</span>
+            PILOT<span className="text-blue-400" style={{ textShadow: '0 0 20px rgba(96,165,250,0.6)' }}>+</span>
           </p>
-          <p className="text-[9px] text-white/30 font-semibold tracking-[0.14em] uppercase whitespace-nowrap">
+          <p className="text-[9px] text-white/25 font-semibold tracking-[0.14em] uppercase whitespace-nowrap">
             Décidez · Exécutez · Gagnez
           </p>
         </Link>
-        {/* Bell on desktop */}
         <div className="hidden md:block">
           <NotificationBell />
         </div>
       </div>
 
-      {/* ── CTA: Nouveau projet ──────────────────────────────────────────── */}
-      <div className="px-3 pt-3">
+      {/* ── CTA Nouveau projet ───────────────────────────────────────────── */}
+      <div className="px-3 pt-3.5">
         <Link
           href="/projects/new"
           onClick={onClose}
-          className="flex items-center gap-2 px-3 py-2.5 w-full rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-all shadow-sm shadow-blue-600/20 hover:shadow-blue-500/30 group"
+          className="flex items-center gap-2.5 px-3.5 py-2.5 w-full rounded-xl text-white text-sm font-semibold transition-all group btn-primary"
         >
           <PlusCircle size={15} className="flex-shrink-0" />
           <span>Nouveau projet</span>
-          <span className="ml-auto text-[9px] font-medium text-blue-300/60 hidden lg:block group-hover:text-blue-200/60 transition-colors">⌘ N</span>
+          <span className="ml-auto text-[9px] font-medium text-blue-200/50 hidden lg:block group-hover:text-blue-200/70 transition-colors">⌘ N</span>
         </Link>
       </div>
 
-      {/* ── Main nav ──────────────────────────────────────────────────────── */}
+      {/* ── Nav ─────────────────────────────────────────────────────────── */}
       <nav className="flex-1 px-3 pt-4 pb-2 space-y-0.5 overflow-y-auto scrollbar-hide">
 
-        {/* Section: Principal */}
-        <p className="text-[9px] font-bold uppercase tracking-widest text-white/20 px-2 mb-2">Principal</p>
+        <p className="text-[9px] font-bold uppercase tracking-widest text-white/18 px-2 mb-2">Principal</p>
         {MAIN_NAV.map(({ href, label, icon: Icon }) => {
           const active = isActive(href)
           return (
@@ -144,21 +139,37 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               href={href}
               onClick={onClose}
               className={cn(
-                'flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
+                'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all relative group',
                 active
-                  ? 'bg-blue-600/15 text-blue-400 border border-blue-600/15'
-                  : 'text-white/50 hover:text-white/90 hover:bg-white/5',
+                  ? 'text-white'
+                  : 'text-white/45 hover:text-white/85 hover:bg-white/5',
               )}
+              style={active ? {
+                background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.06))',
+                border: '1px solid rgba(59,130,246,0.18)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+              } : {}}
             >
-              <Icon size={15} className="flex-shrink-0" />
+              <div className={cn(
+                'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all',
+                active
+                  ? 'bg-blue-500/20 text-blue-400'
+                  : 'text-white/35 group-hover:text-white/60',
+              )}>
+                <Icon size={14} />
+              </div>
               <span>{label}</span>
-              {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />}
+              {active && (
+                <span
+                  className="ml-auto w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ background: 'var(--accent)', boxShadow: '0 0 6px rgba(59,130,246,0.8)' }}
+                />
+              )}
             </Link>
           )
         })}
 
-        {/* Section: Outils */}
-        <p className="text-[9px] font-bold uppercase tracking-widest text-white/20 px-2 pt-4 mb-2">Outils</p>
+        <p className="text-[9px] font-bold uppercase tracking-widest text-white/18 px-2 pt-4 mb-2">Outils</p>
         {TOOLS_NAV.map(({ href, label, icon: Icon, badge }) => {
           const active = isActive(href)
           return (
@@ -167,55 +178,81 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               href={href}
               onClick={onClose}
               className={cn(
-                'flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
+                'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group',
                 active
-                  ? 'bg-blue-600/15 text-blue-400 border border-blue-600/15'
-                  : 'text-white/50 hover:text-white/90 hover:bg-white/5',
+                  ? 'text-white'
+                  : 'text-white/45 hover:text-white/85 hover:bg-white/5',
               )}
+              style={active ? {
+                background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.06))',
+                border: '1px solid rgba(59,130,246,0.18)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+              } : {}}
             >
-              <Icon size={15} className="flex-shrink-0" />
+              <div className={cn(
+                'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all',
+                active
+                  ? 'bg-blue-500/20 text-blue-400'
+                  : 'text-white/35 group-hover:text-white/60',
+              )}>
+                <Icon size={14} />
+              </div>
               <span>{label}</span>
               {badge && (
-                <span className="ml-auto text-[8px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 uppercase tracking-wide animate-pulse">
+                <span
+                  className="ml-auto text-[8px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wide animate-pulse"
+                  style={{
+                    background: 'rgba(16,185,129,0.15)',
+                    color: '#34d399',
+                    border: '1px solid rgba(16,185,129,0.25)',
+                  }}
+                >
                   {badge}
                 </span>
               )}
-              {active && !badge && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />}
+              {active && !badge && (
+                <span
+                  className="ml-auto w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ background: 'var(--accent)', boxShadow: '0 0 6px rgba(59,130,246,0.8)' }}
+                />
+              )}
             </Link>
           )
         })}
-
       </nav>
 
-      {/* ── Bottom section ────────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 border-t border-white/5">
+      {/* ── Bottom ──────────────────────────────────────────────────────── */}
+      <div className="flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
 
         {/* Account + subscription */}
-        <div className="px-3 pt-3 pb-1 space-y-0.5">
-          {BOTTOM_NAV.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              onClick={onClose}
-              className={cn(
-                'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all',
-                isActive(href)
-                  ? 'bg-blue-600/15 text-blue-400 border border-blue-600/15'
-                  : 'text-white/35 hover:text-white/70 hover:bg-white/5',
-              )}
-            >
-              <Icon size={13} className="flex-shrink-0" />
-              {label}
-              {isActive(href) && <span className="ml-auto w-1 h-1 rounded-full bg-blue-400" />}
-            </Link>
-          ))}
+        <div className="px-3 pt-2.5 pb-1 space-y-0.5">
+          {BOTTOM_NAV.map(({ href, label, icon: Icon }) => {
+            const active = isActive(href)
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={onClose}
+                className={cn(
+                  'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all',
+                  active
+                    ? 'text-blue-400 bg-blue-500/10'
+                    : 'text-white/35 hover:text-white/65 hover:bg-white/5',
+                )}
+              >
+                <Icon size={13} className="flex-shrink-0" />
+                {label}
+                {active && <span className="ml-auto w-1 h-1 rounded-full bg-blue-400" style={{ boxShadow: '0 0 4px rgba(96,165,250,0.8)' }} />}
+              </Link>
+            )
+          })}
         </div>
 
-        {/* Help + status row */}
+        {/* Help row */}
         <div className="px-3 pb-2 flex items-center justify-between">
           <a
             href="mailto:support@pilot-plus.fr"
-            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] text-white/25 hover:text-white/60 hover:bg-white/5 transition-all"
+            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] text-white/22 hover:text-white/55 hover:bg-white/5 transition-all"
           >
             <HelpCircle size={12} />
             Aide & support
@@ -234,50 +271,69 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
         {/* User card */}
         {user ? (
-          <div className="mx-3 mb-3 rounded-xl border border-white/8 bg-white/3 overflow-hidden">
+          <div
+            className="mx-3 mb-3 rounded-2xl overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))',
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+            }}
+          >
             <Link
               href="/account"
               onClick={onClose}
-              className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/5 transition-colors"
+              className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/4 transition-colors"
             >
               {/* Avatar */}
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-[10px] font-extrabold flex-shrink-0 select-none">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-extrabold flex-shrink-0 select-none"
+                style={{
+                  background: 'linear-gradient(135deg, #3b82f6, #7c3aed)',
+                  boxShadow: '0 0 12px rgba(59,130,246,0.35)',
+                }}
+              >
                 {user.initials}
               </div>
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-white/80 truncate leading-none">{user.name}</p>
-                <p className="text-[9px] text-white/30 truncate mt-0.5">{user.email}</p>
+                <p className="text-[9px] text-white/28 truncate mt-0.5">{user.email}</p>
               </div>
               {/* Tier badge */}
-              <span className={cn('text-[8px] font-bold px-1.5 py-0.5 rounded-full border flex-shrink-0', TIER_COLORS[user.tier])}>
+              <span
+                className="text-[8px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                style={{
+                  background: tierCfg.bg,
+                  color: tierCfg.text,
+                  boxShadow: tierCfg.glow,
+                }}
+              >
                 {TIER_LABELS[user.tier] ?? user.tier}
               </span>
             </Link>
 
-            {/* Sign out row */}
-            <div className="border-t border-white/6 px-1 py-1">
+            {/* Sign out */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }} className="px-1 py-1">
               <button
                 onClick={handleSignOut}
-                className="flex items-center gap-2 px-2.5 py-1.5 w-full rounded-lg text-[11px] font-medium text-white/25 hover:text-white/60 hover:bg-white/5 transition-all"
+                className="flex items-center gap-2 px-2.5 py-1.5 w-full rounded-xl text-[11px] font-medium text-white/22 hover:text-white/55 hover:bg-white/5 transition-all"
               >
                 <LogOut size={11} className="flex-shrink-0" />
                 Déconnexion
-                <ChevronRight size={9} className="ml-auto" />
+                <ChevronRight size={9} className="ml-auto opacity-50" />
               </button>
             </div>
           </div>
         ) : (
-          /* Skeleton while loading */
-          <div className="mx-3 mb-3 rounded-xl border border-white/6 bg-white/2 px-3 py-2.5 flex items-center gap-2.5 animate-pulse">
-            <div className="w-7 h-7 rounded-full bg-white/8" />
+          <div className="mx-3 mb-3 rounded-2xl px-3 py-2.5 flex items-center gap-2.5 animate-pulse"
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="w-8 h-8 rounded-full skeleton" />
             <div className="flex-1 space-y-1.5">
-              <div className="h-2 bg-white/8 rounded w-20" />
-              <div className="h-1.5 bg-white/5 rounded w-28" />
+              <div className="h-2 skeleton rounded w-20" />
+              <div className="h-1.5 skeleton rounded w-28" />
             </div>
           </div>
         )}
-
       </div>
     </aside>
   )

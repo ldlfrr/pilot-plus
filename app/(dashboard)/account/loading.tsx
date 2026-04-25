@@ -3,7 +3,8 @@ export default function AccountLoading() {
     <div className="flex flex-col min-h-0 h-full">
 
       {/* Top bar */}
-      <div className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center px-4 md:px-6 flex-shrink-0">
+      <div className="h-14 flex items-center px-4 md:px-6 flex-shrink-0"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.055)', background: 'rgba(8,14,34,0.80)', backdropFilter: 'blur(16px)' }}>
         <div className="space-y-1.5">
           <div className="skeleton h-4 w-28 rounded" />
           <div className="skeleton h-3 w-44 rounded" />
@@ -23,7 +24,7 @@ export default function AccountLoading() {
         <div className="flex-1 overflow-y-auto">
 
           {/* Profile banner */}
-          <div className="border-b border-white/5 bg-[var(--bg-surface)] px-5 md:px-8 py-5">
+          <div className="px-5 md:px-8 py-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(8,14,34,0.60)' }}>
             <div className="flex items-center gap-4">
               <div className="skeleton w-16 h-16 rounded-2xl flex-shrink-0" />
               <div className="flex-1 space-y-2">
@@ -37,7 +38,7 @@ export default function AccountLoading() {
           {/* Form cards */}
           <div className="p-5 md:p-8 space-y-5 max-w-2xl">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
+              <div key={i} className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <div className="skeleton h-3 w-24 rounded mb-5" />
                 <div className="grid grid-cols-2 gap-4">
                   {Array.from({ length: i === 0 ? 5 : 2 }).map((_, j) => (

@@ -189,38 +189,44 @@ async function getDashboardData(userId: string) {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function KpiCard({
-  label, value, sub, icon: Icon, iconColor, accent, glow,
+  label, value, sub, icon: Icon, iconColor, accent, glowColor,
 }: {
   label: string; value: string | number; sub?: string
-  icon: typeof Trophy; iconColor: string; accent: string; glow?: string
+  icon: typeof Trophy; iconColor: string; accent: string; glowColor?: string
 }) {
   return (
-    <div className={cn(
-      'rounded-xl border border-white/8 p-4 flex flex-col gap-1.5 relative overflow-hidden',
-      'bg-[var(--bg-card)]',
-    )}>
-      {glow && (
-        <div className={cn('absolute -top-6 -right-6 w-20 h-20 rounded-full blur-2xl opacity-20', glow)} />
+    <div className="rounded-xl p-4 flex flex-col gap-1.5 relative overflow-hidden transition-all duration-200 card-hover"
+      style={{
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        backdropFilter: 'blur(8px)',
+      }}>
+      {glowColor && (
+        <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full pointer-events-none"
+          style={{ background: `radial-gradient(circle, ${glowColor} 0%, transparent 70%)`, filter: 'blur(16px)', opacity: 0.35 }} />
       )}
       <div className="flex items-center justify-between relative">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">{label}</span>
-        <Icon size={14} className={iconColor} />
+        <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">{label}</span>
+        <Icon size={13} className={iconColor} />
       </div>
-      <span className={cn('text-3xl font-extrabold tabular-nums leading-none', accent)}>{value}</span>
-      {sub && <span className="text-[11px] text-white/30 leading-none">{sub}</span>}
+      <span className={cn('text-3xl font-extrabold tabular-nums leading-none relative', accent)}>{value}</span>
+      {sub && <span className="text-[10px] text-white/28 leading-none">{sub}</span>}
     </div>
   )
 }
 
-function CardHeader({ icon: Icon, iconColor, title, sub }: {
-  icon: typeof Trophy; iconColor: string; title: string; sub?: string
+function CardHeader({ icon: Icon, iconColor, title, sub, iconBg }: {
+  icon: typeof Trophy; iconColor: string; title: string; sub?: string; iconBg?: string
 }) {
   return (
-    <div className="flex items-center gap-2 mb-4">
-      <Icon size={15} className={iconColor} />
+    <div className="flex items-center gap-3 mb-4">
+      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+        style={{ background: iconBg ?? 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}>
+        <Icon size={13} className={iconColor} />
+      </div>
       <div>
         <h2 className="text-sm font-semibold text-white leading-none">{title}</h2>
-        {sub && <p className="text-[11px] text-white/40 mt-0.5">{sub}</p>}
+        {sub && <p className="text-[10px] text-white/38 mt-0.5">{sub}</p>}
       </div>
     </div>
   )
@@ -269,12 +275,14 @@ export default async function DashboardPage() {
     <div className="flex flex-col min-h-0 animate-fade-in">
 
       {/* ── Top bar ────────────────────────────────────────────────────────── */}
-      <div className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center justify-between px-4 md:px-6 flex-shrink-0">
+      <div className="h-14 flex items-center justify-between px-4 md:px-6 flex-shrink-0"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.055)', background: 'rgba(8,14,34,0.80)', backdropFilter: 'blur(16px)' }}>
         <div>
           <h1 className="text-base font-semibold text-white">Dashboard</h1>
-          <p className="text-xs text-white/40">Vue d&apos;ensemble de votre activité commerciale</p>
+          <p className="text-xs text-white/35">Vue d&apos;ensemble de votre activité commerciale</p>
         </div>
-        <div className="text-xs text-white/30 hidden md:block capitalize">
+        <div className="text-[11px] text-white/25 hidden md:block capitalize px-3 py-1.5 rounded-full"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
           {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </div>
       </div>
@@ -283,22 +291,22 @@ export default async function DashboardPage() {
 
         {/* ── Row 1 : 8 KPI cards ──────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
-          <KpiCard label="Importés"  value={summary.total}     icon={Layers}     iconColor="text-white/40"  accent="text-white"         />
-          <KpiCard label="Analysés"  value={summary.analyzed}  icon={Zap}        iconColor="text-blue-400"  accent="text-blue-400"      glow="bg-blue-500" />
-          <KpiCard label="Scorés"    value={summary.scored}    icon={Target}     iconColor="text-violet-400" accent="text-violet-400"   glow="bg-violet-500" />
-          <KpiCard label="Répondus"  value={summary.responded} icon={Activity}   iconColor="text-cyan-400"  accent="text-cyan-400"      />
-          <KpiCard label="Gagnés"    value={summary.won}       icon={Trophy}     iconColor="text-emerald-400" accent="text-emerald-400" glow="bg-emerald-500"
+          <KpiCard label="Importés"  value={summary.total}     icon={Layers}     iconColor="text-white/40"   accent="text-white"          />
+          <KpiCard label="Analysés"  value={summary.analyzed}  icon={Zap}        iconColor="text-blue-400"   accent="text-blue-400"       glowColor="rgba(59,130,246,0.8)" />
+          <KpiCard label="Scorés"    value={summary.scored}    icon={Target}     iconColor="text-violet-400" accent="text-violet-400"     glowColor="rgba(139,92,246,0.8)" />
+          <KpiCard label="Répondus"  value={summary.responded} icon={Activity}   iconColor="text-cyan-400"   accent="text-cyan-400"       glowColor="rgba(6,182,212,0.7)" />
+          <KpiCard label="Gagnés"    value={summary.won}       icon={Trophy}     iconColor="text-emerald-400" accent="text-emerald-400"   glowColor="rgba(16,185,129,0.8)"
             sub={summary.responded > 0 ? `sur ${summary.responded} clôturés` : undefined} />
           <KpiCard label="CA généré" value={caFormatted}       icon={DollarSign} iconColor="text-emerald-400" accent="text-emerald-300"
             sub={summary.won > 0 ? `${summary.won} projet${summary.won > 1 ? 's' : ''} gagné${summary.won > 1 ? 's' : ''}` : undefined} />
-          <KpiCard label="Taux transfo." value={`${summary.tauxTransfo}%`} icon={TrendingUp} iconColor="text-amber-400" accent="text-amber-400"
+          <KpiCard label="Taux transfo." value={`${summary.tauxTransfo}%`} icon={TrendingUp} iconColor="text-amber-400" accent="text-amber-400" glowColor="rgba(245,158,11,0.7)"
             sub="répondus → gagnés" />
-          <KpiCard label="Score moyen" value={summary.scoreMoyen > 0 ? `${summary.scoreMoyen}` : '—'} icon={BarChart3} iconColor="text-blue-400" accent="text-blue-300"
+          <KpiCard label="Score moyen" value={summary.scoreMoyen > 0 ? `${summary.scoreMoyen}` : '—'} icon={BarChart3} iconColor="text-blue-400" accent="text-blue-300" glowColor="rgba(59,130,246,0.6)"
             sub={`sur ${scoring.total} dossiers`} />
         </div>
 
         {/* ── Prochaines échéances (full-width table) ─────────────────────── */}
-        <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl overflow-hidden">
+        <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/6">
             <div className="flex items-center gap-2.5">
@@ -455,8 +463,8 @@ export default async function DashboardPage() {
         {/* ── Row 2 : Funnel + Donut ───────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
-            <CardHeader icon={Activity} iconColor="text-blue-400"
+          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
+            <CardHeader icon={Activity} iconColor="text-blue-400" iconBg="rgba(59,130,246,0.12)"
               title="Pipeline de conversion"
               sub="De l'import à la victoire" />
             {summary.total > 0
@@ -466,8 +474,8 @@ export default async function DashboardPage() {
             }
           </div>
 
-          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
-            <CardHeader icon={Target} iconColor="text-violet-400"
+          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
+            <CardHeader icon={Target} iconColor="text-violet-400" iconBg="rgba(139,92,246,0.12)"
               title="Répartition Go / No Go"
               sub="Sur les projets scorés" />
             {donutData.length > 0
@@ -479,8 +487,8 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── Row 3 : Activité mensuelle (full width) ──────────────────────── */}
-        <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
-          <CardHeader icon={BarChart3} iconColor="text-blue-400"
+        <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
+          <CardHeader icon={BarChart3} iconColor="text-blue-400" iconBg="rgba(59,130,246,0.12)"
             title="Activité mensuelle — 12 derniers mois"
             sub="Importés · Analysés · Scorés" />
           <MonthlyBarChart data={monthlyData} />
@@ -489,8 +497,8 @@ export default async function DashboardPage() {
         {/* ── Row 4 : Score distrib + Raisons de perte ────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
-            <CardHeader icon={BarChart3} iconColor="text-amber-400"
+          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
+            <CardHeader icon={BarChart3} iconColor="text-amber-400" iconBg="rgba(245,158,11,0.12)"
               title="Distribution des scores"
               sub="Nombre de projets par tranche" />
             {scoring.total > 0
@@ -499,8 +507,8 @@ export default async function DashboardPage() {
             }
           </div>
 
-          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
-            <CardHeader icon={XCircle} iconColor="text-red-400"
+          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
+            <CardHeader icon={XCircle} iconColor="text-red-400" iconBg="rgba(239,68,68,0.12)"
               title="Top 5 raisons de perte"
               sub="Cloturez des projets comme « Perdu » pour alimenter" />
             {lossReasons.length > 0 ? (
@@ -534,8 +542,8 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* Scoring accuracy */}
-          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
-            <CardHeader icon={Zap} iconColor="text-amber-400"
+          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
+            <CardHeader icon={Zap} iconColor="text-amber-400" iconBg="rgba(245,158,11,0.12)"
               title="Fiabilité du scoring prédictif"
               sub="Score moyen gagné vs perdu" />
             {(scoring.avgWon !== null || scoring.avgLost !== null) ? (
@@ -583,8 +591,8 @@ export default async function DashboardPage() {
           </div>
 
           {/* Segmentation */}
-          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
-            <CardHeader icon={Layers} iconColor="text-blue-400"
+          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
+            <CardHeader icon={Layers} iconColor="text-blue-400" iconBg="rgba(59,130,246,0.12)"
               title="Par type de consultation"
               sub="Répartition et taux de réussite" />
             {bySegment.length > 0 ? (
@@ -630,8 +638,8 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* Top clients */}
-          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
-            <CardHeader icon={Users} iconColor="text-blue-400" title="Top clients" />
+          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
+            <CardHeader icon={Users} iconColor="text-blue-400" iconBg="rgba(59,130,246,0.12)" title="Top clients" />
             {topClients.length > 0 ? (
               <ol className="space-y-3">
                 {topClients.map(({ client, count }, i) => (
@@ -654,8 +662,8 @@ export default async function DashboardPage() {
           </div>
 
           {/* Time & stats card */}
-          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
-            <CardHeader icon={Clock} iconColor="text-cyan-400" title="Métriques de cadence" />
+          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
+            <CardHeader icon={Clock} iconColor="text-cyan-400" iconBg="rgba(6,182,212,0.12)" title="Métriques de cadence" />
             <div className="space-y-4">
               <div className="flex items-center justify-between py-3 border-b border-white/5">
                 <div>
@@ -686,8 +694,8 @@ export default async function DashboardPage() {
 
         {/* ── Insights banner ──────────────────────────────────────────────── */}
         {summary.total > 0 && (
-          <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
-            <CardHeader icon={Lightbulb} iconColor="text-amber-400" title="Insights automatiques" />
+          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
+            <CardHeader icon={Lightbulb} iconColor="text-amber-400" iconBg="rgba(245,158,11,0.12)" title="Insights automatiques" />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {[
                 summary.tauxTransfo > 0 && `Taux de transformation : ${summary.tauxTransfo}% (${summary.won} gagné${summary.won>1?'s':''} sur ${summary.responded} clôturé${summary.responded>1?'s':''})`,
@@ -698,8 +706,8 @@ export default async function DashboardPage() {
                 summary.abandoned > 0 && `${summary.abandoned} projet${summary.abandoned>1?'s':''} abandonné${summary.abandoned>1?'s':''} — analysez les raisons`,
                 summary.caTotal > 0 && `CA total généré via PILOT+ : ${caFormatted}`,
               ].filter(Boolean).map((ins, i) => (
-                <div key={i} className="flex items-start gap-2 p-3 bg-white/3 rounded-lg">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0 mt-1.5" />
+                <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl" style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.10)' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400/70 flex-shrink-0 mt-1.5" style={{ boxShadow: '0 0 4px rgba(245,158,11,0.6)' }} />
                   <span className="text-xs text-white/60 leading-relaxed">{ins as string}</span>
                 </div>
               ))}

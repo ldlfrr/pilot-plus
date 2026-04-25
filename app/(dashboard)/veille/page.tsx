@@ -189,7 +189,8 @@ export default function VeillePage() {
     <div className="flex flex-col h-full overflow-hidden bg-[var(--bg-base)]">
 
       {/* ── Top bar ─────────────────────────────────────────────────────── */}
-      <div className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center justify-between px-4 md:px-6 flex-shrink-0 gap-3">
+      <div className="h-14 flex items-center justify-between px-4 md:px-6 flex-shrink-0 gap-3"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.055)', background: 'rgba(8,14,34,0.80)', backdropFilter: 'blur(16px)' }}>
 
         {/* Left: icon + title */}
         <div className="flex items-center gap-3 min-w-0">

@@ -15,7 +15,8 @@ export async function Header({ title, description, action }: HeaderProps) {
   const initial = user?.email?.[0]?.toUpperCase() ?? '?'
 
   return (
-    <header className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center justify-between px-4 md:px-6 flex-shrink-0">
+    <header className="h-14 flex items-center justify-between px-4 md:px-6 flex-shrink-0"
+      style={{ borderBottom: '1px solid rgba(255,255,255,0.055)', background: 'rgba(8,14,34,0.80)', backdropFilter: 'blur(16px)' }}>
       <div className="min-w-0">
         <h1 className="text-base font-semibold text-white truncate">{title}</h1>
         {description && (

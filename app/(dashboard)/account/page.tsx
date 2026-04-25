@@ -325,10 +325,11 @@ export default function AccountPage() {
     <div className="flex flex-col min-h-0 h-full animate-fade-in">
 
       {/* ── Top bar ─────────────────────────────────────────────────────── */}
-      <div className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center px-4 md:px-6 flex-shrink-0">
+      <div className="h-14 flex items-center px-4 md:px-6 flex-shrink-0"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.055)', background: 'rgba(8,14,34,0.80)', backdropFilter: 'blur(16px)' }}>
         <div>
           <h1 className="text-base font-semibold text-white">Mon compte</h1>
-          <p className="text-xs text-white/40">Gérez votre profil et vos préférences</p>
+          <p className="text-xs text-white/35">Gérez votre profil et vos préférences</p>
         </div>
       </div>
 
@@ -336,7 +337,8 @@ export default function AccountPage() {
       <div className="flex flex-1 min-h-0">
 
         {/* ── Left nav ──────────────────────────────────────────────────── */}
-        <aside className="hidden md:flex flex-col w-52 border-r border-white/5 flex-shrink-0 py-4 gap-0.5 overflow-y-auto scrollbar-hide">
+        <aside className="hidden md:flex flex-col w-52 flex-shrink-0 py-4 gap-0.5 overflow-y-auto scrollbar-hide"
+          style={{ borderRight: '1px solid rgba(255,255,255,0.055)' }}>
           {NAV.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -382,7 +384,7 @@ export default function AccountPage() {
         <div className="flex-1 overflow-y-auto scrollbar-hide">
 
           {/* Profile banner */}
-          <div className="border-b border-white/5 bg-[var(--bg-surface)] px-5 md:px-8 py-5">
+          <div className="px-5 md:px-8 py-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(8,14,34,0.60)', backdropFilter: 'blur(12px)' }}>
             {loading ? (
               <div className="flex items-center gap-4">
                 <div className="skeleton w-16 h-16 rounded-2xl flex-shrink-0" />
@@ -454,7 +456,7 @@ export default function AccountPage() {
             {activeSection === 'profile' && (
               <div className="space-y-5 animate-fade-in">
 
-                <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
+                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
                   <SectionTitle>Identité</SectionTitle>
                   {loading ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -479,8 +481,8 @@ export default function AccountPage() {
                       className={cn(
                         'inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all',
                         saveSuccess
-                          ? 'bg-emerald-600/15 border border-emerald-500/30 text-emerald-400'
-                          : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/20',
+                          ? 'bg-emerald-500/12 border border-emerald-500/30 text-emerald-400'
+                          : 'btn-primary',
                         (saving || loading) && 'opacity-60 cursor-not-allowed',
                       )}
                     >
@@ -492,7 +494,7 @@ export default function AccountPage() {
                 </div>
 
                 {/* Connexion */}
-                <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
+                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
                   <SectionTitle>Connexion</SectionTitle>
                   <div className="space-y-0">
                     <div className="flex items-center justify-between py-3 border-b border-white/5">
@@ -526,7 +528,7 @@ export default function AccountPage() {
                 </div>
 
                 {/* Export données */}
-                <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
+                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
                   <SectionTitle>Mes données</SectionTitle>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -554,7 +556,7 @@ export default function AccountPage() {
             {activeSection === 'notifications' && notifLoaded && (
               <div className="space-y-5 animate-fade-in">
 
-                <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
+                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
                   <SectionTitle>Alertes & rappels</SectionTitle>
                   <NotifRow
                     icon={Bell}    iconColor="bg-amber-500/10 text-amber-400"
@@ -572,7 +574,7 @@ export default function AccountPage() {
                   />
                 </div>
 
-                <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
+                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
                   <SectionTitle>Veille & activité</SectionTitle>
                   <NotifRow
                     icon={Zap}       iconColor="bg-blue-500/10 text-blue-400"
@@ -590,7 +592,7 @@ export default function AccountPage() {
                   />
                 </div>
 
-                <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
+                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
                   <SectionTitle>Produit</SectionTitle>
                   <NotifRow
                     icon={Star}    iconColor="bg-violet-500/10 text-violet-400"
@@ -614,7 +616,7 @@ export default function AccountPage() {
             {/* ══════════════ APPARENCE ══════════════ */}
             {activeSection === 'appearance' && (
               <div className="space-y-5 animate-fade-in">
-                <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
+                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
                   <SectionTitle>Thème de l&apos;interface</SectionTitle>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {THEMES.map(t => {
@@ -666,7 +668,7 @@ export default function AccountPage() {
               <div className="space-y-5 animate-fade-in">
 
                 {/* Mot de passe */}
-                <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
+                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
                   <SectionTitle>Mot de passe</SectionTitle>
                   {profile?.provider === 'google' ? (
                     <div className="flex items-center gap-3 py-2">
@@ -713,7 +715,7 @@ export default function AccountPage() {
                 </div>
 
                 {/* 2FA */}
-                <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
+                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
                   <SectionTitle>Double authentification</SectionTitle>
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
@@ -732,7 +734,7 @@ export default function AccountPage() {
                 </div>
 
                 {/* Session */}
-                <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
+                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
                   <SectionTitle>Session active</SectionTitle>
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
@@ -760,7 +762,7 @@ export default function AccountPage() {
               <div className="space-y-5 animate-fade-in">
 
                 {/* Plan actuel */}
-                <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
+                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
                   <SectionTitle>Formule actuelle</SectionTitle>
 
                   <div className="flex items-center justify-between gap-4 mb-5">
@@ -844,7 +846,7 @@ export default function AccountPage() {
                 )}
 
                 {/* Facturation */}
-                <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
+                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
                   <SectionTitle>Facturation</SectionTitle>
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
@@ -880,7 +882,7 @@ export default function AccountPage() {
                 </div>
 
                 {/* Déconnexion */}
-                <div className="bg-[var(--bg-card)] border border-white/8 rounded-xl p-5">
+                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
                   <SectionTitle>Déconnexion</SectionTitle>
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
@@ -902,7 +904,7 @@ export default function AccountPage() {
                 </div>
 
                 {/* Suppression */}
-                <div className="bg-[var(--bg-card)] border border-red-500/20 rounded-xl p-5">
+                <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(239,68,68,0.20)', backdropFilter: 'blur(10px)' }}>
                   <SectionTitle>Suppression du compte</SectionTitle>
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex items-start gap-3">

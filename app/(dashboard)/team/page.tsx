@@ -178,9 +178,12 @@ export default function TeamPage() {
     <div className="flex flex-col min-h-0 animate-fade-in">
 
       {/* Header */}
-      <div className="bg-[var(--bg-surface)] border-b border-white/5 px-5 md:px-8 py-5 flex-shrink-0">
-        <h1 className="text-xl font-bold text-white">Équipe</h1>
-        <p className="text-sm text-white/40 mt-0.5">Gérez les membres de votre équipe et leurs accès</p>
+      <div className="px-5 md:px-8 h-14 flex items-center flex-shrink-0"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.055)', background: 'rgba(8,14,34,0.80)', backdropFilter: 'blur(16px)' }}>
+        <div>
+          <h1 className="text-base font-semibold text-white">Équipe</h1>
+          <p className="text-xs text-white/35 mt-0.5">Gérez les membres et leurs accès</p>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 md:p-8 space-y-6 max-w-2xl">
@@ -199,7 +202,7 @@ export default function TeamPage() {
 
         {/* No team yet */}
         {!team ? (
-          <div className="bg-[var(--bg-card)] border border-dashed border-white/10 rounded-2xl p-10 text-center">
+          <div className="rounded-2xl p-10 text-center" style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.10)' }}>
             <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-4">
               <Users size={22} className="text-blue-400" />
             </div>
@@ -227,7 +230,7 @@ export default function TeamPage() {
         ) : (
           <>
             {/* Team name card */}
-            <div className="bg-[var(--bg-card)] border border-white/8 rounded-2xl p-5">
+            <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
               <div className="flex items-center justify-between gap-4">
                 {editingName ? (
                   <div className="flex items-center gap-2 flex-1">
@@ -267,7 +270,7 @@ export default function TeamPage() {
             </div>
 
             {/* Invite form */}
-            <div className="bg-[var(--bg-card)] border border-white/8 rounded-2xl p-5">
+            <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
               <p className="text-sm font-semibold text-white/80 mb-3 flex items-center gap-2">
                 <UserPlus size={14} className="text-blue-400" />Inviter un membre
               </p>
@@ -301,7 +304,7 @@ export default function TeamPage() {
             </div>
 
             {/* Members list */}
-            <div className="bg-[var(--bg-card)] border border-white/8 rounded-2xl overflow-hidden">
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
               <div className="px-5 py-3.5 border-b border-white/5">
                 <p className="text-sm font-semibold text-white/70">Membres</p>
               </div>
@@ -368,7 +371,7 @@ export default function TeamPage() {
             </div>
 
             {/* Role legend */}
-            <div className="bg-[var(--bg-card)] border border-white/6 rounded-xl p-4">
+            <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
               <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-3">Niveaux d&apos;accès</p>
               <div className="grid grid-cols-2 gap-2">
                 {(Object.entries(ROLE_CFG) as [string, typeof ROLE_CFG[keyof typeof ROLE_CFG]][]).map(([key, cfg]) => {

@@ -69,15 +69,13 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
     <div className="flex flex-col min-h-0 animate-fade-in">
 
       {/* Header */}
-      <div className="h-14 border-b border-white/5 bg-[var(--bg-surface)] flex items-center justify-between px-4 md:px-6 flex-shrink-0">
+      <div className="flex items-center justify-between px-4 md:px-6 flex-shrink-0 h-14"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.055)', background: 'rgba(8,14,34,0.80)', backdropFilter: 'blur(16px)' }}>
         <div>
           <h1 className="text-base font-semibold text-white">Mes projets</h1>
-          <p className="text-xs text-white/40 mt-0.5">{filtered.length} projet{filtered.length !== 1 ? 's' : ''}</p>
+          <p className="text-xs text-white/35 mt-0.5">{filtered.length} projet{filtered.length !== 1 ? 's' : ''}</p>
         </div>
-        <Link
-          href="/projects/new"
-          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors"
-        >
+        <Link href="/projects/new" className="btn-primary">
           <Plus size={14} />
           Nouveau projet
         </Link>
@@ -86,36 +84,51 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
       <div className="flex-1 p-4 md:p-6 space-y-4 overflow-y-auto">
         {/* Filters */}
         <div className="flex items-center gap-2 flex-wrap">
-          {STATUS_FILTERS.map(({ value, label }) => (
-            <Link
-              key={value}
-              href={value === 'all' ? '/projects' : `/projects?status=${value}`}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                (status ?? 'all') === value
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white/5 text-white/50 border border-white/10 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              {label}
-            </Link>
-          ))}
+          {STATUS_FILTERS.map(({ value, label }) => {
+            const isActive = (status ?? 'all') === value
+            return (
+              <Link
+                key={value}
+                href={value === 'all' ? '/projects' : `/projects?status=${value}`}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                style={isActive ? {
+                  background: 'linear-gradient(135deg, rgba(59,130,246,0.25), rgba(59,130,246,0.12))',
+                  border: '1px solid rgba(59,130,246,0.35)',
+                  color: '#93c5fd',
+                  boxShadow: '0 0 12px rgba(59,130,246,0.12)',
+                } : {
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.45)',
+                }}
+              >
+                {label}
+              </Link>
+            )
+          })}
         </div>
 
         {/* Grid */}
         {filtered.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {filtered.map(project => (
-              <ProjectCard key={project.id} project={project} />
+            {filtered.map((project, i) => (
+              <div key={project.id} style={{ animationDelay: `${i * 35}ms` }} className="animate-fade-in">
+                <ProjectCard project={project} />
+              </div>
             ))}
           </div>
         ) : (
-          <div className="bg-[var(--bg-card)] border border-dashed border-white/10 rounded-xl p-12 text-center">
-            <FolderOpen size={32} className="mx-auto text-white/20 mb-3" />
-            <p className="text-white/60 font-medium">Aucun projet trouvé</p>
-            <p className="text-sm text-white/30 mt-1 mb-5">
-              {q ? `Aucun résultat pour "${q}"` : 'Créez votre premier projet DCE'}
+          <div className="rounded-2xl p-14 text-center"
+            style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.10)' }}>
+            <div className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-4"
+              style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}>
+              <FolderOpen size={24} className="text-blue-400/50" />
+            </div>
+            <p className="text-white/65 font-semibold mb-1">Aucun projet trouvé</p>
+            <p className="text-sm text-white/30 mb-6">
+              {q ? `Aucun résultat pour « ${q} »` : 'Créez votre premier projet DCE pour démarrer'}
             </p>
-            <Link href="/projects/new" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-500 transition-colors">
+            <Link href="/projects/new" className="btn-primary inline-flex">
               <Plus size={14} />Créer un projet
             </Link>
           </div>
