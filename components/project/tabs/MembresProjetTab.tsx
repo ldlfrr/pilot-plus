@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Users, UserPlus, Trash2, ChevronDown, Loader2, AlertCircle, CheckCircle, Crown, Shield, Eye, Wrench, X } from 'lucide-react'
+import { Users, UserPlus, Trash2, ChevronDown, Loader2, AlertCircle, CheckCircle, Crown, Shield, Eye, Wrench, X, Clock, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 interface Member {
@@ -13,34 +13,39 @@ interface Member {
   created_at: string
 }
 
+interface PendingInvitation {
+  id:            string
+  invited_email: string
+  role:          string
+  created_at:    string
+  token:         string
+}
+
 interface MembresProjetTabProps {
   projectId:   string
-  /** Role of the currently authenticated user on this project */
   currentRole: 'owner' | 'editor' | 'viewer' | 'avant_vente'
 }
 
 const ROLE_OPTIONS = [
-  { value: 'editor',      label: 'Éditeur',      desc: 'Peut modifier le projet',            color: 'text-blue-400',   bg: 'bg-blue-500/15 border-blue-500/30'  },
-  { value: 'avant_vente', label: 'Avant-Vente',   desc: 'Accès chiffrage + mémoire',          color: 'text-violet-400', bg: 'bg-violet-500/15 border-violet-500/30' },
-  { value: 'viewer',      label: 'Lecteur',       desc: 'Consultation uniquement',            color: 'text-white/50',   bg: 'bg-white/5 border-white/10'         },
+  { value: 'editor',      label: 'Éditeur',      desc: 'Peut modifier le projet',   color: 'text-blue-400',   bg: 'bg-blue-500/15 border-blue-500/30'    },
+  { value: 'avant_vente', label: 'Avant-Vente',   desc: 'Chiffrage + mémoire',       color: 'text-violet-400', bg: 'bg-violet-500/15 border-violet-500/30' },
+  { value: 'viewer',      label: 'Lecteur',       desc: 'Consultation uniquement',   color: 'text-white/50',   bg: 'bg-white/5 border-white/10'           },
 ]
 
 function roleCfg(role: string) {
   switch (role) {
-    case 'owner':      return { label: 'Propriétaire', icon: Crown,   color: 'text-amber-400',   bg: 'bg-amber-500/15 border-amber-500/30'  }
-    case 'editor':     return { label: 'Éditeur',      icon: Wrench,  color: 'text-blue-400',    bg: 'bg-blue-500/15 border-blue-500/30'    }
+    case 'owner':      return { label: 'Propriétaire', icon: Crown,   color: 'text-amber-400',   bg: 'bg-amber-500/15 border-amber-500/30'   }
+    case 'editor':     return { label: 'Éditeur',      icon: Wrench,  color: 'text-blue-400',    bg: 'bg-blue-500/15 border-blue-500/30'     }
     case 'avant_vente':return { label: 'Avant-Vente',  icon: Shield,  color: 'text-violet-400',  bg: 'bg-violet-500/15 border-violet-500/30' }
-    case 'viewer':     return { label: 'Lecteur',      icon: Eye,     color: 'text-white/50',    bg: 'bg-white/5 border-white/10'           }
-    default:           return { label: role,           icon: Users,   color: 'text-white/40',    bg: 'bg-white/5 border-white/10'           }
+    case 'viewer':     return { label: 'Lecteur',      icon: Eye,     color: 'text-white/50',    bg: 'bg-white/5 border-white/10'            }
+    default:           return { label: role,           icon: Users,   color: 'text-white/40',    bg: 'bg-white/5 border-white/10'            }
   }
 }
 
 function initials(name: string | null, email: string) {
   if (name) {
     const parts = name.trim().split(/\s+/)
-    return parts.length >= 2
-      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-      : name.slice(0, 2).toUpperCase()
+    return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase()
   }
   return email.slice(0, 2).toUpperCase()
 }
@@ -48,136 +53,146 @@ function initials(name: string | null, email: string) {
 export function MembresProjetTab({ projectId, currentRole }: MembresProjetTabProps) {
   const isOwner = currentRole === 'owner'
 
-  const [members,      setMembers]      = useState<Member[]>([])
-  const [loading,      setLoading]      = useState(true)
-  const [error,        setError]        = useState<string | null>(null)
-  const [success,      setSuccess]      = useState<string | null>(null)
+  const [members,     setMembers]     = useState<Member[]>([])
+  const [pending,     setPending]     = useState<PendingInvitation[]>([])
+  const [loading,     setLoading]     = useState(true)
+  const [error,       setError]       = useState<string | null>(null)
+  const [success,     setSuccess]     = useState<string | null>(null)
 
   // Add form
-  const [addEmail,     setAddEmail]     = useState('')
-  const [addRole,      setAddRole]      = useState('editor')
-  const [adding,       setAdding]       = useState(false)
-  const [addError,     setAddError]     = useState<string | null>(null)
+  const [addEmail,    setAddEmail]    = useState('')
+  const [addRole,     setAddRole]     = useState('editor')
+  const [adding,      setAdding]      = useState(false)
+  const [addError,    setAddError]    = useState<string | null>(null)
 
-  // Role change
-  const [changingId,   setChangingId]   = useState<string | null>(null)
-  const [roleMenuId,   setRoleMenuId]   = useState<string | null>(null)
+  // Role change dropdown
+  const [roleMenuId,  setRoleMenuId]  = useState<string | null>(null)
+  const [changingId,  setChangingId]  = useState<string | null>(null)
 
   // Remove
-  const [removingId,   setRemovingId]   = useState<string | null>(null)
+  const [removingId,  setRemovingId]  = useState<string | null>(null)
+  const [cancellingToken, setCancellingToken] = useState<string | null>(null)
 
-  async function loadMembers() {
+  async function load() {
     setLoading(true); setError(null)
     try {
-      const res = await fetch(`/api/projects/${projectId}/members`)
-      if (!res.ok) throw new Error('Impossible de charger les membres')
-      const json = await res.json()
-      setMembers(json.members ?? [])
+      const [membersRes, invRes] = await Promise.all([
+        fetch(`/api/projects/${projectId}/members`),
+        isOwner ? fetch(`/api/projects/${projectId}/invitations`) : Promise.resolve(null),
+      ])
+      if (!membersRes.ok) throw new Error('Impossible de charger les membres')
+      const membersJson = await membersRes.json()
+      setMembers(membersJson.members ?? [])
+
+      if (invRes?.ok) {
+        const invJson = await invRes.json()
+        setPending(invJson.invitations ?? [])
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
-  useEffect(() => { loadMembers() }, [projectId])   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [projectId])  // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     if (!addEmail.trim()) return
     setAdding(true); setAddError(null); setSuccess(null)
     try {
-      const res = await fetch(`/api/projects/${projectId}/members`, {
+      const res = await fetch('/api/invitations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: addEmail.trim(), role: addRole }),
+        body: JSON.stringify({ type: 'project', projectId, email: addEmail.trim(), role: addRole }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Erreur')
-      setMembers(prev => [...prev, json.member])
+
+      if (json.isNewUser) {
+        setSuccess(`Invitation envoyée à ${addEmail.trim()}. L'utilisateur doit créer un compte PILOT+ pour accepter.`)
+      } else {
+        setSuccess(`Invitation envoyée à ${addEmail.trim()} — il/elle recevra une notification.`)
+      }
       setAddEmail('')
-      setSuccess(`${json.member.full_name ?? json.member.email} a été ajouté·e au projet.`)
+      // Reload pending
+      const invRes = await fetch(`/api/projects/${projectId}/invitations`)
+      if (invRes.ok) { const d = await invRes.json(); setPending(d.invitations ?? []) }
     } catch (err) {
       setAddError(err instanceof Error ? err.message : 'Erreur')
-    } finally {
-      setAdding(false)
-    }
+    } finally { setAdding(false) }
   }
 
   async function handleRoleChange(memberId: string, newRole: string) {
-    setChangingId(memberId); setRoleMenuId(null); setSuccess(null)
+    setChangingId(memberId); setRoleMenuId(null)
     try {
       const res = await fetch(`/api/projects/${projectId}/members`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ memberId, role: newRole }),
       })
-      if (!res.ok) {
-        const json = await res.json()
-        throw new Error(json.error ?? 'Erreur')
-      }
+      if (!res.ok) throw new Error((await res.json()).error)
       setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role: newRole } : m))
       setSuccess('Rôle mis à jour.')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur')
-    } finally {
-      setChangingId(null)
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Erreur') }
+    finally { setChangingId(null) }
   }
 
   async function handleRemove(memberId: string, name: string) {
     if (!confirm(`Retirer ${name} du projet ?`)) return
-    setRemovingId(memberId); setSuccess(null)
+    setRemovingId(memberId)
     try {
-      const res = await fetch(`/api/projects/${projectId}/members`, {
+      await fetch(`/api/projects/${projectId}/members`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ memberId }),
       })
-      if (!res.ok) {
-        const json = await res.json()
-        throw new Error(json.error ?? 'Erreur')
-      }
       setMembers(prev => prev.filter(m => m.id !== memberId))
-      setSuccess(`${name} a été retiré·e du projet.`)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur')
-    } finally {
-      setRemovingId(null)
-    }
+      setSuccess(`${name} retiré·e du projet.`)
+    } catch { setError('Erreur lors de la suppression') }
+    finally { setRemovingId(null) }
   }
+
+  async function handleCancelInvitation(token: string) {
+    setCancellingToken(token)
+    try {
+      await fetch(`/api/invitations/${token}`, { method: 'DELETE' })
+      setPending(prev => prev.filter(i => i.token !== token))
+      setSuccess('Invitation annulée.')
+    } catch { setError('Erreur lors de l\'annulation') }
+    finally { setCancellingToken(null) }
+  }
+
+  const totalCount = members.length + 1 // +1 for owner
 
   return (
     <div className="max-w-2xl">
       <div className="flex items-center gap-2 mb-6">
         <Users size={18} className="text-white/40" />
         <h2 className="text-base font-semibold text-white">Membres du projet</h2>
-        <span className="ml-auto text-xs text-white/30">{members.length + 1} membre{members.length > 0 ? 's' : ''}</span>
+        <span className="ml-auto text-xs text-white/30">{totalCount} membre{totalCount > 1 ? 's' : ''}</span>
       </div>
 
-      {/* Feedback banners */}
+      {/* Feedback */}
       {error && (
         <div className="mb-4 flex items-start gap-2 text-sm text-red-400 bg-red-950/30 border border-red-800/40 rounded-lg px-3.5 py-2.5">
           <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
           <span className="flex-1">{error}</span>
-          <button onClick={() => setError(null)} className="text-white/30 hover:text-white/60"><X size={12} /></button>
+          <button onClick={() => setError(null)}><X size={12} /></button>
         </div>
       )}
       {success && (
         <div className="mb-4 flex items-center gap-2 text-sm text-emerald-400 bg-emerald-950/30 border border-emerald-800/40 rounded-lg px-3.5 py-2.5">
-          <CheckCircle size={14} />
-          <span className="flex-1">{success}</span>
-          <button onClick={() => setSuccess(null)} className="text-white/30 hover:text-white/60"><X size={12} /></button>
+          <CheckCircle size={14} /><span className="flex-1">{success}</span>
+          <button onClick={() => setSuccess(null)}><X size={12} /></button>
         </div>
       )}
 
-      {/* Add member form — owner only */}
+      {/* Invite form — owner only */}
       {isOwner && (
-        <form
-          onSubmit={handleAdd}
-          className="mb-6 bg-[var(--bg-card)] border border-white/8 rounded-xl p-4"
-        >
-          <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Inviter un membre</p>
+        <form onSubmit={handleAdd} className="mb-6 bg-[var(--bg-card)] border border-white/8 rounded-xl p-4">
+          <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">
+            <Mail size={11} className="inline mr-1.5" />Inviter par email
+          </p>
           <div className="flex gap-2 flex-wrap">
             <input
               type="email"
@@ -186,50 +201,44 @@ export function MembresProjetTab({ projectId, currentRole }: MembresProjetTabPro
               onChange={e => setAddEmail(e.target.value)}
               className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-blue-500/50 transition-colors"
             />
-            {/* Role picker */}
             <select
               value={addRole}
               onChange={e => setAddRole(e.target.value)}
-              className="bg-[var(--bg-base)] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/70 outline-none focus:border-blue-500/50 cursor-pointer"
+              className="bg-[var(--bg-base)] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/70 outline-none focus:border-blue-500/50"
             >
-              {ROLE_OPTIONS.map(r => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
+              {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
-            <button
-              type="submit"
-              disabled={adding || !addEmail.trim()}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
-            >
+            <button type="submit" disabled={adding || !addEmail.trim()}
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition-colors">
               {adding ? <Loader2 size={13} className="animate-spin" /> : <UserPlus size={13} />}
               Inviter
             </button>
           </div>
-          {addError && (
-            <p className="mt-2 text-xs text-red-400 flex items-center gap-1.5">
-              <AlertCircle size={11} />{addError}
-            </p>
-          )}
+          {addError && <p className="mt-2 text-xs text-red-400 flex items-center gap-1.5"><AlertCircle size={11} />{addError}</p>}
+
+          {/* Role picker */}
           <div className="mt-3 grid grid-cols-3 gap-2">
             {ROLE_OPTIONS.map(r => (
-              <div key={r.value} className={cn('border rounded-lg p-2.5 text-xs transition-all cursor-pointer', addRole === r.value ? r.bg : 'border-white/6 bg-white/3')}
-                onClick={() => setAddRole(r.value)}>
+              <div key={r.value} onClick={() => setAddRole(r.value)} className={cn('border rounded-lg p-2.5 text-xs cursor-pointer transition-all', addRole === r.value ? r.bg : 'border-white/6 bg-white/3')}>
                 <p className={cn('font-semibold mb-0.5', addRole === r.value ? r.color : 'text-white/50')}>{r.label}</p>
                 <p className="text-white/30 text-[11px] leading-tight">{r.desc}</p>
               </div>
             ))}
           </div>
+
+          <p className="mt-3 text-[11px] text-white/25 leading-relaxed">
+            Un email sera envoyé. Si la personne n&apos;a pas encore de compte, elle recevra un lien pour s&apos;inscrire et accéder directement au projet.
+          </p>
         </form>
       )}
 
-      {/* Members list */}
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-white/30 py-8 justify-center">
-          <Loader2 size={16} className="animate-spin" />Chargement...
+          <Loader2 size={16} className="animate-spin" />Chargement…
         </div>
       ) : (
         <div className="space-y-2">
-          {/* Owner row (static — always first) */}
+          {/* Owner row */}
           <div className="flex items-center gap-3 bg-[var(--bg-card)] border border-amber-500/15 rounded-xl px-4 py-3">
             <div className="w-8 h-8 rounded-full bg-amber-500/15 border border-amber-500/25 flex items-center justify-center flex-shrink-0">
               <Crown size={14} className="text-amber-400" />
@@ -237,76 +246,50 @@ export function MembresProjetTab({ projectId, currentRole }: MembresProjetTabPro
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white/80 truncate">Vous (propriétaire)</p>
             </div>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400">
-              Propriétaire
-            </span>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400">Propriétaire</span>
           </div>
 
-          {members.length === 0 && (
-            <div className="text-center py-10 text-white/30 text-sm">
-              Aucun membre ajouté pour l&apos;instant.
-              {isOwner && <p className="text-xs mt-1 text-white/20">Utilisez le formulaire ci-dessus pour inviter des collaborateurs.</p>}
-            </div>
-          )}
-
+          {/* Confirmed members */}
           {members.map(member => {
             const cfg = roleCfg(member.role)
             const RoleIcon = cfg.icon
             const displayName = member.full_name ?? member.email
             const isChanging = changingId === member.id
-            const isRemoving = removingId === member.id
 
             return (
-              <div
-                key={member.id}
-                className="flex items-center gap-3 bg-[var(--bg-card)] border border-white/6 rounded-xl px-4 py-3 hover:border-white/10 transition-colors"
-              >
-                {/* Avatar */}
+              <div key={member.id} className="flex items-center gap-3 bg-[var(--bg-card)] border border-white/6 rounded-xl px-4 py-3 hover:border-white/10 transition-colors">
                 <div className={cn('w-8 h-8 rounded-full border flex items-center justify-center flex-shrink-0 text-[11px] font-bold', cfg.bg, cfg.color)}>
                   {initials(member.full_name, member.email)}
                 </div>
-
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white/80 truncate">{member.full_name ?? <span className="text-white/40 italic">Sans nom</span>}</p>
                   <p className="text-xs text-white/35 truncate">{member.email}</p>
                 </div>
 
-                {/* Role pill / dropdown */}
+                {/* Role dropdown — owner only */}
                 {isOwner ? (
                   <div className="relative">
                     <button
                       onClick={() => setRoleMenuId(roleMenuId === member.id ? null : member.id)}
                       disabled={isChanging}
-                      className={cn(
-                        'flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md border transition-all',
-                        cfg.bg, cfg.color,
-                        'hover:opacity-80'
-                      )}
+                      className={cn('flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md border transition-all hover:opacity-80', cfg.bg, cfg.color)}
                     >
                       {isChanging ? <Loader2 size={11} className="animate-spin" /> : <RoleIcon size={11} />}
                       {cfg.label}
                       <ChevronDown size={10} className="opacity-60" />
                     </button>
-
                     {roleMenuId === member.id && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setRoleMenuId(null)} />
                         <div className="absolute right-0 top-full mt-1 z-20 bg-[var(--bg-card)] border border-white/12 rounded-xl shadow-xl overflow-hidden min-w-[160px]">
                           {ROLE_OPTIONS.map(r => (
-                            <button
-                              key={r.value}
-                              onClick={() => handleRoleChange(member.id, r.value)}
-                              className={cn(
-                                'w-full flex items-start gap-2 px-3 py-2.5 text-left hover:bg-white/5 transition-colors',
-                                member.role === r.value && 'bg-white/4'
-                              )}
-                            >
+                            <button key={r.value} onClick={() => handleRoleChange(member.id, r.value)}
+                              className={cn('w-full flex items-start gap-2 px-3 py-2.5 text-left hover:bg-white/5 transition-colors', member.role === r.value && 'bg-white/4')}>
                               <div className="flex-1">
                                 <p className={cn('text-xs font-semibold', r.color)}>{r.label}</p>
                                 <p className="text-[11px] text-white/30 mt-0.5">{r.desc}</p>
                               </div>
-                              {member.role === r.value && <CheckCircle size={12} className={cn('mt-0.5 flex-shrink-0', r.color)} />}
+                              {member.role === r.value && <CheckCircle size={12} className={cn('mt-0.5', r.color)} />}
                             </button>
                           ))}
                         </div>
@@ -319,29 +302,61 @@ export function MembresProjetTab({ projectId, currentRole }: MembresProjetTabPro
                   </span>
                 )}
 
-                {/* Remove — owner only */}
                 {isOwner && (
-                  <button
-                    onClick={() => handleRemove(member.id, displayName)}
-                    disabled={isRemoving}
-                    title="Retirer du projet"
-                    className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-all disabled:opacity-40"
-                  >
-                    {isRemoving ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                  <button onClick={() => handleRemove(member.id, displayName)} disabled={removingId === member.id}
+                    className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-all disabled:opacity-40">
+                    {removingId === member.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                   </button>
                 )}
               </div>
             )
           })}
+
+          {/* Pending invitations */}
+          {pending.length > 0 && (
+            <>
+              <p className="text-xs text-white/30 font-semibold uppercase tracking-wider pt-2 pb-1 px-1">
+                En attente de réponse
+              </p>
+              {pending.map(inv => (
+                <div key={inv.id} className="flex items-center gap-3 bg-[var(--bg-card)] border border-dashed border-white/10 rounded-xl px-4 py-3 opacity-70">
+                  <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                    <Clock size={13} className="text-white/30" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white/50 truncate">{inv.invited_email}</p>
+                    <p className="text-xs text-white/25">Invitation envoyée</p>
+                  </div>
+                  <span className="text-[11px] text-white/30 bg-white/5 border border-white/8 px-2 py-0.5 rounded-md">
+                    {inv.role}
+                  </span>
+                  {isOwner && (
+                    <button onClick={() => handleCancelInvitation(inv.token)} disabled={cancellingToken === inv.token}
+                      title="Annuler l'invitation"
+                      className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-all">
+                      {cancellingToken === inv.token ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
+
+          {members.length === 0 && pending.length === 0 && (
+            <div className="text-center py-10 text-white/30 text-sm">
+              Aucun membre ajouté pour l&apos;instant.
+              {isOwner && <p className="text-xs mt-1 text-white/20">Utilisez le formulaire ci-dessus pour inviter des collaborateurs.</p>}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Info box */}
+      {/* Info */}
       <div className="mt-6 bg-blue-950/20 border border-blue-500/15 rounded-xl px-4 py-3">
         <p className="text-xs text-blue-300/70 font-medium mb-1">Accès en temps réel</p>
         <p className="text-xs text-white/30 leading-relaxed">
-          Tous les membres voient le même projet. Les analyses, coches, chiffrage et mémoires sont partagés instantanément.
-          Seul le propriétaire peut ajouter ou retirer des membres.
+          Tous les membres voient le même projet. Analyses, coches, chiffrage et mémoires sont partagés instantanément.
+          Les invitations non acceptées dans les 7 jours expirent automatiquement.
         </p>
       </div>
     </div>

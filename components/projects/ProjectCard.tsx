@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
-import { MapPin, Calendar, FileText, Star, Trophy, XCircle, X } from 'lucide-react'
+import { MapPin, Calendar, FileText, Star, Trophy, XCircle, X, Users } from 'lucide-react'
 import type { ProjectWithScore } from '@/types'
 
 const VERDICT_CFG = {
@@ -123,6 +123,12 @@ export function ProjectCard({ project }: Props) {
           {new Date(project.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
         </span>
         <div className="flex items-center gap-3">
+          {(project.member_count ?? 0) > 0 && (
+            <span className={cn('flex items-center gap-1 text-[11px]', isClosed ? 'text-white/20' : 'text-blue-400/60')} title={`${(project.member_count ?? 0) + 1} personnes sur ce projet`}>
+              <Users size={11} />
+              {(project.member_count ?? 0) + 1}
+            </span>
+          )}
           {(project.file_count ?? 0) > 0 && (
             <span className={cn('flex items-center gap-1 text-[11px]', isClosed ? 'text-white/20' : 'text-white/30')}>
               <FileText size={11} />

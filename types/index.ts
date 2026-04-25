@@ -328,6 +328,7 @@ export const DEFAULT_CRITERIA: CompanyCriteria = {
 // ─── Project with score (for rich lists) ─────────────────────────────────────
 
 export interface ProjectWithScore extends Project {
-  score?: ProjectScore | null
-  file_count?: number
+  score?:        ProjectScore | null
+  file_count?:   number
+  member_count?: number   // number of project_members (excludes owner)
 }

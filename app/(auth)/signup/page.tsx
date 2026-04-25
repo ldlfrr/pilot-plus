@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   User, Mail, Lock, Loader2, AlertCircle,
@@ -16,7 +16,18 @@ const PERKS = [
 ]
 
 export default function SignupPage() {
-  const router = useRouter()
+  return (
+    <Suspense fallback={<div className="w-full h-32 flex items-center justify-center"><div className="w-6 h-6 border-2 border-blue-500/40 border-t-blue-500 rounded-full animate-spin" /></div>}>
+      <SignupForm />
+    </Suspense>
+  )
+}
+
+function SignupForm() {
+  const router       = useRouter()
+  const searchParams = useSearchParams()
+  const inviteToken  = searchParams.get('invite')
+
   const [fullName, setFullName] = useState('')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -24,6 +35,16 @@ export default function SignupPage() {
   const [error, setError]       = useState<string | null>(null)
   const [loading, setLoading]   = useState(false)
   const [success, setSuccess]   = useState(false)
+  const [invitationInfo, setInvitationInfo] = useState<{ project_name?: string; team_name?: string; inviter_name?: string } | null>(null)
+
+  // Load invitation details if token present
+  useEffect(() => {
+    if (!inviteToken) return
+    fetch(`/api/invitations/${inviteToken}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.invitation) setInvitationInfo(d.invitation) })
+      .catch(() => {})
+  }, [inviteToken])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -37,12 +58,25 @@ export default function SignupPage() {
       email, password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback${inviteToken ? `?invite=${inviteToken}` : ''}`,
       },
     })
     if (error) { setError(error.message); setLoading(false); return }
+
+    // Auto-accept any pending invitations for this email
+    try {
+      await fetch('/api/invitations/auto-accept', { method: 'POST' })
+    } catch { /* best effort */ }
+
     setSuccess(true)
-    setTimeout(() => { router.push('/accueil'); router.refresh() }, 1800)
+    setTimeout(() => {
+      if (inviteToken) {
+        router.push(`/invite/${inviteToken}`)
+      } else {
+        router.push('/accueil')
+      }
+      router.refresh()
+    }, 1800)
   }
 
   const pwStrength = password.length === 0 ? 0 : password.length < 8 ? 1 : password.length < 12 ? 2 : 3
@@ -87,7 +121,22 @@ export default function SignupPage() {
         <p className="text-sm text-white/40">Gratuit pour commencer — aucune carte requise</p>
       </div>
 
+      {/* Invitation banner */}
+      {invitationInfo && (
+        <div className="mb-6 p-4 rounded-xl" style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.25)' }}>
+          <p className="text-xs font-semibold text-blue-400 mb-1">Invitation en attente</p>
+          <p className="text-sm text-white/70">
+            <strong className="text-white/90">{invitationInfo.inviter_name ?? 'Quelqu\'un'}</strong> vous invite à rejoindre{' '}
+            {invitationInfo.project_name
+              ? <>le projet <strong className="text-white/90">« {invitationInfo.project_name} »</strong></>
+              : <>l&apos;équipe <strong className="text-white/90">« {invitationInfo.team_name} »</strong></>}
+            . Créez votre compte pour accéder automatiquement.
+          </p>
+        </div>
+      )}
+
       {/* Perks strip */}
+      {!invitationInfo && (
       <div className="flex flex-col gap-1.5 mb-6 p-4 rounded-xl" style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)' }}>
         {PERKS.map(perk => (
           <div key={perk} className="flex items-center gap-2.5">
@@ -98,6 +147,7 @@ export default function SignupPage() {
           </div>
         ))}
       </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
 

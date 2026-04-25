@@ -91,6 +91,21 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ team: { ...team, members: [ownerMember] } }, { status: 201 })
 }
 
+// DELETE — delete team (owner only)
+export async function DELETE() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+
+  const { error } = await supabase
+    .from('teams')
+    .delete()
+    .eq('owner_id', user.id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
 // PATCH — rename team
 export async function PATCH(req: NextRequest) {
   const supabase = await createClient()

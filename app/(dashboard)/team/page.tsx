@@ -6,6 +6,7 @@ import {
   Users, UserPlus, Mail, Trash2, Loader2, CheckCircle,
   AlertCircle, Crown, Shield, Eye, Clock, X,
   BarChart3, TrendingUp, Target, Trophy, XCircle, ChevronRight,
+  AlertTriangle,
 } from 'lucide-react'
 import type { TeamDashboard, MemberStats } from '@/app/api/team/dashboard/route'
 
@@ -229,10 +230,13 @@ export default function TeamPage() {
   const [inviting, setInviting]       = useState(false)
 
   // Team name
-  const [teamName, setTeamName]       = useState('')
-  const [editingName, setEditingName] = useState(false)
-  const [savingName, setSavingName]   = useState(false)
-  const [isOwner, setIsOwner]         = useState(false)
+  const [teamName, setTeamName]         = useState('')
+  const [editingName, setEditingName]   = useState(false)
+  const [savingName, setSavingName]     = useState(false)
+  const [isOwner, setIsOwner]           = useState(false)
+  const [deletingTeam, setDeletingTeam] = useState(false)
+  const [pendingInvites, setPendingInvites] = useState<Array<{ id: string; invited_email: string; role: string; token: string }>>([])
+  const [cancellingToken, setCancellingToken] = useState<string | null>(null)
 
   const [removingId, setRemovingId] = useState<string | null>(null)
 
@@ -240,37 +244,24 @@ export default function TeamPage() {
     fetch('/api/team')
       .then(r => r.json())
       .then(d => {
-        setTeam(d.team ?? null)
-        setTeamName(d.team?.name ?? '')
-        // Check if current user is owner by fetching user info
-        fetch('/api/user/limits')
-          .then(r => r.json())
-          .then(limits => {
-            if (d.team) {
-              // We'll determine isOwner by checking if user is in the team and role === owner
-              // The team API already returns members; we check role via auth
-              fetch('/api/team')
-                .then(r2 => r2.json())
-                .then(d2 => {
-                  const me = d2.team?.members?.find(
-                    (m: TeamMember) => m.role === 'owner'
-                  )
-                  if (me) setIsOwner(true)
-                }).catch(() => {})
-            }
-          }).catch(() => {})
+        const t = d.team ?? null
+        setTeam(t)
+        setTeamName(t?.name ?? '')
+        // Detect owner: dashboard endpoint is owner-only
+        if (t) {
+          fetch('/api/team/dashboard')
+            .then(r => { if (r.ok) { setIsOwner(true) } })
+            .catch(() => {})
+          // Fetch pending invitations for owner
+          fetch('/api/team/invitations')
+            .then(r => r.ok ? r.json() : { invitations: [] })
+            .then(d2 => setPendingInvites(d2.invitations ?? []))
+            .catch(() => {})
+        }
       })
       .catch(() => setError('Impossible de charger l\'équipe'))
       .finally(() => setLoading(false))
   }, [])
-
-  // Simpler owner detection: fetch once and check
-  useEffect(() => {
-    if (!team) return
-    fetch('/api/team/dashboard')
-      .then(r => { if (r.ok) setIsOwner(true) })
-      .catch(() => {})
-  }, [team])
 
   function flash(msg: string, isErr = false) {
     if (isErr) { setError(msg); setTimeout(() => setError(null), 4000) }
@@ -315,22 +306,51 @@ export default function TeamPage() {
   }
 
   async function handleInvite() {
-    if (!inviteEmail.trim() || inviting) return
+    if (!inviteEmail.trim() || inviting || !team) return
     setInviting(true)
     try {
-      const res = await fetch('/api/team/invite', {
+      const res = await fetch('/api/invitations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
+        body: JSON.stringify({ type: 'team', teamId: team.id, email: inviteEmail.trim(), role: inviteRole }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Erreur')
-      if (data.member) setTeam(prev => prev ? { ...prev, members: [...prev.members, data.member] } : prev)
       setInviteEmail('')
-      flash(`${inviteEmail.trim()} a été ajouté·e à l'équipe`)
+      flash(data.isNewUser
+        ? `Invitation envoyée à ${inviteEmail.trim()}. L'utilisateur devra créer un compte PILOT+ pour accepter.`
+        : `Invitation envoyée à ${inviteEmail.trim()} — une notification lui a été envoyée.`)
+      // Refresh pending invitations
+      const invRes = await fetch(`/api/team/invitations`)
+      if (invRes.ok) { const d = await invRes.json(); setPendingInvites(d.invitations ?? []) }
     } catch (err) {
       flash(err instanceof Error ? err.message : 'Erreur', true)
     } finally { setInviting(false) }
+  }
+
+  async function handleDeleteTeam() {
+    if (!confirm('Supprimer définitivement l\'équipe ? Tous les membres perdront l\'accès. Action irréversible.')) return
+    setDeletingTeam(true)
+    try {
+      const res = await fetch('/api/team', { method: 'DELETE' })
+      if (!res.ok) throw new Error('Erreur')
+      setTeam(null)
+      setIsOwner(false)
+      flash('Équipe supprimée.')
+    } catch {
+      flash('Impossible de supprimer l\'équipe', true)
+    } finally { setDeletingTeam(false) }
+  }
+
+  async function handleCancelInvite(token: string) {
+    setCancellingToken(token)
+    try {
+      await fetch(`/api/invitations/${token}`, { method: 'DELETE' })
+      setPendingInvites(prev => prev.filter(i => i.token !== token))
+      flash('Invitation annulée.')
+    } catch {
+      flash('Erreur', true)
+    } finally { setCancellingToken(null) }
   }
 
   async function handleRemove(memberId: string, memberName: string) {
@@ -488,10 +508,21 @@ export default function TeamPage() {
                         <h2 className="text-lg font-bold text-white">{team.name}</h2>
                       </div>
                       {isOwner && (
-                        <button onClick={() => setEditingName(true)}
-                          className="text-xs text-white/30 hover:text-white/60 border border-white/10 px-3 py-1.5 rounded-lg transition-colors">
-                          Renommer
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setEditingName(true)}
+                            className="text-xs text-white/30 hover:text-white/60 border border-white/10 px-3 py-1.5 rounded-lg transition-colors">
+                            Renommer
+                          </button>
+                          <button
+                            onClick={handleDeleteTeam}
+                            disabled={deletingTeam}
+                            title="Supprimer l'équipe"
+                            className="flex items-center gap-1 text-xs text-red-400/50 hover:text-red-400 border border-red-500/20 hover:border-red-500/40 hover:bg-red-950/30 px-2.5 py-1.5 rounded-lg transition-all disabled:opacity-40"
+                          >
+                            {deletingTeam ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                            Supprimer
+                          </button>
+                        </div>
                       )}
                     </>
                   )}
@@ -591,6 +622,38 @@ export default function TeamPage() {
                   })}
                 </div>
               </div>
+
+              {/* Pending invitations */}
+              {isOwner && pendingInvites.length > 0 && (
+                <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.08)' }}>
+                  <div className="px-5 py-3.5 border-b border-white/5 flex items-center gap-2">
+                    <Clock size={13} className="text-white/30" />
+                    <p className="text-sm font-semibold text-white/50">Invitations en attente ({pendingInvites.length})</p>
+                  </div>
+                  <div className="divide-y divide-white/4">
+                    {pendingInvites.map(inv => (
+                      <div key={inv.id} className="flex items-center gap-3 px-5 py-3 opacity-70">
+                        <div className="w-8 h-8 rounded-full bg-white/5 border border-white/8 flex items-center justify-center flex-shrink-0">
+                          <Mail size={12} className="text-white/25" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white/50 truncate">{inv.invited_email}</p>
+                          <p className="text-xs text-white/25">En attente d&apos;acceptation</p>
+                        </div>
+                        <span className="text-[10px] text-white/30 bg-white/5 px-2 py-0.5 rounded-full border border-white/8">{inv.role}</span>
+                        <button
+                          onClick={() => handleCancelInvite(inv.token)}
+                          disabled={cancellingToken === inv.token}
+                          className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all"
+                          title="Annuler"
+                        >
+                          {cancellingToken === inv.token ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Role legend */}
               <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>

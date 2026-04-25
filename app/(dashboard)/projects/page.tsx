@@ -52,10 +52,21 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
     fileCounts.set(f.project_id, (fileCounts.get(f.project_id) ?? 0) + 1)
   }
 
+  // Member counts
+  const memberCountsRes = await supabase
+    .from('project_members')
+    .select('project_id')
+    .in('project_id', allProjects.map(p => p.id))
+  const memberCounts = new Map<string, number>()
+  for (const m of memberCountsRes.data ?? []) {
+    memberCounts.set(m.project_id, (memberCounts.get(m.project_id) ?? 0) + 1)
+  }
+
   const enriched: ProjectWithScore[] = allProjects.map(p => ({
     ...p,
-    score: scoreMap.get(p.id) ?? null,
-    file_count: fileCounts.get(p.id) ?? 0,
+    score:        scoreMap.get(p.id) ?? null,
+    file_count:   fileCounts.get(p.id) ?? 0,
+    member_count: memberCounts.get(p.id) ?? 0,
   }))
 
   const filtered = q
