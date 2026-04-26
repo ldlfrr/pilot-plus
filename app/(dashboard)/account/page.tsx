@@ -1548,6 +1548,6 @@ export default function AccountPage() {
           </div>{/* end content scroll */}
         </div>{/* end right-panel */}
       </div>{/* end body row */}
-    </div>{/* end outer */}
+    </div>
   )
 }
