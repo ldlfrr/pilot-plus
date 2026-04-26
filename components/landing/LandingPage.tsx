@@ -71,6 +71,34 @@ function GlowOrb({ style }: { style: React.CSSProperties }) {
   return <div className="absolute rounded-full pointer-events-none" style={style} />
 }
 
+// ── Animated + logo ───────────────────────────────────────────────────────────
+// 3 full rotations in 2s → hold for 7s → repeat (total cycle = 9s)
+
+function AnimatedPlus({ size = 'nav' }: { size?: 'nav' | 'hero' }) {
+  return (
+    <motion.span
+      animate={{ rotate: [0, 1080, 1080] }}
+      transition={{
+        duration: 9,
+        times: [0, 2 / 9, 1],           // 0s → 2s spin → 9s hold
+        ease: ['easeInOut', 'linear'],
+        repeat: Infinity,
+        repeatType: 'loop',
+      }}
+      className="text-blue-400"
+      style={{
+        display: 'inline-block',
+        transformOrigin: 'center',
+        textShadow: size === 'hero'
+          ? '0 0 32px rgba(96,165,250,0.9)'
+          : '0 0 24px rgba(96,165,250,0.75)',
+      }}
+    >
+      +
+    </motion.span>
+  )
+}
+
 // ── 1. Navbar ─────────────────────────────────────────────────────────────────
 
 function Navbar() {
@@ -105,12 +133,9 @@ function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-600/30">
-            <span className="text-white text-[11px] font-black tracking-tighter select-none">P+</span>
-          </div>
-          <span className="text-[15px] font-extrabold text-white tracking-tight">
-            PILOT<span className="text-blue-400">+</span>
+        <div className="flex items-center">
+          <span className="text-[22px] font-black text-white tracking-tight select-none">
+            PILOT<AnimatedPlus />
           </span>
         </div>
 
@@ -165,27 +190,14 @@ function Hero() {
 
         {/* ── Big centered logo ── */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.7 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, scale: 0.8, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.9, ease }}
-          className="mb-8 flex flex-col items-center gap-2"
+          className="mb-8 flex flex-col items-center"
         >
-          <div className="relative">
-            {/* Outer glow rings */}
-            <div className="absolute inset-0 rounded-3xl animate-pulse"
-              style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.35) 0%, transparent 70%)', filter: 'blur(24px)', transform: 'scale(1.6)' }} />
-            <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-800 flex items-center justify-center shadow-2xl shadow-blue-600/50">
-              <span className="text-white text-3xl font-black tracking-tighter select-none">P+</span>
-            </div>
-          </div>
-          <motion.p
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.5, ease }}
-            className="text-2xl font-extrabold text-white tracking-tight"
-          >
-            PILOT<span className="text-blue-400" style={{ textShadow: '0 0 20px rgba(96,165,250,0.7)' }}>+</span>
-          </motion.p>
+          <p className="text-5xl sm:text-6xl font-black text-white tracking-tight select-none">
+            PILOT<AnimatedPlus size="hero" />
+          </p>
         </motion.div>
 
         {/* Badge */}
@@ -1152,11 +1164,8 @@ function Footer() {
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row items-start justify-between gap-8 mb-8">
           <div className="max-w-xs">
-            <div className="flex items-center gap-2.5 mb-3">
-              <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
-                <span className="text-white text-[10px] font-black">P+</span>
-              </div>
-              <span className="text-[14px] font-extrabold text-white">PILOT<span className="text-blue-400">+</span></span>
+            <div className="flex items-center mb-3">
+              <span className="text-[18px] font-black text-white tracking-tight">PILOT<AnimatedPlus /></span>
             </div>
             <p className="text-xs text-white/25 leading-relaxed">
               Logiciel SaaS d&apos;analyse et de pilotage des appels d&apos;offres pour les entreprises du BTP et des énergies renouvelables.
