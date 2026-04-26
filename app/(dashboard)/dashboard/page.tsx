@@ -374,7 +374,7 @@ export default async function DashboardPage() {
             { label: 'Analysés',    value: summary.analyzed,        icon: BrainCircuit,rgb: '59,130,246',  num: summary.analyzed,  sub: `${summary.total > 0 ? Math.round(summary.analyzed/summary.total*100) : 0}% du total` },
             { label: 'Scorés',      value: summary.scored,          icon: Target,      rgb: '6,182,212',   num: summary.scored,    sub: `${summary.total > 0 ? Math.round(summary.scored/summary.total*100) : 0}% du total` },
             { label: 'Répondus',    value: summary.replied,         icon: Send,        rgb: '99,102,241',  num: summary.replied,   sub: 'gagnés + perdus' },
-            { label: 'Gagnés',      value: summary.won,             icon: Trophy,      rgb: '16,185,129',  num: summary.won,       sub: summary.responded > 0 ? `sur ${summary.responded} clôturés` : 'projets gagnés' },
+            { label: 'Gagnés',      value: summary.won,             icon: Trophy,      rgb: '16,185,129',  num: summary.won,       sub: summary.replied > 0 ? `sur ${summary.replied} clôturés` : 'projets gagnés' },
             { label: 'CA Pipeline', value: fmtCA(summary.caPipeline), icon: DollarSign, rgb: '16,185,129', num: summary.caPipeline, sub: 'projets actifs' },
             { label: 'CA Généré',   value: fmtCA(summary.caGenerated), icon: TrendingUp, rgb: '34,197,94', num: summary.caGenerated, sub: `${summary.won} gagné${summary.won !== 1 ? 's' : ''}` },
             { label: 'Taux Go',     value: `${summary.tauxGo}%`,    icon: Percent,     rgb: '124,58,237',  num: summary.tauxGo,    sub: `${verdicts.go} go / ${scoring.total} scorés` },
