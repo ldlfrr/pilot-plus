@@ -863,28 +863,30 @@ function TeamDetail({
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-        {TABS.map(t => {
-          const I = t.icon
-          const active = tab === t.id
-          return (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all relative',
-                active ? 'bg-white/10 text-white shadow-sm' : 'text-white/35 hover:text-white/65')}>
-              {t.badge > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-extrabold text-white bg-violet-500">
-                  {t.badge}
-                </span>
-              )}
-              <I size={12}/>{t.label}
-              {t.id === 'invitations' && pending.length > 0 && (
-                <span className="ml-1 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold bg-blue-500/30 text-blue-300 px-1">
-                  {pending.length}
-                </span>
-              )}
-            </button>
-          )
-        })}
+      <div className="overflow-x-auto scrollbar-hide -mx-1">
+        <div className="flex gap-1 p-1 rounded-xl w-max min-w-full sm:w-fit mx-1" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          {TABS.map(t => {
+            const I = t.icon
+            const active = tab === t.id
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all relative whitespace-nowrap',
+                  active ? 'bg-white/10 text-white shadow-sm' : 'text-white/35 hover:text-white/65')}>
+                {t.badge > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-extrabold text-white bg-violet-500">
+                    {t.badge}
+                  </span>
+                )}
+                <I size={12}/>{t.label}
+                {t.id === 'invitations' && pending.length > 0 && (
+                  <span className="ml-1 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold bg-blue-500/30 text-blue-300 px-1">
+                    {pending.length}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Tab content */}

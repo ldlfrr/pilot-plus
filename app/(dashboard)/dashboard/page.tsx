@@ -407,7 +407,7 @@ export default async function DashboardPage() {
 
         {/* ── [D] Secondary KPIs ──────────────────────────────────────────── */}
         {showSecondary && (
-          <div className={cn('grid gap-3', `grid-cols-${secItems.length} sm:grid-cols-${secItems.length}`)}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {secItems.map(item => (
               <GlassCard key={item.label} className="p-4">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-white/32 mb-2">{item.label}</p>

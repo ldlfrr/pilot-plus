@@ -603,7 +603,7 @@ export default function AccountPage() {
       {/* ── Body ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-1 min-h-0">
 
-        {/* ── Left nav ────────────────────────────────────────────────────── */}
+        {/* ── Left nav (desktop) ──────────────────────────────────────────── */}
         <aside className="hidden md:flex flex-col w-52 flex-shrink-0 py-4 gap-0 overflow-y-auto scrollbar-hide"
           style={{ borderRight: '1px solid rgba(255,255,255,0.055)' }}>
           {NAV_GROUPS.map((group, gi) => (
@@ -632,28 +632,32 @@ export default function AccountPage() {
           ))}
         </aside>
 
-        {/* ── Mobile tabs ─────────────────────────────────────────────────── */}
-        <div className="md:hidden flex-shrink-0 border-b border-white/5 overflow-x-auto scrollbar-hide w-full absolute top-14 z-10 bg-[var(--bg-surface)]">
-          <div className="flex gap-0 px-3 py-2 w-max">
-            {ALL_NAV.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => setActiveSection(id)}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all',
-                  activeSection === id
-                    ? id === 'danger' ? 'bg-red-500/15 text-red-400' : 'bg-blue-600/15 text-blue-400'
-                    : 'text-white/40 hover:text-white/70',
-                )}
-              >
-                <Icon size={12} />{label}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* ── Right panel: mobile tabs + content ──────────────────────────── */}
+        <div className="flex-1 flex flex-col min-h-0">
 
-        {/* ── Content ─────────────────────────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto scrollbar-hide">
+          {/* ── Mobile tabs ─────────────────────────────────────────────── */}
+          <div className="md:hidden flex-shrink-0 border-b border-white/5 overflow-x-auto scrollbar-hide"
+            style={{ background: 'var(--bg-surface, rgba(8,14,34,1))' }}>
+            <div className="flex gap-0 px-3 py-2 w-max">
+              {ALL_NAV.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => setActiveSection(id)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all',
+                    activeSection === id
+                      ? id === 'danger' ? 'bg-red-500/15 text-red-400' : 'bg-blue-600/15 text-blue-400'
+                      : 'text-white/40 hover:text-white/70',
+                  )}
+                >
+                  <Icon size={12} />{label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Content ─────────────────────────────────────────────────── */}
+          <div className="flex-1 overflow-y-auto scrollbar-hide">
 
           {/* Profile banner */}
           <div className="px-5 md:px-8 py-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(8,14,34,0.60)', backdropFilter: 'blur(12px)' }}>
@@ -1540,9 +1544,10 @@ export default function AccountPage() {
               </div>
             )}
 
-          </div>
-        </div>
-      </div>
-    </div>
+          </div>{/* end section content */}
+          </div>{/* end content scroll */}
+        </div>{/* end right-panel */}
+      </div>{/* end body row */}
+    </div>{/* end outer */}
   )
 }

@@ -144,8 +144,9 @@ function CalendarGrid({
       {/* Day headers */}
       <div className="grid grid-cols-7 border-b border-white/6">
         {DAYS_FR.map(d => (
-          <div key={d} className="py-2.5 text-center text-[10px] font-bold text-white/30 uppercase tracking-wider">
-            {d}
+          <div key={d} className="py-2 text-center text-[9px] sm:text-[10px] font-bold text-white/30 uppercase tracking-wider">
+            <span className="hidden sm:inline">{d}</span>
+            <span className="sm:hidden">{d[0]}</span>
           </div>
         ))}
       </div>
@@ -172,7 +173,7 @@ function CalendarGrid({
               key={idx}
               onClick={() => hasProjects && onDayClick(dayProjects)}
               className={cn(
-                'relative min-h-[80px] p-2 border-r border-b border-white/4 last:border-r-0 transition-all',
+                'relative min-h-[48px] sm:min-h-[80px] p-1 sm:p-2 border-r border-b border-white/4 transition-all',
                 hasProjects ? 'cursor-pointer hover:bg-white/4' : '',
                 idx % 7 === 6 ? 'border-r-0' : '',
               )}
@@ -181,28 +182,43 @@ function CalendarGrid({
                 <>
                   {/* Day number */}
                   <div className={cn(
-                    'w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold mb-1',
+                    'w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-semibold mb-0.5 sm:mb-1',
                     isToday ? 'bg-blue-600 text-white' : 'text-white/40',
                   )}>
                     {day}
                   </div>
 
-                  {/* Project dots/pills */}
-                  {dayProjects.slice(0, 3).map((p, i) => {
-                    const urg = urgency(daysLeft(p.offer_deadline))
-                    const s   = URGENCY_STYLES[urg]
-                    return (
-                      <div
-                        key={i}
-                        className={cn('text-[9px] font-medium px-1.5 py-0.5 rounded mb-0.5 truncate border', s.pill)}
-                      >
-                        {p.name.length > 16 ? p.name.slice(0, 14) + '…' : p.name}
+                  {/* Project dots — mobile shows dots only, desktop shows pills */}
+                  <div className="hidden sm:block">
+                    {dayProjects.slice(0, 3).map((p, i) => {
+                      const urg = urgency(daysLeft(p.offer_deadline))
+                      const s   = URGENCY_STYLES[urg]
+                      return (
+                        <div
+                          key={i}
+                          className={cn('text-[9px] font-medium px-1.5 py-0.5 rounded mb-0.5 truncate border', s.pill)}
+                        >
+                          {p.name.length > 16 ? p.name.slice(0, 14) + '…' : p.name}
+                        </div>
+                      )
+                    })}
+                    {dayProjects.length > 3 && (
+                      <div className="text-[8px] text-white/30 px-1.5">
+                        +{dayProjects.length - 3}
                       </div>
-                    )
-                  })}
-                  {dayProjects.length > 3 && (
-                    <div className="text-[8px] text-white/30 px-1.5">
-                      +{dayProjects.length - 3} autres
+                    )}
+                  </div>
+
+                  {/* Mobile: colored dots */}
+                  {hasProjects && (
+                    <div className="sm:hidden flex gap-0.5 flex-wrap mt-0.5">
+                      {dayProjects.slice(0, 3).map((p, i) => {
+                        const s = URGENCY_STYLES[urgency(daysLeft(p.offer_deadline))]
+                        return <div key={i} className={cn('w-1.5 h-1.5 rounded-full', s.dot)} />
+                      })}
+                      {dayProjects.length > 3 && (
+                        <div className="text-[7px] text-white/30 leading-none">+{dayProjects.length - 3}</div>
+                      )}
                     </div>
                   )}
                 </>
