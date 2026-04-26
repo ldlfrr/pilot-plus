@@ -35,8 +35,8 @@ const stagger = (delay = 0.12) => ({
   show: { transition: { staggerChildren: delay } },
 })
 
-function Section({ children, className = '', id = '' }: {
-  children: React.ReactNode; className?: string; id?: string
+function Section({ children, className = '', id = '', style }: {
+  children: React.ReactNode; className?: string; id?: string; style?: React.CSSProperties
 }) {
   const ref = useRef(null)
   const inView = useInView(ref, { once: true, margin: '-80px' })
@@ -47,6 +47,7 @@ function Section({ children, className = '', id = '' }: {
       initial="hidden"
       animate={inView ? 'show' : 'hidden'}
       className={className}
+      style={style}
     >
       {children}
     </motion.section>
