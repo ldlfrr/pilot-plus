@@ -214,6 +214,14 @@ export interface VenteInterneData {
   decideur?:         string
 }
 
+export type AvantVenteStatus = 'transmis' | 'en_chiffrage' | 'prep_memoire' | 'termine'
+
+export interface AvantVenteData {
+  status?:     AvantVenteStatus
+  notes?:      string
+  updated_at?: string
+}
+
 export type EchangeType = 'email' | 'reunion' | 'appel' | 'visio' | 'autre'
 
 export interface EchangeClient {
@@ -282,6 +290,7 @@ export interface TaskStates {
   // ── Stage-specific data ───────────────────────────────────────────────────
   prospection?:                    ProspectionData
   vente_interne?:                  VenteInterneData
+  avant_vente_data?:               AvantVenteData
   echanges_client?:                EchangesClientData
   juridique?:                      JuridiqueData
   signature_data?:                 SignatureData

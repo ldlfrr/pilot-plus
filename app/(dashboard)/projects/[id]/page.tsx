@@ -20,6 +20,7 @@ import { MemoireTechniqueTab } from '@/components/project/tabs/MemoireTechniqueT
 import { MembresProjetTab }    from '@/components/project/tabs/MembresProjetTab'
 import { ProspectionTab }      from '@/components/project/tabs/ProspectionTab'
 import { VenteInterneTab }     from '@/components/project/tabs/VenteInterneTab'
+import { AvantVenteTab }      from '@/components/project/tabs/AvantVenteTab'
 import { EchangesClientTab }   from '@/components/project/tabs/EchangesClientTab'
 import { JuridiqueTab }        from '@/components/project/tabs/JuridiqueTab'
 import { SignatureTab }        from '@/components/project/tabs/SignatureTab'
@@ -36,9 +37,9 @@ import {
 import { ExportMenu } from '@/components/projects/ExportMenu'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
-import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates, SubscriptionTier, ProjectOutcome, Intervenant, ChiffrageData, ChecklistRemise, ProspectionData, VenteInterneData, EchangesClientData, JuridiqueData, SignatureData } from '@/types'
+import type { Project, ProjectFile, ProjectAnalysis, ProjectScore, TaskStates, SubscriptionTier, ProjectOutcome, Intervenant, ChiffrageData, ChecklistRemise, ProspectionData, VenteInterneData, AvantVenteData, EchangesClientData, JuridiqueData, SignatureData } from '@/types'
 
-type Tab = 'synthese' | 'corp' | 'map' | 'besoin' | 'pieces' | 'specificites' | 'gonogo' | 'actions' | 'documents' | 'plan' | 'comments' | 'intervenants' | 'chiffrage' | 'checklist' | 'memoire' | 'membres' | 'prospection' | 'vente_interne' | 'echanges_client' | 'juridique' | 'signature'
+type Tab = 'synthese' | 'corp' | 'map' | 'besoin' | 'pieces' | 'specificites' | 'gonogo' | 'actions' | 'documents' | 'plan' | 'comments' | 'intervenants' | 'chiffrage' | 'checklist' | 'memoire' | 'membres' | 'prospection' | 'vente_interne' | 'avant_vente' | 'echanges_client' | 'juridique' | 'signature'
 type TabGroup = 'analyse' | 'reponse' | 'commercial' | 'equipe'
 
 interface ProjectData {
@@ -104,6 +105,7 @@ export default function ProjectPage() {
   const [memoireText,    setMemoireText]    = useState<string>('')
   const [prospection,    setProspection]    = useState<ProspectionData | null>(null)
   const [venteInterne,   setVenteInterne]   = useState<VenteInterneData | null>(null)
+  const [avantVente,     setAvantVente]     = useState<AvantVenteData | null>(null)
   const [echangesClient, setEchangesClient] = useState<EchangesClientData | null>(null)
   const [juridique,      setJuridique]      = useState<JuridiqueData | null>(null)
   const [signatureData,  setSignatureData]  = useState<SignatureData | null>(null)
@@ -144,7 +146,8 @@ export default function ProjectPage() {
     setMemoireText   (ts.memoire_technique ?? '')
     setPipelineStage (ts.pipeline_stage)
     setProspection   (ts.prospection       ?? null)
-    setVenteInterne  (ts.vente_interne     ?? null)
+    setVenteInterne  (ts.vente_interne      ?? null)
+    setAvantVente    (ts.avant_vente_data  ?? null)
     setEchangesClient(ts.echanges_client   ?? null)
     setJuridique     (ts.juridique         ?? null)
     setSignatureData (ts.signature_data    ?? null)
@@ -416,6 +419,7 @@ export default function ProjectPage() {
       tabs: [
         { id: 'prospection',    label: 'Prospection',      icon: Search         },
         { id: 'vente_interne',  label: 'Vente interne',    icon: Building2      },
+        { id: 'avant_vente',    label: 'Avant-vente',      icon: Wrench         },
         { id: 'intervenants',   label: 'Intervenants',     icon: Users          },
         { id: 'echanges_client',label: 'Échanges client',  icon: MessageSquare  },
         { id: 'juridique',      label: 'Juridique',        icon: Scale          },
@@ -993,6 +997,16 @@ export default function ProjectPage() {
             projectId={id}
             data={venteInterne}
             onChange={setVenteInterne}
+            onApproved={() => setPipelineStage('avant_vente')}
+          />
+        </div>
+
+        <div style={{ display: activeTab === 'avant_vente' ? 'block' : 'none' }} className="p-4 md:p-6">
+          <AvantVenteTab
+            projectId={id}
+            data={avantVente}
+            onChange={setAvantVente}
+            onTermine={() => setPipelineStage('echanges_client')}
           />
         </div>
 
