@@ -282,6 +282,7 @@ export default async function DashboardPage() {
 
   const d = await getDashboardData(user.id)
   const { summary, secondary, verdicts, monthlyData, hasMonthlyActivity, funnel, scoreDistrib, scoring, bySegment, topClients, upcoming, lossReasons, pendingVeille, insights } = d
+  const { avgWon, avgLost } = scoring
 
   const donutData = [
     { name: 'GO',        value: verdicts.go,      color: '#10B981' },
