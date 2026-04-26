@@ -12,7 +12,7 @@ import {
   FileText, Users, Mail, UserSearch, Brain, Sparkles, Kanban,
   Calendar, Download, Search, BellRing, PenLine, Check,
   Workflow, Bolt, Globe, PlayCircle, ChevronDown, Plus,
-  Cpu, Lock, Layers, MessageSquare, Eye,
+  Cpu, Lock, Layers, MessageSquare, Eye, Linkedin,
 } from 'lucide-react'
 
 // ── Animation presets (Apple-style easing) ────────────────────────────────────
@@ -728,8 +728,8 @@ function AllFeaturesGrid() {
     { icon: Kanban,     color: 'text-cyan-400',     bg: 'bg-cyan-500/10 border-cyan-500/20',       title: 'Pipeline Kanban',          desc: '7 colonnes de prospection à signature. Drag & drop.' },
     { icon: PenLine,    color: 'text-amber-400',    bg: 'bg-amber-500/10 border-amber-500/20',     title: 'Mémoire technique IA',     desc: 'Génération automatique de la mémoire technique prête à compléter.' },
     { icon: Download,   color: 'text-rose-400',     bg: 'bg-rose-500/10 border-rose-500/20',       title: 'Export PDF pro',           desc: 'Mise en page complète, prêt à intégrer dans votre dossier.' },
-    { icon: UserSearch, color: 'text-blue-400',     bg: 'bg-blue-500/10 border-blue-500/20',       title: 'Find contacts IA',         desc: 'Enrichissement automatique : emails et contacts décisionnaires.' },
-    { icon: Mail,       color: 'text-violet-400',   bg: 'bg-violet-500/10 border-violet-500/20',   title: 'Campagnes email IA',       desc: 'Séquences email personnalisées depuis votre pipeline.' },
+    { icon: Linkedin,   color: 'text-blue-400',     bg: 'bg-blue-500/10 border-blue-500/20',       title: 'Find LinkedIn IA',         desc: 'Identifiez les décisionnaires LinkedIn par entreprise et titre de poste.' },
+    { icon: BellRing,  color: 'text-violet-400',   bg: 'bg-violet-500/10 border-violet-500/20',   title: 'Alertes & notifications',  desc: 'Alertes J-14/J-7/J-3 sur vos échéances. Notifications BOAMP instantanées.' },
     { icon: BarChart3,  color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', title: 'Dashboard analytique',     desc: 'KPIs, taux de conversion, CA pipeline, alertes d\'échéance.' },
     { icon: Calendar,   color: 'text-cyan-400',     bg: 'bg-cyan-500/10 border-cyan-500/20',       title: 'Calendrier des remises',   desc: 'Vue calendrier de toutes vos échéances avec alertes J-14/7/3.' },
     { icon: Users,      color: 'text-amber-400',    bg: 'bg-amber-500/10 border-amber-500/20',     title: 'Collaboration équipe',     desc: 'Partagez projets et analyses avec tous vos collaborateurs.' },
@@ -836,25 +836,25 @@ function Pricing() {
       id: 'free', name: 'Gratuit', price: 0, tagline: 'Pour découvrir',
       quota: '1 analyse IA',
       items: ['1 analyse IA (à vie)', 'Score Go/No Go basique', 'Dashboard simplifié', 'Accès pipeline'],
-      notIncluded: ['Veille BOAMP', 'Export PDF', 'Find contacts', 'Équipe'],
+      notIncluded: ['Veille BOAMP', 'Export PDF', 'Find LinkedIn', 'Équipe'],
       cta: 'Commencer gratuitement', href: '/signup', color: 'free',
     },
     {
       id: 'basic', name: 'Basic', price: 49, tagline: 'Pour démarrer',
       quota: '10 analyses / mois',
-      items: ['10 analyses IA / mois', 'Score Go/No Go complet', 'Rapport 7 onglets', 'Pipeline commercial', 'Calendrier & alertes', 'Find contacts : 50/mois'],
+      items: ['10 analyses IA / mois', 'Score Go/No Go complet', 'Rapport 7 onglets', 'Pipeline commercial', 'Calendrier & alertes', 'Find LinkedIn : 30 / mois'],
       cta: 'Essayer Basic', href: '/signup', color: 'blue',
     },
     {
       id: 'pro', name: 'Pro', price: 149, tagline: 'Pour les équipes actives',
       quota: '50 analyses / mois', badge: '⭐ Le plus populaire',
-      items: ['50 analyses IA / mois', 'Score + rapport complet', 'Veille BOAMP automatique', 'Export PDF professionnel', 'Mémoire technique IA', 'Campagnes email IA', 'Find contacts : 200/mois', "Équipe jusqu'à 5 utilisateurs", 'Support prioritaire'],
+      items: ['50 analyses IA / mois', 'Score + rapport complet', 'Veille BOAMP automatique', 'Export PDF professionnel', 'Mémoire technique IA', 'Find LinkedIn : 150 / mois', "Équipe jusqu'à 5 utilisateurs", 'Alertes & notifications avancées', 'Support prioritaire'],
       cta: 'Essayer Pro 14 jours', href: '/signup', color: 'pro', highlight: true,
     },
     {
       id: 'enterprise', name: 'Entreprise', price: 499, tagline: 'Pour scaler sans limite',
       quota: 'Illimité',
-      items: ['Analyses illimitées', 'Tout le plan Pro', 'Find contacts illimité', 'API PILOT+', 'Équipe illimitée', 'Onboarding dédié', 'SLA 99.9%', 'Support téléphonique'],
+      items: ['Analyses illimitées', 'Tout le plan Pro', 'Find LinkedIn illimité', 'API PILOT+', 'Équipe illimitée', 'Onboarding dédié', 'SLA 99.9%', 'Support téléphonique'],
       cta: 'Nous contacter', href: 'mailto:contact@pilot-plus.fr?subject=Abonnement%20Entreprise', color: 'purple',
     },
   ]
