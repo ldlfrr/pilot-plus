@@ -758,7 +758,7 @@ export default async function DashboardPage() {
                 title="Métriques de cadence" sub="Délais et état du pipeline" />
               <div className="space-y-0">
                 {[
-                  { label: 'Délai moyen import → décision', value: secondary.avgDecisionDays !== null ? `${secondary.avgDecisionDays} jours` : '—', sub: `sur ${lossReasons.length > 0 ? won + lost : won} projets clôturés`, rgb: '6,182,212' },
+                  { label: 'Délai moyen import → décision', value: secondary.avgDecisionDays !== null ? `${secondary.avgDecisionDays} jours` : '—', sub: `sur ${summary.replied} projet${summary.replied !== 1 ? 's' : ''} clôturés`, rgb: '6,182,212' },
                   { label: 'Projets en attente de clôture', value: String(secondary.pending), sub: 'sans issue définie', rgb: '245,158,11' },
                   { label: 'Projets abandonnés', value: String(secondary.abandoned), sub: 'à analyser', rgb: '239,68,68' },
                 ].map(({ label, value, sub, rgb }, i, arr) => (
