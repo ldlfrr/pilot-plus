@@ -1,8 +1,13 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import {
   Brain, Target, Radio, TrendingUp, Shield,
   Kanban, FileText, Users, BarChart3, Sparkles,
 } from 'lucide-react'
+
+export const metadata: Metadata = {
+  robots: { index: true, follow: true },
+}
 
 const FEATURES = [
   { icon: Brain,    text: 'Analyse IA de vos DCE en 30 secondes', color: 'text-blue-400',    bg: 'rgba(59,130,246,0.10)',  border: 'rgba(59,130,246,0.20)' },

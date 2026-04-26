@@ -1,37 +1,35 @@
 'use client'
 
-import { useState } from 'react'
-import {
-  MessageSquare, Mail, Phone, Video, Calendar, Users,
-  FileText, Plus, Trash2, Check, Loader2, ChevronDown, ChevronUp,
-  ArrowRight,
-} from 'lucide-react'
-import { cn } from '@/lib/utils/cn'
-import type { EchangesClientData, EchangeClient, EchangeType } from '@/types'
+import { useState, useEffect, useRef } from 'react'
+import { MessageSquare, Plus, Send, Loader2, Check, AlertCircle, Trash2 } from 'lucide-react'
+import type { EchangesClientData, ClientNote } from '@/types'
 
-const TYPE_OPTIONS: { value: EchangeType; label: string; icon: typeof Mail; color: string; bg: string; border: string }[] = [
-  { value: 'email',   label: 'Email',     icon: Mail,          color: 'text-blue-300',    bg: 'bg-blue-500/12',    border: 'border-blue-500/25'    },
-  { value: 'reunion', label: 'Réunion',   icon: Users,         color: 'text-violet-300',  bg: 'bg-violet-500/12',  border: 'border-violet-500/25'  },
-  { value: 'appel',   label: 'Appel',     icon: Phone,         color: 'text-emerald-300', bg: 'bg-emerald-500/12', border: 'border-emerald-500/25' },
-  { value: 'visio',   label: 'Visio',     icon: Video,         color: 'text-amber-300',   bg: 'bg-amber-500/12',   border: 'border-amber-500/25'   },
-  { value: 'autre',   label: 'Autre',     icon: MessageSquare, color: 'text-white/40',    bg: 'bg-white/5',        border: 'border-white/12'       },
-]
+const AUTHOR_KEY = 'echanges_client_author'
 
-function getTypeCfg(type: EchangeType) {
-  return TYPE_OPTIONS.find(t => t.value === type) ?? TYPE_OPTIONS[4]
+function genId() { return Math.random().toString(36).slice(2, 9) }
+
+function initials(name: string) {
+  return name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?'
 }
 
-function genId() {
-  return Math.random().toString(36).slice(2, 9)
+function avatarColor(name: string): string {
+  const colors = [
+    'rgba(59,130,246,0.85)',   // blue
+    'rgba(139,92,246,0.85)',   // violet
+    'rgba(16,185,129,0.85)',   // emerald
+    'rgba(245,158,11,0.85)',   // amber
+    'rgba(236,72,153,0.85)',   // pink
+    'rgba(20,184,166,0.85)',   // teal
+  ]
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff
+  return colors[h % colors.length]
 }
 
-const EMPTY_ECHANGE: Omit<EchangeClient, 'id'> = {
-  date:         new Date().toISOString().slice(0, 10),
-  type:         'email',
-  sujet:        '',
-  participants: '',
-  notes:        '',
-  next_step:    '',
+function fmtDate(iso: string) {
+  const d = new Date(iso)
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+    + ' · ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
 
 interface EchangesClientTabProps {
@@ -41,31 +39,36 @@ interface EchangesClientTabProps {
 }
 
 export function EchangesClientTab({ projectId, data, onChange }: EchangesClientTabProps) {
-  const [echanges, setEchanges] = useState<EchangeClient[]>(data?.echanges ?? [])
-  const [showForm, setShowForm] = useState(false)
-  const [form,     setForm]     = useState<Omit<EchangeClient, 'id'>>(EMPTY_ECHANGE)
-  const [expanded, setExpanded] = useState<string | null>(null)
+  const [notes,    setNotes]    = useState<ClientNote[]>(data?.notes ?? [])
+  const [author,   setAuthor]   = useState('')
+  const [content,  setContent]  = useState('')
   const [saving,   setSaving]   = useState(false)
   const [saved,    setSaved]    = useState(false)
   const [error,    setError]    = useState<string | null>(null)
+  const textRef = useRef<HTMLTextAreaElement>(null)
 
-  function updateForm(patch: Partial<Omit<EchangeClient, 'id'>>) {
-    setForm(prev => ({ ...prev, ...patch }))
-  }
+  // Load persisted author name from localStorage
+  useEffect(() => {
+    try { setAuthor(localStorage.getItem(AUTHOR_KEY) ?? '') } catch { /* */ }
+  }, [])
 
-  async function saveAll(updated: EchangeClient[]) {
+  async function saveAll(updated: ClientNote[]) {
     setSaving(true); setError(null)
     try {
+      const payload: EchangesClientData = {
+        echanges: data?.echanges ?? [],
+        notes:    updated,
+      }
       const res = await fetch(`/api/projects/${projectId}/pipeline`, {
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ echanges_client: { echanges: updated } }),
+        body:    JSON.stringify({ echanges_client: payload }),
       })
       if (!res.ok) {
         const json = await res.json().catch(() => ({}))
         throw new Error((json as { error?: string }).error ?? 'Erreur')
       }
-      onChange({ echanges: updated })
+      onChange(payload)
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (err) {
@@ -75,240 +78,137 @@ export function EchangesClientTab({ projectId, data, onChange }: EchangesClientT
     }
   }
 
-  function handleAdd() {
-    if (!form.sujet.trim()) return
-    const newEchange: EchangeClient = { id: genId(), ...form }
-    const updated = [newEchange, ...echanges]
-    setEchanges(updated)
+  function handleSubmit() {
+    if (!content.trim() || !author.trim()) return
+    // Persist author
+    try { localStorage.setItem(AUTHOR_KEY, author) } catch { /* */ }
+    const note: ClientNote = {
+      id:          genId(),
+      date:        new Date().toISOString(),
+      author_name: author.trim(),
+      content:     content.trim(),
+    }
+    const updated = [...notes, note]
+    setNotes(updated)
     saveAll(updated)
-    setForm(EMPTY_ECHANGE)
-    setShowForm(false)
-    setExpanded(newEchange.id)
+    setContent('')
+    textRef.current?.focus()
   }
 
   function handleDelete(id: string) {
-    const updated = echanges.filter(e => e.id !== id)
-    setEchanges(updated)
+    const updated = notes.filter(n => n.id !== id)
+    setNotes(updated)
     saveAll(updated)
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-xl space-y-4">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: 'rgba(236,72,153,0.14)', border: '1px solid rgba(236,72,153,0.22)' }}>
+          <MessageSquare size={16} className="text-pink-400" />
+        </div>
         <div>
-          <h2 className="text-base font-bold text-white flex items-center gap-2">
-            <MessageSquare size={16} className="text-pink-400" />
-            Étape 5 — Échanges client
-          </h2>
-          <p className="text-xs text-white/40 mt-0.5">
-            Historique des interactions avec le client
-          </p>
+          <h2 className="text-sm font-bold text-white">Échanges client</h2>
+          <p className="text-xs text-white/35">Notes partagées — chacun annote ses discussions client</p>
         </div>
-        <div className="flex items-center gap-3">
-          {saved && (
-            <span className="flex items-center gap-1 text-xs text-emerald-400">
-              <Check size={12} />Sauvegardé
-            </span>
-          )}
-          <button
-            onClick={() => setShowForm(v => !v)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 text-pink-400 rounded-xl text-xs font-semibold transition-all"
-          >
-            <Plus size={13} />
-            Nouvel échange
-          </button>
-        </div>
+        {saved && (
+          <span className="ml-auto flex items-center gap-1 text-xs text-emerald-400">
+            <Check size={11} />Sauvegardé
+          </span>
+        )}
+        {saving && <Loader2 size={13} className="ml-auto animate-spin text-white/30" />}
       </div>
 
-      {/* Add form */}
-      {showForm && (
-        <div className="bg-[var(--bg-card)] border border-pink-500/20 rounded-2xl p-5 space-y-4">
-          <p className="text-xs font-bold uppercase tracking-widest text-white/30">Nouvel échange</p>
+      {/* Notes feed */}
+      <div className="rounded-2xl overflow-hidden"
+        style={{ background: 'rgba(8,8,28,0.72)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.07)', boxShadow: '0 8px 32px rgba(0,0,0,0.45)' }}>
 
-          {/* Type selector */}
-          <div className="flex flex-wrap gap-2">
-            {TYPE_OPTIONS.map(opt => {
-              const Icon = opt.icon
-              const selected = form.type === opt.value
+        {notes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
+              style={{ background: 'rgba(236,72,153,0.10)', border: '1px solid rgba(236,72,153,0.18)' }}>
+              <MessageSquare size={20} className="text-pink-400/60" />
+            </div>
+            <p className="text-sm font-semibold text-white/40">Aucune note</p>
+            <p className="text-xs text-white/20 mt-1">Annotez vos discussions avec le client</p>
+          </div>
+        ) : (
+          <div className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+            {notes.map((note, i) => {
+              const color = avatarColor(note.author_name)
               return (
-                <button
-                  key={opt.value}
-                  onClick={() => updateForm({ type: opt.value })}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all',
-                    selected ? cn(opt.bg, opt.border, opt.color) : 'bg-white/3 border-white/8 text-white/30 hover:border-white/20',
-                  )}
-                >
-                  <Icon size={11} />{opt.label}
-                </button>
+                <div key={note.id} className="px-5 py-4 group hover:bg-white/[0.02] transition-colors">
+                  <div className="flex items-start gap-3">
+                    {/* Avatar */}
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white text-[11px] font-bold"
+                      style={{ background: color, boxShadow: `0 0 12px ${color.replace('0.85', '0.25')}` }}>
+                      {initials(note.author_name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2 mb-1">
+                        <span className="text-xs font-bold text-white/80">{note.author_name}</span>
+                        <span className="text-[10px] text-white/25">{fmtDate(note.date)}</span>
+                      </div>
+                      <p className="text-sm text-white/65 whitespace-pre-wrap leading-relaxed">{note.content}</p>
+                    </div>
+                    {/* Delete (shown on hover) */}
+                    <button
+                      onClick={() => handleDelete(note.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 p-1.5 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-950/30"
+                      title="Supprimer"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
               )
             })}
           </div>
+        )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-[11px] text-white/40">Date</label>
-              <div className="relative">
-                <Calendar size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
-                <input
-                  type="date"
-                  value={form.date}
-                  onChange={e => updateForm({ date: e.target.value })}
-                  className="w-full bg-white/4 border border-white/10 rounded-xl pl-8 pr-3 py-2.5 text-sm text-white/70 outline-none focus:border-pink-500/50 transition-colors"
-                />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] text-white/40">Participants</label>
-              <div className="relative">
-                <Users size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
-                <input
-                  type="text"
-                  value={form.participants ?? ''}
-                  onChange={e => updateForm({ participants: e.target.value })}
-                  placeholder="ex: Jean D., Marie T."
-                  className="w-full bg-white/4 border border-white/10 rounded-xl pl-8 pr-3 py-2.5 text-sm text-white placeholder-white/20 outline-none focus:border-pink-500/50 transition-colors"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[11px] text-white/40">Sujet *</label>
-            <input
-              type="text"
-              value={form.sujet}
-              onChange={e => updateForm({ sujet: e.target.value })}
-              placeholder="ex: Clarification technique sur les spécifications"
-              className="w-full bg-white/4 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/20 outline-none focus:border-pink-500/50 transition-colors"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[11px] text-white/40">Notes / Compte-rendu</label>
-            <textarea
-              rows={3}
-              value={form.notes ?? ''}
-              onChange={e => updateForm({ notes: e.target.value })}
-              placeholder="Résumé de l'échange, points importants soulevés…"
-              className="w-full bg-white/4 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/20 outline-none focus:border-pink-500/50 transition-colors resize-none"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[11px] text-white/40 flex items-center gap-1.5">
-              <ArrowRight size={10} />Prochaine étape / Action requise
-            </label>
-            <input
-              type="text"
-              value={form.next_step ?? ''}
-              onChange={e => updateForm({ next_step: e.target.value })}
-              placeholder="ex: Envoyer la proposition révisée avant le 15"
-              className="w-full bg-white/4 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/20 outline-none focus:border-pink-500/50 transition-colors"
-            />
-          </div>
-
-          <div className="flex gap-2">
+        {/* Input area */}
+        <div className="border-t px-4 py-4 space-y-3" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+          {/* Author name row */}
+          <input
+            type="text"
+            value={author}
+            onChange={e => setAuthor(e.target.value)}
+            placeholder="Votre nom…"
+            className="w-full text-xs font-semibold bg-transparent text-white/60 placeholder-white/20 outline-none border-none"
+          />
+          {/* Content */}
+          <textarea
+            ref={textRef}
+            rows={3}
+            value={content}
+            onChange={e => setContent(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSubmit() }}
+            placeholder="Notez votre échange client — appel, réunion, email reçu…"
+            className="w-full bg-white/[0.03] border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/18 outline-none focus:border-pink-500/40 transition-colors resize-none"
+          />
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-white/20">Ctrl+Entrée pour envoyer</p>
             <button
-              onClick={handleAdd}
-              disabled={!form.sujet.trim() || saving}
-              className="flex items-center gap-2 px-4 py-2 bg-pink-600 hover:bg-pink-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-all"
+              onClick={handleSubmit}
+              disabled={saving || !content.trim() || !author.trim()}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-30"
+              style={{ background: 'rgba(236,72,153,0.20)', border: '1px solid rgba(236,72,153,0.35)', color: 'rgba(249,168,212,0.90)' }}
             >
-              {saving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+              {saving ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
               Ajouter
             </button>
-            <button
-              onClick={() => { setShowForm(false); setForm(EMPTY_ECHANGE) }}
-              className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/50 text-sm rounded-xl transition-all"
-            >
-              Annuler
-            </button>
           </div>
         </div>
+      </div>
+
+      {error && (
+        <p className="text-xs text-red-400 flex items-center gap-1.5 px-1">
+          <AlertCircle size={11} />{error}
+        </p>
       )}
-
-      {/* Échanges list */}
-      {echanges.length === 0 ? (
-        <div className="bg-[var(--bg-card)] border border-dashed border-white/8 rounded-2xl p-10 text-center">
-          <MessageSquare size={24} className="mx-auto text-white/15 mb-3" />
-          <p className="text-sm text-white/35">Aucun échange enregistré</p>
-          <p className="text-xs text-white/20 mt-1">
-            Ajoutez vos emails, réunions et appels avec le client pour garder un historique complet.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {echanges.map(echange => {
-            const cfg = getTypeCfg(echange.type)
-            const Icon = cfg.icon
-            const isExpanded = expanded === echange.id
-            return (
-              <div
-                key={echange.id}
-                className={cn('bg-[var(--bg-card)] border rounded-2xl overflow-hidden transition-all', cfg.border)}
-              >
-                {/* Header row */}
-                <button
-                  onClick={() => setExpanded(isExpanded ? null : echange.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-white/2 transition-colors"
-                >
-                  <span className={cn('flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center', cfg.bg, cfg.border, 'border')}>
-                    <Icon size={14} className={cfg.color} />
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white/85 truncate">{echange.sujet}</p>
-                    <p className="text-[11px] text-white/30 mt-0.5">
-                      {new Date(echange.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      {echange.participants && ` · ${echange.participants}`}
-                    </p>
-                  </div>
-                  <span className={cn('flex-shrink-0 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full', cfg.bg, cfg.color)}>
-                    {cfg.label}
-                  </span>
-                  {isExpanded
-                    ? <ChevronUp size={13} className="text-white/30 flex-shrink-0" />
-                    : <ChevronDown size={13} className="text-white/30 flex-shrink-0" />}
-                </button>
-
-                {/* Expanded content */}
-                {isExpanded && (
-                  <div className="px-4 pb-4 space-y-3 border-t border-white/5 pt-3">
-                    {echange.notes && (
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-white/20 mb-1">
-                          <FileText size={9} className="inline mr-1" />Notes
-                        </p>
-                        <p className="text-sm text-white/60 whitespace-pre-wrap">{echange.notes}</p>
-                      </div>
-                    )}
-                    {echange.next_step && (
-                      <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-500/8 border border-amber-500/20 rounded-xl">
-                        <ArrowRight size={12} className="text-amber-400 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400/60 mb-0.5">Prochaine étape</p>
-                          <p className="text-sm text-amber-300/80">{echange.next_step}</p>
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex justify-end">
-                      <button
-                        onClick={() => handleDelete(echange.id)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-red-400/50 hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-all"
-                      >
-                        <Trash2 size={11} />Supprimer
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
   )
 }

@@ -1,14 +1,14 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import {
   Kanban, MapPin, Building, Clock,
   AlertTriangle, ChevronRight, MoreHorizontal, ArrowRight,
-  TrendingUp, RefreshCw,
+  TrendingUp, RefreshCw, Users, Lock, User,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import type { PipelineStage, TaskStates } from '@/types'
+import type { PipelineStage } from '@/types'
 
 // ── Stage config ──────────────────────────────────────────────────────────────
 
@@ -46,6 +46,8 @@ interface PipelineProject {
   offer_deadline: string | null
   outcome:        string
   pipeline_stage: PipelineStage
+  is_owner?:      boolean
+  teams?:         string[]
   score?:         number | null
   verdict?:       string | null
   chiffrage_montant?: number | null
@@ -67,17 +69,14 @@ function urgencyClass(days: number | null): string {
 // ── Project card ──────────────────────────────────────────────────────────────
 
 function ProjectCard({
-  project,
-  onStageChange,
-  isDragging,
-  onDragStart,
-  onDragEnd,
+  project, onStageChange, isDragging, onDragStart, onDragEnd, showTeams,
 }: {
   project:       PipelineProject
   onStageChange: (id: string, stage: PipelineStage) => void
   isDragging:    boolean
   onDragStart:   (id: string) => void
   onDragEnd:     () => void
+  showTeams?:    boolean
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -104,8 +103,8 @@ function ProjectCard({
         isDragging ? 'opacity-40 scale-95' : 'hover:-translate-y-0.5',
       )}
       style={{
-        background:   isDragging ? 'rgba(255,255,255,0.04)' : 'rgba(8,14,34,0.85)',
-        borderColor:  cfg.border,
+        background:     isDragging ? 'rgba(255,255,255,0.04)' : 'rgba(8,14,34,0.85)',
+        borderColor:    cfg.border,
         backdropFilter: 'blur(8px)',
       }}
     >
@@ -118,7 +117,6 @@ function ProjectCard({
         >
           {project.name}
         </Link>
-        {/* Quick actions menu */}
         <div className="relative flex-shrink-0" ref={menuRef}>
           <button
             onClick={() => setMenuOpen(v => !v)}
@@ -127,15 +125,8 @@ function ProjectCard({
             <MoreHorizontal size={12} />
           </button>
           {menuOpen && (
-            <div
-              className="absolute right-0 top-6 z-50 w-44 rounded-xl overflow-hidden"
-              style={{
-                background:   'rgba(8,14,34,0.98)',
-                border:       '1px solid rgba(255,255,255,0.10)',
-                boxShadow:    '0 8px 24px rgba(0,0,0,0.6)',
-                backdropFilter: 'blur(20px)',
-              }}
-            >
+            <div className="absolute right-0 top-6 z-50 w-44 rounded-xl overflow-hidden"
+              style={{ background: 'rgba(8,14,34,0.98)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 8px 24px rgba(0,0,0,0.6)', backdropFilter: 'blur(20px)' }}>
               <div className="px-2 py-1.5">
                 <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest px-2 py-1">Déplacer vers</p>
                 {STAGES.filter(s => s.value !== project.pipeline_stage).map(s => (
@@ -154,28 +145,32 @@ function ProjectCard({
         </div>
       </div>
 
-      {/* Client */}
-      <div className="flex items-center gap-1.5 text-[10px] text-white/35 mb-2">
-        <Building size={8} />
-        <span className="truncate">{project.client}</span>
+      <div className="flex items-center gap-1.5 text-[10px] text-white/35 mb-1.5">
+        <Building size={8} /><span className="truncate">{project.client}</span>
       </div>
-
-      {/* Location */}
       <div className="flex items-center gap-1.5 text-[10px] text-white/25 mb-2.5 truncate">
-        <MapPin size={8} />
-        <span className="truncate">{project.location}</span>
+        <MapPin size={8} /><span className="truncate">{project.location}</span>
       </div>
 
-      {/* Footer: deadline + score */}
+      {/* Team badges */}
+      {showTeams && project.teams && project.teams.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {project.teams.slice(0, 2).map(t => (
+            <span key={t} className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500/15 text-violet-300 border border-violet-500/20">
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Footer */}
       <div className="flex items-center justify-between gap-2">
         {project.offer_deadline ? (
           <div className={cn('flex items-center gap-1 text-[10px] font-semibold', urgencyClass(days))}>
             {days !== null && days <= 7 ? <AlertTriangle size={9} /> : <Clock size={9} />}
             {days === null ? '' : days <= 0 ? 'Passée' : `J−${days}`}
           </div>
-        ) : (
-          <span />
-        )}
+        ) : <span />}
 
         <div className="flex items-center gap-1.5">
           {project.chiffrage_montant != null && (
@@ -184,28 +179,24 @@ function ProjectCard({
             </span>
           )}
           {project.score != null && (
-            <span
-              className="text-[9px] font-bold px-1.5 py-0.5 rounded-md"
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md"
               style={{
                 background: project.verdict === 'GO' ? 'rgba(16,185,129,0.15)' : project.verdict === 'NO_GO' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)',
-                color:      project.verdict === 'GO' ? '#34d399'             : project.verdict === 'NO_GO' ? '#f87171'             : '#fbbf24',
-              }}
-            >
+                color:      project.verdict === 'GO' ? '#34d399'              : project.verdict === 'NO_GO' ? '#f87171'              : '#fbbf24',
+              }}>
               {project.score}
             </span>
           )}
         </div>
       </div>
 
-      {/* Quick advance button */}
       {nextStage && (
         <button
           onClick={() => onStageChange(project.id, nextStage.value)}
           className="mt-2 w-full flex items-center justify-center gap-1 py-1 rounded-lg text-[9px] font-semibold transition-all opacity-0 group-hover:opacity-100"
           style={{ background: nextStage.bg, color: nextStage.color, border: `1px solid ${nextStage.border}` }}
         >
-          <ArrowRight size={9} />
-          {nextStage.label}
+          <ArrowRight size={9} />{nextStage.label}
         </button>
       )}
     </div>
@@ -215,15 +206,8 @@ function ProjectCard({
 // ── Column ────────────────────────────────────────────────────────────────────
 
 function KanbanColumn({
-  stage,
-  projects,
-  onStageChange,
-  dragOverStage,
-  draggingId,
-  onDragStart,
-  onDragEnd,
-  onDragOver,
-  onDrop,
+  stage, projects, onStageChange, dragOverStage, draggingId,
+  onDragStart, onDragEnd, onDragOver, onDrop, showTeams,
 }: {
   stage:         StageCfg
   projects:      PipelineProject[]
@@ -234,28 +218,23 @@ function KanbanColumn({
   onDragEnd:     () => void
   onDragOver:    (stage: PipelineStage) => void
   onDrop:        (stage: PipelineStage) => void
+  showTeams?:    boolean
 }) {
   const isOver       = dragOverStage === stage.value
   const totalMontant = projects.reduce((s, p) => s + (p.chiffrage_montant ?? 0), 0)
 
   return (
-    <div
-      className="flex flex-col min-w-[220px] w-56 flex-shrink-0"
+    <div className="flex flex-col min-w-[220px] w-56 flex-shrink-0"
       onDragOver={e => { e.preventDefault(); onDragOver(stage.value) }}
-      onDrop={e => { e.preventDefault(); onDrop(stage.value) }}
-    >
-      {/* Column header */}
-      <div
-        className="flex items-center justify-between px-3 py-2.5 rounded-xl mb-2.5 flex-shrink-0"
-        style={{ background: stage.bg, border: `1px solid ${stage.border}` }}
-      >
+      onDrop={e => { e.preventDefault(); onDrop(stage.value) }}>
+
+      <div className="flex items-center justify-between px-3 py-2.5 rounded-xl mb-2.5 flex-shrink-0"
+        style={{ background: stage.bg, border: `1px solid ${stage.border}` }}>
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: stage.dot }} />
           <span className="text-xs font-bold" style={{ color: stage.color }}>{stage.label}</span>
-          <span
-            className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full"
-            style={{ background: stage.color + '20', color: stage.color }}
-          >
+          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full"
+            style={{ background: stage.color + '20', color: stage.color }}>
             {projects.length}
           </span>
         </div>
@@ -267,103 +246,33 @@ function KanbanColumn({
         )}
       </div>
 
-      {/* Drop zone */}
-      <div
-        className={cn(
-          'flex-1 rounded-xl flex flex-col gap-2 p-2 min-h-[120px] transition-all duration-200',
-          isOver ? 'ring-2 ring-inset' : '',
-        )}
-        style={isOver ? {
-          background: stage.bg,
-          boxShadow:  `inset 0 0 0 2px ${stage.color}`,
-        } : {
-          background: 'rgba(255,255,255,0.02)',
-        }}
-      >
+      <div className={cn('flex-1 rounded-xl flex flex-col gap-2 p-2 min-h-[120px] transition-all duration-200')}
+        style={isOver ? { background: stage.bg, boxShadow: `inset 0 0 0 2px ${stage.color}` } : { background: 'rgba(255,255,255,0.02)' }}>
         {projects.map(p => (
-          <ProjectCard
-            key={p.id}
-            project={p}
-            onStageChange={onStageChange}
-            isDragging={draggingId === p.id}
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
-          />
+          <ProjectCard key={p.id} project={p} onStageChange={onStageChange}
+            isDragging={draggingId === p.id} onDragStart={onDragStart} onDragEnd={onDragEnd}
+            showTeams={showTeams} />
         ))}
         {projects.length === 0 && (
-          <div className="flex items-center justify-center h-16 text-[10px] text-white/15">
-            Aucun projet
-          </div>
+          <div className="flex items-center justify-center h-16 text-[10px] text-white/15">Aucun projet</div>
         )}
       </div>
     </div>
   )
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ── Kanban board (shared) ─────────────────────────────────────────────────────
 
-export default function PipelinePage() {
-  const [projects,  setProjects]  = useState<PipelineProject[]>([])
-  const [loading,   setLoading]   = useState(true)
+function KanbanBoard({
+  projects, onStageChange, filter, showTeams,
+}: {
+  projects:      PipelineProject[]
+  onStageChange: (id: string, stage: PipelineStage) => void
+  filter:        'all' | 'active'
+  showTeams?:    boolean
+}) {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOver,   setDragOver]   = useState<PipelineStage | null>(null)
-  const [filter,     setFilter]     = useState<'all' | 'active'>('active')
-  const [refreshing, setRefreshing] = useState(false)
-
-  async function loadProjects() {
-    try {
-      const res  = await fetch('/api/projects?limit=200')
-      if (!res.ok) return
-      const data = await res.json() as { projects: Array<{
-        id: string; name: string; client: string; location: string
-        offer_deadline: string | null; outcome: string; task_states: TaskStates | null
-        score?: { total_score?: number; verdict?: string } | null
-      }> }
-      const mapped: PipelineProject[] = (data.projects ?? []).map(p => ({
-        id:             p.id,
-        name:           p.name,
-        client:         p.client,
-        location:       p.location,
-        offer_deadline: p.offer_deadline,
-        outcome:        p.outcome,
-        pipeline_stage: (p.task_states?.pipeline_stage ?? 'prospection') as PipelineStage,
-        score:          p.score?.total_score ?? null,
-        verdict:        p.score?.verdict ?? null,
-        chiffrage_montant: p.task_states?.chiffrage?.montant ?? null,
-      }))
-      setProjects(mapped)
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }
-
-  useEffect(() => { loadProjects() }, [])
-
-  async function handleStageChange(projectId: string, newStage: PipelineStage) {
-    // Optimistic update
-    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, pipeline_stage: newStage } : p))
-    await fetch(`/api/projects/${projectId}/pipeline`, {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ pipeline_stage: newStage }),
-    })
-  }
-
-  function handleDragStart(id: string) { setDraggingId(id) }
-  function handleDragEnd()             { setDraggingId(null); setDragOver(null) }
-  function handleDragOver(stage: PipelineStage) { setDragOver(stage) }
-
-  function handleDrop(stage: PipelineStage) {
-    if (draggingId) handleStageChange(draggingId, stage)
-    setDragOver(null)
-    setDraggingId(null)
-  }
-
-  function handleRefresh() {
-    setRefreshing(true)
-    loadProjects()
-  }
 
   const displayed = filter === 'active'
     ? projects.filter(p => p.outcome === 'pending' && p.pipeline_stage !== 'cloture')
@@ -371,19 +280,135 @@ export default function PipelinePage() {
 
   const byStage = (stage: PipelineStage) => displayed.filter(p => p.pipeline_stage === stage)
 
-  // Pipeline value stats
-  const totalValue   = displayed.reduce((s, p) => s + (p.chiffrage_montant ?? 0), 0)
-  const totalGo      = displayed.filter(p => ['vente_interne', 'avant_vente', 'echanges_client', 'juridique', 'signature'].includes(p.pipeline_stage)).length
-  const totalRemis   = displayed.filter(p => p.pipeline_stage === 'signature').length
+  function handleDrop(stage: PipelineStage) {
+    if (draggingId) onStageChange(draggingId, stage)
+    setDragOver(null); setDraggingId(null)
+  }
+
+  return (
+    <div className="flex-1 overflow-x-auto overflow-y-hidden">
+      <div className="flex gap-3 px-4 md:px-6 py-4 h-full min-h-0" style={{ minWidth: 'max-content' }}>
+        {STAGES.map(stage => (
+          <KanbanColumn
+            key={stage.value}
+            stage={stage}
+            projects={byStage(stage.value)}
+            onStageChange={onStageChange}
+            dragOverStage={dragOver}
+            draggingId={draggingId}
+            onDragStart={id => setDraggingId(id)}
+            onDragEnd={() => { setDraggingId(null); setDragOver(null) }}
+            onDragOver={setDragOver}
+            onDrop={handleDrop}
+            showTeams={showTeams}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+type PipelineView = 'personal' | 'team'
+
+export default function PipelinePage() {
+  const [view,         setView]         = useState<PipelineView>('personal')
+  const [filter,       setFilter]       = useState<'all' | 'active'>('active')
+  const [loading,      setLoading]      = useState(true)
+  const [refreshing,   setRefreshing]   = useState(false)
+
+  // Personal state
+  const [personalProjects, setPersonalProjects] = useState<PipelineProject[]>([])
+
+  // Team state
+  const [teamProjects,  setTeamProjects]  = useState<PipelineProject[]>([])
+  const [teamError,     setTeamError]     = useState<string | null>(null)
+  const [teamLoaded,    setTeamLoaded]    = useState(false)
+  const [isEnterprise,  setIsEnterprise]  = useState<boolean | null>(null)   // null = unknown
+
+  // Load personal pipeline
+  const loadPersonal = useCallback(async () => {
+    const res = await fetch('/api/pipeline/personal')
+    if (!res.ok) return
+    const data = await res.json()
+    setPersonalProjects(data.projects ?? [])
+  }, [])
+
+  // Load team pipeline
+  const loadTeam = useCallback(async () => {
+    setTeamError(null)
+    const res = await fetch('/api/pipeline/team')
+    if (res.status === 403) {
+      const j = await res.json()
+      setIsEnterprise(false)
+      setTeamError(j.error ?? 'Accès refusé')
+      return
+    }
+    if (!res.ok) { setTeamError('Erreur chargement'); return }
+    const data = await res.json()
+    setIsEnterprise(true)
+    setTeamProjects(data.projects ?? [])
+    setTeamLoaded(true)
+  }, [])
+
+  // Initial load
+  useEffect(() => {
+    async function init() {
+      await loadPersonal()
+      setLoading(false)
+    }
+    init()
+  }, [loadPersonal])
+
+  // Load team lazily when tab is first clicked
+  useEffect(() => {
+    if (view === 'team' && !teamLoaded && isEnterprise !== false) loadTeam()
+  }, [view, teamLoaded, isEnterprise, loadTeam])
+
+  async function handleRefresh() {
+    setRefreshing(true)
+    if (view === 'personal') await loadPersonal()
+    else                     await loadTeam()
+    setRefreshing(false)
+  }
+
+  // ── Stage change handlers ───────────────────────────────────────────────────
+
+  function handlePersonalStageChange(projectId: string, stage: PipelineStage) {
+    setPersonalProjects(prev => prev.map(p => p.id === projectId ? { ...p, pipeline_stage: stage } : p))
+    fetch('/api/pipeline/personal', {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ projectId, stage }),
+    })
+  }
+
+  function handleTeamStageChange(projectId: string, stage: PipelineStage) {
+    setTeamProjects(prev => prev.map(p => p.id === projectId ? { ...p, pipeline_stage: stage } : p))
+    fetch('/api/pipeline/team', {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ projectId, stage }),
+    })
+  }
+
+  // ── Stats ───────────────────────────────────────────────────────────────────
+
+  const activeProjects = view === 'personal' ? personalProjects : teamProjects
+  const displayedCount = filter === 'active'
+    ? activeProjects.filter(p => p.outcome === 'pending' && p.pipeline_stage !== 'cloture').length
+    : activeProjects.length
+  const totalValue = activeProjects.reduce((s, p) => s + (p.chiffrage_montant ?? 0), 0)
+
+  // ── Skeleton ────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
       <div className="flex-1 p-6 space-y-4 animate-pulse">
         <div className="h-8 w-48 bg-white/6 rounded-xl" />
         <div className="flex gap-4 overflow-hidden">
-          {STAGES.map(s => (
-            <div key={s.value} className="min-w-[220px] h-64 bg-white/4 rounded-xl border border-white/6" />
-          ))}
+          {STAGES.map(s => <div key={s.value} className="min-w-[220px] h-64 bg-white/4 rounded-xl border border-white/6" />)}
         </div>
       </div>
     )
@@ -393,10 +418,9 @@ export default function PipelinePage() {
     <div className="flex flex-col min-h-0 h-full animate-fade-in">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div
-        className="flex-shrink-0 px-4 md:px-6 pt-5 pb-4"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-      >
+      <div className="flex-shrink-0 px-4 md:px-6 pt-5 pb-4"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+
         <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
           <div>
             <h1 className="text-xl font-extrabold text-white flex items-center gap-2">
@@ -404,66 +428,81 @@ export default function PipelinePage() {
               Pipeline commercial
             </h1>
             <p className="text-xs text-white/35 mt-0.5">
-              {displayed.length} projet{displayed.length !== 1 ? 's' : ''} · Glissez-déposez pour avancer une étape
+              {displayedCount} projet{displayedCount !== 1 ? 's' : ''} · Glissez-déposez pour avancer une étape
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Filter toggle */}
-            <div
-              className="flex items-center rounded-lg overflow-hidden border border-white/10"
-              style={{ background: 'rgba(255,255,255,0.04)' }}
-            >
+            {/* Filter */}
+            <div className="flex items-center rounded-lg overflow-hidden border border-white/10"
+              style={{ background: 'rgba(255,255,255,0.04)' }}>
               {(['active', 'all'] as const).map(f => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={cn(
-                    'px-3 py-1.5 text-xs font-semibold transition-all',
-                    filter === f ? 'bg-blue-600 text-white' : 'text-white/40 hover:text-white/70'
-                  )}
-                >
+                <button key={f} onClick={() => setFilter(f)}
+                  className={cn('px-3 py-1.5 text-xs font-semibold transition-all',
+                    filter === f ? 'bg-blue-600 text-white' : 'text-white/40 hover:text-white/70')}>
                   {f === 'active' ? 'Actifs' : 'Tous'}
                 </button>
               ))}
             </div>
 
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2 text-white/30 hover:text-white/70 border border-white/10 rounded-lg hover:bg-white/5 transition-all"
-            >
+            <button onClick={handleRefresh} disabled={refreshing}
+              className="p-2 text-white/30 hover:text-white/70 border border-white/10 rounded-lg hover:bg-white/5 transition-all">
               <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
             </button>
 
-            <Link
-              href="/projects/new"
-              className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-colors"
-            >
-              Nouveau projet
-              <ChevronRight size={12} />
+            <Link href="/projects/new"
+              className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-colors">
+              Nouveau projet <ChevronRight size={12} />
             </Link>
           </div>
+        </div>
+
+        {/* ── View toggle (Ma pipeline / Pipeline équipe) ─────────────────── */}
+        <div className="flex items-center gap-1 mb-4 p-1 rounded-xl w-fit"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+
+          <button
+            onClick={() => setView('personal')}
+            className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              view === 'personal'
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'text-white/45 hover:text-white/80',
+            )}>
+            <User size={12} />
+            Ma pipeline
+          </button>
+
+          <button
+            onClick={() => setView('team')}
+            className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              view === 'team'
+                ? 'bg-violet-600 text-white shadow-lg'
+                : 'text-white/45 hover:text-white/80',
+            )}>
+            <Users size={12} />
+            Pipeline équipe
+            {isEnterprise === false ? (
+              <Lock size={9} className="text-amber-400" />
+            ) : (
+              <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300">
+                ENT
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Stats strip */}
         <div className="flex items-center gap-6 text-xs">
           <div className="flex items-center gap-1.5">
-            <span className="text-white/35">Projets actifs :</span>
-            <span className="text-white font-bold">{displayed.length}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-white/35">En GO+ :</span>
-            <span className="text-emerald-400 font-bold">{totalGo}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-white/35">Remis :</span>
-            <span className="text-teal-400 font-bold">{totalRemis}</span>
+            <span className="text-white/35">Projets :</span>
+            <span className="text-white font-bold">{displayedCount}</span>
           </div>
           {totalValue > 0 && (
             <div className="flex items-center gap-1.5">
               <TrendingUp size={11} className="text-white/30" />
-              <span className="text-white/35">Valeur pipeline :</span>
+              <span className="text-white/35">Valeur :</span>
               <span className="text-white font-bold">
                 {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', notation: 'compact', maximumFractionDigits: 1 }).format(totalValue)}
               </span>
@@ -472,25 +511,55 @@ export default function PipelinePage() {
         </div>
       </div>
 
-      {/* ── Kanban board ───────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden">
-        <div className="flex gap-3 px-4 md:px-6 py-4 h-full min-h-0" style={{ minWidth: 'max-content' }}>
-          {STAGES.map(stage => (
-            <KanbanColumn
-              key={stage.value}
-              stage={stage}
-              projects={byStage(stage.value)}
-              onStageChange={handleStageChange}
-              dragOverStage={dragOver}
-              draggingId={draggingId}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
+      {/* ── Personal pipeline board ─────────────────────────────────────────── */}
+      {view === 'personal' && (
+        <KanbanBoard
+          projects={personalProjects}
+          onStageChange={handlePersonalStageChange}
+          filter={filter}
+        />
+      )}
+
+      {/* ── Team pipeline board ─────────────────────────────────────────────── */}
+      {view === 'team' && (
+        <>
+          {/* Enterprise gate */}
+          {isEnterprise === false ? (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center max-w-sm">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.25)' }}>
+                  <Lock size={28} className="text-violet-400" />
+                </div>
+                <h2 className="text-lg font-bold text-white mb-2">Pipeline équipe</h2>
+                <p className="text-sm text-white/40 mb-4">
+                  La pipeline équipe — avec vue unifiée de tous les projets et déplacement synchronisé — est réservée à l'abonnement <strong className="text-violet-300">Entreprise</strong>.
+                </p>
+                <Link href="/abonnement"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all">
+                  Passer à Entreprise
+                  <ChevronRight size={14} />
+                </Link>
+              </div>
+            </div>
+          ) : isEnterprise === null ? (
+            <div className="flex-1 flex items-center justify-center">
+              <RefreshCw size={20} className="text-white/20 animate-spin" />
+            </div>
+          ) : teamError ? (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-sm text-red-400">{teamError}</p>
+            </div>
+          ) : (
+            <KanbanBoard
+              projects={teamProjects}
+              onStageChange={handleTeamStageChange}
+              filter={filter}
+              showTeams
             />
-          ))}
-        </div>
-      </div>
+          )}
+        </>
+      )}
     </div>
   )
 }

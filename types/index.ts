@@ -226,13 +226,24 @@ export interface EchangeClient {
   next_step?: string
 }
 
+export interface ClientNote {
+  id:          string
+  date:        string   // ISO datetime
+  author_name: string
+  content:     string
+}
+
 export interface EchangesClientData {
   echanges: EchangeClient[]
+  notes?:   ClientNote[]
 }
+
+export type JuridiqueStatus = 'envoye_juridique' | 'en_cours' | 'modif_attente' | 'valide'
 
 export type JuridiqueRisque = 'faible' | 'moyen' | 'eleve'
 
 export interface JuridiqueData {
+  status?:              JuridiqueStatus
   risque_global?:       JuridiqueRisque
   clauses_penalites?:   boolean
   conditions_paiement?: string

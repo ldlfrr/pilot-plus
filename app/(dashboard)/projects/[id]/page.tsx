@@ -1017,6 +1017,7 @@ export default function ProjectPage() {
             projectId={id}
             data={juridique}
             onChange={setJuridique}
+            onValidated={() => setPipelineStage('signature')}
           />
         </div>
 
@@ -1025,6 +1026,7 @@ export default function ProjectPage() {
             projectId={id}
             data={signatureData}
             onChange={setSignatureData}
+            onSigned={() => setPipelineStage('cloture')}
           />
         </div>
 
