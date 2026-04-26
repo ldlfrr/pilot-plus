@@ -31,7 +31,7 @@ export async function GET() {
   const teamIds  = memberships.map(m => m.team_id as string)
   const teamMeta: Record<string, { id: string; name: string }> = {}
   for (const m of memberships) {
-    const t = m.teams as { id: string; name: string } | null
+    const t = (m.teams as unknown) as { id: string; name: string } | null
     if (t) teamMeta[t.id] = t
   }
 
