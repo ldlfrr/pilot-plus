@@ -1,3 +1,4 @@
+import React from 'react'
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
@@ -9,34 +10,53 @@ import {
   TrendingUp, Trophy, XCircle, Clock, AlertCircle, Layers,
   Target, DollarSign, BarChart3, Activity, Zap,
   ChevronRight, Calendar, Users, Lightbulb, AlertTriangle,
-  MapPin, Building, ArrowRight, Flame,
+  MapPin, Building, ArrowRight, Flame, Radio, Send,
+  Percent, RefreshCw, BrainCircuit,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { Project, GoNoGoVerdict } from '@/types'
 
 export const metadata: Metadata = { title: 'Dashboard — PILOT+' }
 
+// ─── Shared glass styles ──────────────────────────────────────────────────────
+
+const G = {
+  card: {
+    background: 'rgba(8, 8, 28, 0.72)',
+    backdropFilter: 'blur(24px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+    border: '1px solid rgba(255,255,255,0.07)',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
+  } as React.CSSProperties,
+  glow: (rgb: string, opacity = 0.12) => ({
+    background: `rgba(${rgb}, 0.07)`,
+    backdropFilter: 'blur(24px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+    border: `1px solid rgba(${rgb}, 0.22)`,
+    boxShadow: `0 0 60px rgba(${rgb}, ${opacity}), 0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)`,
+  } as React.CSSProperties),
+}
+
 // ─── Data fetching ────────────────────────────────────────────────────────────
 
 async function getDashboardData(userId: string) {
   const supabase = await createClient()
 
-  const projectIds = await supabase
-    .from('projects').select('id').eq('user_id', userId)
-
-  const ids = projectIds.data?.map(p => p.id) ?? []
-
-  const [projectsRes, scoresRes] = await Promise.all([
+  const [projectsRes, scoresRes, veilleRes] = await Promise.all([
     supabase.from('projects').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-    ids.length > 0
-      ? supabase.from('project_scores').select('*').in('project_id', ids).order('created_at', { ascending: false })
-      : Promise.resolve({ data: [] }),
+    supabase.from('project_scores').select('*').order('created_at', { ascending: false }),
+    supabase.from('veille_results').select('id', { count: 'exact' }).eq('user_id', userId).eq('status', 'pending'),
   ])
 
   const projects = (projectsRes.data ?? []) as Project[]
-  const scores   = scoresRes.data ?? []
+  const allScores = scoresRes.data ?? []
+  const pendingVeille = veilleRes.count ?? 0
 
-  // ── Summary ────────────────────────────────────────────────────────────────
+  // filter scores to user's projects
+  const projectIds = new Set(projects.map(p => p.id))
+  const scores = allScores.filter(s => projectIds.has(s.project_id as string))
+
+  // ── KPIs ───────────────────────────────────────────────────────────────────
   const total     = projects.length
   const analyzed  = projects.filter(p => ['analyzed','scored'].includes(p.status)).length
   const scored    = projects.filter(p => p.status === 'scored').length
@@ -45,52 +65,50 @@ async function getDashboardData(userId: string) {
   const abandoned = projects.filter(p => p.outcome === 'abandoned').length
   const responded = won + lost
   const pending   = total - won - lost - abandoned
+  const replied   = responded
 
-  const caTotal   = projects.reduce((s, p) => s + (p.ca_amount ?? 0), 0)
-  const tauxTransfo = responded > 0 ? Math.round((won / responded) * 100) : 0
+  const caPipeline  = projects.filter(p => !['lost','abandoned'].includes(p.outcome)).reduce((s, p) => s + (p.ca_amount ?? 0), 0)
+  const caGenerated = projects.filter(p => p.outcome === 'won').reduce((s, p) => s + (p.ca_amount ?? 0), 0)
 
-  // ── Scores ─────────────────────────────────────────────────────────────────
   const allScoreVals = scores.map(s => s.total_score as number)
   const scoreMoyen   = allScoreVals.length > 0
     ? Math.round(allScoreVals.reduce((a, b) => a + b, 0) / allScoreVals.length) : 0
-  const go       = scores.filter(s => s.verdict === 'GO').length
-  const nogo     = scores.filter(s => s.verdict === 'NO_GO').length
-  const aEtudier = scores.filter(s => s.verdict === 'A_ETUDIER').length
 
-  // ── Monthly activity (last 12 months) ──────────────────────────────────────
+  const go        = scores.filter(s => s.verdict === 'GO').length
+  const nogo      = scores.filter(s => s.verdict === 'NO_GO').length
+  const aEtudier  = scores.filter(s => s.verdict === 'A_ETUDIER').length
+  const tauxGo    = scores.length > 0 ? Math.round((go / scores.length) * 100) : 0
+
+  // ── Secondary KPIs ─────────────────────────────────────────────────────────
+  const avgDecisionDays = (() => {
+    const closed = projects.filter(p => p.closed_at)
+    if (!closed.length) return null
+    const avg = closed.reduce((sum, p) =>
+      sum + (new Date(p.closed_at!).getTime() - new Date(p.created_at).getTime()) / 86400000, 0
+    ) / closed.length
+    return Math.round(avg)
+  })()
+
+  // ── Monthly 12m ────────────────────────────────────────────────────────────
   const monthKeys: string[] = []
   const monthLabels: string[] = []
   for (let i = 11; i >= 0; i--) {
-    const d = new Date()
-    d.setDate(1)
-    d.setMonth(d.getMonth() - i)
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i)
     monthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
     monthLabels.push(d.toLocaleDateString('fr-FR', { month: 'short' }))
   }
-
   const getYM = (iso: string) => iso.slice(0, 7)
-
-  const importedByMonth = Object.fromEntries(monthKeys.map(k => [k, 0]))
-  const analyzedByMonth = Object.fromEntries(monthKeys.map(k => [k, 0]))
-  const scoredByMonth   = Object.fromEntries(monthKeys.map(k => [k, 0]))
-
+  const iByM: Record<string,number> = Object.fromEntries(monthKeys.map(k => [k, 0]))
+  const aByM: Record<string,number> = Object.fromEntries(monthKeys.map(k => [k, 0]))
+  const sByM: Record<string,number> = Object.fromEntries(monthKeys.map(k => [k, 0]))
   projects.forEach(p => {
     const ym = getYM(p.created_at)
-    if (ym in importedByMonth) importedByMonth[ym]++
-    if (['analyzed','scored'].includes(p.status)) {
-      if (ym in analyzedByMonth) analyzedByMonth[ym]++
-    }
-    if (p.status === 'scored') {
-      if (ym in scoredByMonth) scoredByMonth[ym]++
-    }
+    if (ym in iByM) iByM[ym]++
+    if (['analyzed','scored'].includes(p.status) && ym in aByM) aByM[ym]++
+    if (p.status === 'scored' && ym in sByM) sByM[ym]++
   })
-
-  const monthlyData = monthKeys.map((k, i) => ({
-    month:    monthLabels[i],
-    imported: importedByMonth[k],
-    analyzed: analyzedByMonth[k],
-    scored:   scoredByMonth[k],
-  }))
+  const monthlyData = monthKeys.map((k, i) => ({ month: monthLabels[i], imported: iByM[k], analyzed: aByM[k], scored: sByM[k] }))
+  const hasMonthlyActivity = monthlyData.filter(m => m.imported + m.analyzed + m.scored > 0).length >= 2
 
   // ── Funnel ─────────────────────────────────────────────────────────────────
   const funnel = [
@@ -101,147 +119,153 @@ async function getDashboardData(userId: string) {
     { step: 'Gagnés',    count: won,       pct: total > 0 ? Math.round(won       / total * 100) : 0 },
   ]
 
+  // ── Score distribution ─────────────────────────────────────────────────────
+  const scoreDistrib = [0,10,20,30,40,50,60,70,80,90].map(low => ({
+    low, label: `${low}–${low+9}`,
+    count: allScoreVals.filter(v => v >= low && v < low + 10).length,
+  }))
+
+  // ── Scoring reliability ────────────────────────────────────────────────────
+  const wonIds   = new Set(projects.filter(p => p.outcome === 'won').map(p => p.id))
+  const lostIds  = new Set(projects.filter(p => p.outcome === 'lost').map(p => p.id))
+  const wonSc    = scores.filter(s => wonIds.has(s.project_id as string)).map(s => s.total_score as number)
+  const lostSc   = scores.filter(s => lostIds.has(s.project_id as string)).map(s => s.total_score as number)
+  const avgWon   = wonSc.length  > 0 ? Math.round(wonSc.reduce((a,b)=>a+b,0) / wonSc.length)   : null
+  const avgLost  = lostSc.length > 0 ? Math.round(lostSc.reduce((a,b)=>a+b,0) / lostSc.length)  : null
+
+  // ── By consultation type ───────────────────────────────────────────────────
+  const segMap: Record<string, { total: number; won: number; scores: number[] }> = {}
+  const scoreByProject: Record<string, number> = {}
+  for (const s of scores) scoreByProject[s.project_id as string] = s.total_score as number
+
+  projects.forEach(p => {
+    const t = p.consultation_type?.trim() || 'Non défini'
+    if (!segMap[t]) segMap[t] = { total: 0, won: 0, scores: [] }
+    segMap[t].total++
+    if (p.outcome === 'won') segMap[t].won++
+    if (scoreByProject[p.id] !== undefined) segMap[t].scores.push(scoreByProject[p.id])
+  })
+  const bySegment = Object.entries(segMap)
+    .map(([type, v]) => ({
+      type, total: v.total, won: v.won,
+      taux: v.total > 0 ? Math.round((v.won / v.total) * 100) : 0,
+      scoreMoyen: v.scores.length > 0 ? Math.round(v.scores.reduce((a,b)=>a+b,0)/v.scores.length) : null,
+    }))
+    .sort((a, b) => b.total - a.total).slice(0, 8)
+
+  // ── Top clients ────────────────────────────────────────────────────────────
+  const clientMap: Record<string, { count: number; won: number }> = {}
+  projects.forEach(p => {
+    if (!clientMap[p.client]) clientMap[p.client] = { count: 0, won: 0 }
+    clientMap[p.client].count++
+    if (p.outcome === 'won') clientMap[p.client].won++
+  })
+  const topClients = Object.entries(clientMap)
+    .sort(([,a],[,b]) => b.count - a.count).slice(0, 5)
+    .map(([client, v]) => ({ client, ...v }))
+
+  // ── Upcoming deadlines ─────────────────────────────────────────────────────
+  const latestScore: Record<string, { total_score: number; verdict: GoNoGoVerdict }> = {}
+  for (const s of scores) {
+    const pid = s.project_id as string
+    if (!latestScore[pid]) latestScore[pid] = { total_score: s.total_score as number, verdict: s.verdict as GoNoGoVerdict }
+  }
+  const now = Date.now()
+  const upcoming = projects
+    .filter(p => p.offer_deadline && p.outcome === 'pending')
+    .map(p => ({
+      ...p,
+      daysLeft: Math.ceil((new Date(p.offer_deadline!).getTime() - now) / 86400000),
+      scoreInfo: latestScore[p.id] ?? null,
+    }))
+    .filter(p => p.daysLeft >= 0 && p.daysLeft <= 30)
+    .sort((a, b) => a.daysLeft - b.daysLeft)
+    .slice(0, 8)
+
   // ── Loss reasons ───────────────────────────────────────────────────────────
   const lossMap: Record<string, number> = {}
   projects.filter(p => p.outcome === 'lost' && p.loss_reason)
     .forEach(p => { lossMap[p.loss_reason!] = (lossMap[p.loss_reason!] ?? 0) + 1 })
   const lossReasons = Object.entries(lossMap).sort(([,a],[,b]) => b - a).slice(0, 5)
 
-  // ── Score distribution ─────────────────────────────────────────────────────
-  const scoreDistrib = [0,10,20,30,40,50,60,70,80,90].map(low => ({
-    low,
-    label: `${low}–${low + 9}`,
-    count: allScoreVals.filter(v => v >= low && v < low + 10).length,
-  }))
-
-  // ── Score vs outcome ───────────────────────────────────────────────────────
-  const wonIds  = new Set(projects.filter(p => p.outcome === 'won').map(p => p.id))
-  const lostIds = new Set(projects.filter(p => p.outcome === 'lost').map(p => p.id))
-  const wonScores  = scores.filter(s => wonIds.has(s.project_id as string)).map(s => s.total_score as number)
-  const lostScores = scores.filter(s => lostIds.has(s.project_id as string)).map(s => s.total_score as number)
-  const avgWon  = wonScores.length  > 0 ? Math.round(wonScores.reduce((a,b)=>a+b,0)  / wonScores.length)  : null
-  const avgLost = lostScores.length > 0 ? Math.round(lostScores.reduce((a,b)=>a+b,0) / lostScores.length) : null
-
-  // ── By segment ─────────────────────────────────────────────────────────────
-  const segMap: Record<string, { total: number; won: number }> = {}
-  projects.forEach(p => {
-    const t = p.consultation_type?.trim() || 'Non défini'
-    if (!segMap[t]) segMap[t] = { total: 0, won: 0 }
-    segMap[t].total++
-    if (p.outcome === 'won') segMap[t].won++
-  })
-  const bySegment = Object.entries(segMap)
-    .map(([type, v]) => ({ type, ...v, taux: v.total > 0 ? Math.round((v.won / v.total) * 100) : 0 }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 8)
-
-  // ── By client ──────────────────────────────────────────────────────────────
-  const clientMap: Record<string, number> = {}
-  projects.forEach(p => { clientMap[p.client] = (clientMap[p.client] ?? 0) + 1 })
-  const topClients = Object.entries(clientMap).sort(([,a],[,b]) => b - a).slice(0, 5)
-    .map(([client, count]) => ({ client, count }))
-
-  // ── Upcoming deadlines (next 30 days) ──────────────────────────────────────
-  const now = Date.now()
-  // Build a map projectId → latest score for enriching the table
-  const latestScoreByProject: Record<string, { total_score: number; verdict: GoNoGoVerdict }> = {}
-  for (const s of scores) {
-    const pid = s.project_id as string
-    if (!latestScoreByProject[pid]) {
-      latestScoreByProject[pid] = { total_score: s.total_score as number, verdict: s.verdict as GoNoGoVerdict }
-    }
+  // ── Insights ───────────────────────────────────────────────────────────────
+  const notScored = projects.filter(p => p.status === 'analyzed').length
+  const insights: string[] = []
+  if (upcoming.length > 0) insights.push(`${upcoming.length} projet${upcoming.length>1?'s':''} nécessite${upcoming.length>1?'nt':''} une action dans les 30 prochains jours`)
+  if (notScored > 0) insights.push(`${notScored} projet${notScored>1?'s':''} analysé${notScored>1?'s':''} ne ${notScored>1?'sont':'est'} pas encore scoré${notScored>1?'s':''}`)
+  if (won === 0 && total >= 5) insights.push(`Aucun projet gagné pour l'instant — clôturez vos dossiers terminés`)
+  if (responded > 0) {
+    const taux = Math.round((won / responded) * 100)
+    if (taux < 15 && responded >= 3) insights.push(`Taux de transformation : ${taux}% — en dessous de la moyenne B2B (15–20%)`)
   }
-
-  const upcoming = projects
-    .filter(p => p.offer_deadline && p.outcome === 'pending')
-    .map(p => ({
-      ...p,
-      daysLeft: Math.ceil((new Date(p.offer_deadline!).getTime() - now) / 86400000),
-      scoreInfo: latestScoreByProject[p.id] ?? null,
-    }))
-    .filter(p => p.daysLeft >= 0 && p.daysLeft <= 30)
-    .sort((a, b) => a.daysLeft - b.daysLeft)
-    .slice(0, 12)
-
-  // ── Time to decision ───────────────────────────────────────────────────────
-  const closedProjects = projects.filter(p => p.closed_at && p.outcome !== 'pending')
-  const avgDecisionDays = closedProjects.length > 0
-    ? Math.round(closedProjects.reduce((sum, p) => {
-        return sum + (new Date(p.closed_at!).getTime() - new Date(p.created_at).getTime()) / 86400000
-      }, 0) / closedProjects.length)
-    : null
+  if (pendingVeille > 0) insights.push(`${pendingVeille} annonce${pendingVeille>1?'s':''} BOAMP non consultée${pendingVeille>1?'s':''} correspondent à votre profil`)
+  if (abandoned > 0) insights.push(`${abandoned} projet${abandoned>1?'s':''} abandonné${abandoned>1?'s':''} — analysez les raisons pour améliorer votre scoring`)
+  if (avgWon !== null && avgLost !== null && avgWon > avgLost)
+    insights.push(`Scoring fiable : +${avgWon - avgLost} pts d'écart entre projets gagnés et perdus`)
 
   return {
-    summary: { total, analyzed, scored, responded, won, lost, abandoned, pending, caTotal, tauxTransfo, scoreMoyen },
+    summary: { total, analyzed, scored, replied, won, lost, abandoned, pending, caPipeline, caGenerated, scoreMoyen, tauxGo },
+    secondary: { avgDecisionDays, notScored, abandoned, pending },
     verdicts: { go, nogo, aEtudier },
-    monthlyData,
-    funnel,
-    lossReasons,
-    scoreDistrib,
+    monthlyData, hasMonthlyActivity,
+    funnel, scoreDistrib,
     scoring: { avgWon, avgLost, total: allScoreVals.length },
-    bySegment,
-    topClients,
-    upcoming,
-    avgDecisionDays,
+    bySegment, topClients,
+    upcoming, lossReasons,
+    pendingVeille,
+    insights: insights.slice(0, 5),
   }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function fmtCA(n: number) {
+  if (n >= 1_000_000) return `${(n/1_000_000).toFixed(1)}M€`
+  if (n >= 1000)      return `${(n/1000).toFixed(0)}k€`
+  return n > 0 ? `${n.toLocaleString('fr-FR')}€` : '—'
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function KpiCard({
-  label, value, sub, icon: Icon, iconColor, accent, glowColor,
-}: {
-  label: string; value: string | number; sub?: string
-  icon: typeof Trophy; iconColor: string; accent: string; glowColor?: string
-}) {
+function GlassCard({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
-    <div className="rounded-xl p-4 flex flex-col gap-1.5 relative overflow-hidden transition-all duration-200 card-hover"
-      style={{
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        backdropFilter: 'blur(8px)',
-      }}>
-      {glowColor && (
-        <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full pointer-events-none"
-          style={{ background: `radial-gradient(circle, ${glowColor} 0%, transparent 70%)`, filter: 'blur(16px)', opacity: 0.35 }} />
-      )}
-      <div className="flex items-center justify-between relative">
-        <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">{label}</span>
-        <Icon size={13} className={iconColor} />
-      </div>
-      <span className={cn('text-3xl font-extrabold tabular-nums leading-none relative', accent)}>{value}</span>
-      {sub && <span className="text-[10px] text-white/28 leading-none">{sub}</span>}
+    <div className={cn('rounded-2xl overflow-hidden', className)} style={{ ...G.card, ...style }}>
+      {children}
     </div>
   )
 }
 
-function CardHeader({ icon: Icon, iconColor, title, sub, iconBg }: {
-  icon: typeof Trophy; iconColor: string; title: string; sub?: string; iconBg?: string
+function SectionHeader({ icon: Icon, iconColor, iconRgb, title, sub, action }: {
+  icon: React.ElementType; iconColor: string; iconRgb: string; title: string; sub?: string; action?: React.ReactNode
 }) {
   return (
-    <div className="flex items-center gap-3 mb-4">
-      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-        style={{ background: iconBg ?? 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}>
-        <Icon size={13} className={iconColor} />
+    <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: `rgba(${iconRgb}, 0.12)`, border: `1px solid rgba(${iconRgb}, 0.20)` }}>
+          <Icon size={14} className={iconColor} />
+        </div>
+        <div>
+          <h2 className="text-sm font-bold text-white/90 leading-none">{title}</h2>
+          {sub && <p className="text-[10px] text-white/35 mt-0.5">{sub}</p>}
+        </div>
       </div>
-      <div>
-        <h2 className="text-sm font-semibold text-white leading-none">{title}</h2>
-        {sub && <p className="text-[10px] text-white/38 mt-0.5">{sub}</p>}
-      </div>
+      {action}
     </div>
   )
 }
 
-function EmptyState({ message, cta }: { message: string; cta?: { label: string; href: string } }) {
+function EmptySlate({ message, cta }: { message: string; cta?: { label: string; href: string } }) {
   return (
-    <div className="flex flex-col items-center justify-center py-8 gap-3">
-      <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
-        <BarChart3 size={18} className="text-white/20" />
+    <div className="flex flex-col items-center justify-center py-10 gap-3">
+      <div className="w-10 h-10 rounded-2xl flex items-center justify-center"
+        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <BarChart3 size={17} className="text-white/15" />
       </div>
-      <p className="text-sm text-white/30 text-center max-w-xs">{message}</p>
+      <p className="text-[13px] text-white/28 text-center max-w-xs leading-relaxed">{message}</p>
       {cta && (
         <Link href={cta.href}
-          className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-medium">
+          className="flex items-center gap-1.5 text-xs text-blue-400/70 hover:text-blue-400 transition-colors font-medium mt-1">
           {cta.label} <ChevronRight size={12} />
         </Link>
       )}
@@ -257,186 +281,229 @@ export default async function DashboardPage() {
   if (!user) return null
 
   const d = await getDashboardData(user.id)
-  const { summary, verdicts, monthlyData, funnel, lossReasons, scoreDistrib, scoring, bySegment, topClients, upcoming, avgDecisionDays } = d
+  const { summary, secondary, verdicts, monthlyData, hasMonthlyActivity, funnel, scoreDistrib, scoring, bySegment, topClients, upcoming, lossReasons, pendingVeille, insights } = d
 
   const donutData = [
-    { name: 'GO',        value: verdicts.go,       color: '#22c55e' },
-    { name: 'À étudier', value: verdicts.aEtudier,  color: '#f59e0b' },
-    { name: 'No Go',     value: verdicts.nogo,      color: '#ef4444' },
+    { name: 'GO',        value: verdicts.go,      color: '#10B981' },
+    { name: 'À étudier', value: verdicts.aEtudier, color: '#F59E0B' },
+    { name: 'NO GO',     value: verdicts.nogo,     color: '#EF4444' },
   ].filter(x => x.value > 0)
 
-  const caFormatted = summary.caTotal >= 1_000_000
-    ? `${(summary.caTotal / 1_000_000).toFixed(1)}M€`
-    : summary.caTotal >= 1000
-    ? `${(summary.caTotal / 1000).toFixed(0)}k€`
-    : summary.caTotal > 0 ? `${summary.caTotal.toLocaleString('fr-FR')}€` : '—'
+  const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+  const VERDICT_BADGE: Record<GoNoGoVerdict, { label: string; rgb: string }> = {
+    GO:        { label: 'GO',       rgb: '16,185,129' },
+    A_ETUDIER: { label: '~ Étudier',rgb: '245,158,11' },
+    NO_GO:     { label: 'NO GO',    rgb: '239,68,68'  },
+  }
+
+  // Secondary KPIs — only show block if at least 2 have non-null values
+  const secItems = [
+    secondary.avgDecisionDays !== null ? { label: 'Délai moyen décision', value: `${secondary.avgDecisionDays}j`, sub: 'import → clôture', rgb: '6,182,212' } : null,
+    scoring.total > 0 ? { label: 'Score moyen global', value: String(summary.scoreMoyen), sub: `sur ${scoring.total} dossiers`, rgb: '124,58,237' } : null,
+    secondary.abandoned > 0 ? { label: 'Projets abandonnés', value: String(secondary.abandoned), sub: 'à analyser', rgb: '239,68,68' } : null,
+    secondary.pending > 0 ? { label: 'En attente clôture', value: String(secondary.pending), sub: 'projets actifs', rgb: '245,158,11' } : null,
+  ].filter(Boolean) as { label: string; value: string; sub: string; rgb: string }[]
+
+  const showSecondary = secItems.filter(x => x !== null).length >= 2
 
   return (
-    <div className="flex flex-col min-h-0 animate-fade-in">
+    <div className="flex flex-col min-h-0">
 
-      {/* ── Top bar ────────────────────────────────────────────────────────── */}
-      <div className="h-14 flex items-center justify-between px-4 md:px-6 flex-shrink-0"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.055)', background: 'rgba(8,14,34,0.80)', backdropFilter: 'blur(16px)' }}>
-        <div>
-          <h1 className="text-base font-semibold text-white">Dashboard</h1>
-          <p className="text-xs text-white/35">Vue d&apos;ensemble de votre activité commerciale</p>
-        </div>
-        <div className="text-[11px] text-white/25 hidden md:block capitalize px-3 py-1.5 rounded-full"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-          {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+      {/* ── [A] Header ────────────────────────────────────────────────────── */}
+      <div className="relative flex-shrink-0 overflow-hidden"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(6,6,20,0.85)', backdropFilter: 'blur(20px)' }}>
+        {/* subtle gradient accent */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 60% 80% at 30% 50%, rgba(124,58,237,0.06) 0%, transparent 70%)' }} />
+        <div className="relative flex items-center justify-between px-5 md:px-7 h-16">
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-lg font-extrabold tracking-tight"
+                style={{ background: 'linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.65) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                Dashboard
+              </h1>
+              <p className="text-[11px] text-white/32 -mt-0.5">Vue d&apos;ensemble de votre activité commerciale</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="hidden md:block text-[11px] text-white/28 capitalize px-3 py-1.5 rounded-xl"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              {today}
+            </span>
+            <Link href="/dashboard"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold text-white/40 hover:text-white/70 transition-all"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <RefreshCw size={12} />Actualiser
+            </Link>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+      {/* ── Scrollable content ─────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 py-5 space-y-5"
+        style={{ background: 'linear-gradient(180deg, rgba(7,7,26,1) 0%, rgba(5,5,18,1) 100%)' }}>
 
-        {/* ── Row 1 : 8 KPI cards ──────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
-          <KpiCard label="Importés"  value={summary.total}     icon={Layers}     iconColor="text-white/40"   accent="text-white"          />
-          <KpiCard label="Analysés"  value={summary.analyzed}  icon={Zap}        iconColor="text-blue-400"   accent="text-blue-400"       glowColor="rgba(59,130,246,0.8)" />
-          <KpiCard label="Scorés"    value={summary.scored}    icon={Target}     iconColor="text-violet-400" accent="text-violet-400"     glowColor="rgba(139,92,246,0.8)" />
-          <KpiCard label="Répondus"  value={summary.responded} icon={Activity}   iconColor="text-cyan-400"   accent="text-cyan-400"       glowColor="rgba(6,182,212,0.7)" />
-          <KpiCard label="Gagnés"    value={summary.won}       icon={Trophy}     iconColor="text-emerald-400" accent="text-emerald-400"   glowColor="rgba(16,185,129,0.8)"
-            sub={summary.responded > 0 ? `sur ${summary.responded} clôturés` : undefined} />
-          <KpiCard label="CA généré" value={caFormatted}       icon={DollarSign} iconColor="text-emerald-400" accent="text-emerald-300"
-            sub={summary.won > 0 ? `${summary.won} projet${summary.won > 1 ? 's' : ''} gagné${summary.won > 1 ? 's' : ''}` : undefined} />
-          <KpiCard label="Taux transfo." value={`${summary.tauxTransfo}%`} icon={TrendingUp} iconColor="text-amber-400" accent="text-amber-400" glowColor="rgba(245,158,11,0.7)"
-            sub="répondus → gagnés" />
-          <KpiCard label="Score moyen" value={summary.scoreMoyen > 0 ? `${summary.scoreMoyen}` : '—'} icon={BarChart3} iconColor="text-blue-400" accent="text-blue-300" glowColor="rgba(59,130,246,0.6)"
-            sub={`sur ${scoring.total} dossiers`} />
-        </div>
-
-        {/* ── Prochaines échéances (full-width table) ─────────────────────── */}
-        <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/6">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center flex-shrink-0">
-                <Calendar size={14} className="text-amber-400" />
+        {/* ── [B] BOAMP Alert Banner ───────────────────────────────────────── */}
+        {pendingVeille > 0 && (
+          <div className="relative overflow-hidden rounded-2xl px-5 py-3.5 flex items-center justify-between gap-4"
+            style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.22)', boxShadow: '0 0 30px rgba(245,158,11,0.06)' }}>
+            <div className="absolute inset-0 pointer-events-none"
+              style={{ background: 'radial-gradient(ellipse 50% 100% at 10% 50%, rgba(245,158,11,0.08) 0%, transparent 70%)' }} />
+            <div className="relative flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                <Radio size={14} className="text-amber-400" />
               </div>
-              <div>
-                <h2 className="text-sm font-semibold text-white leading-none">Prochaines échéances</h2>
-                <p className="text-[11px] text-white/40 mt-0.5">Projets en cours — 30 prochains jours</p>
-              </div>
+              <p className="text-sm font-semibold text-amber-300/90">
+                <span className="font-extrabold text-amber-300">{pendingVeille}</span> nouvelle{pendingVeille > 1 ? 's' : ''} annonce{pendingVeille > 1 ? 's' : ''} BOAMP correspondent à votre profil
+              </p>
             </div>
-            <Link href="/projects"
-              className="flex items-center gap-1 text-xs text-white/40 hover:text-white/70 transition-colors">
-              Tous les projets <ChevronRight size={12} />
+            <Link href="/veille"
+              className="relative flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-amber-300 transition-all hover:bg-amber-400/15"
+              style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.25)' }}>
+              Voir les annonces <ArrowRight size={12} />
             </Link>
           </div>
+        )}
 
-          {upcoming.length > 0 ? (<>
-            {/* ── Mobile / tablet: card layout ── */}
-            <div className="md:hidden divide-y divide-white/4">
-              {upcoming.map(p => {
-                const isUrgent  = p.daysLeft <= 3
-                const isWarning = p.daysLeft <= 7
-                const isSoon    = p.daysLeft <= 14
-                const urgencyColor = isUrgent  ? 'bg-red-500/20 text-red-400 border-red-500/20'
-                                   : isWarning ? 'bg-amber-500/20 text-amber-400 border-amber-500/20'
-                                   : isSoon    ? 'bg-blue-500/15 text-blue-400 border-blue-500/15'
-                                   :             'bg-white/5 text-white/40 border-white/8'
-                const verdictMap: Record<GoNoGoVerdict, { label: string; color: string }> = {
-                  GO:        { label: 'GO',    color: 'bg-emerald-500/15 text-emerald-400' },
-                  A_ETUDIER: { label: '~',     color: 'bg-amber-500/15 text-amber-400'    },
-                  NO_GO:     { label: 'NO GO', color: 'bg-red-500/15 text-red-400'        },
-                }
-                return (
-                  <Link key={p.id} href={`/projects/${p.id}`}
-                    className={cn('flex items-center gap-3 px-4 py-3 hover:bg-white/3 transition-colors', isUrgent && 'bg-red-500/3')}>
-                    <span className={cn('inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-extrabold tabular-nums flex-shrink-0 w-12 justify-center', urgencyColor)}>
-                      {isUrgent && <Flame size={9} />}
-                      {p.daysLeft === 0 ? 'Auj.' : `${p.daysLeft}j`}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white/80 truncate">{p.name}</p>
-                      <p className="text-[11px] text-white/35 flex items-center gap-1.5 mt-0.5">
-                        <Building size={9} /><span className="truncate">{p.client}</span>
-                        <span className="text-white/15">·</span>
-                        {new Date(p.offer_deadline!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                      </p>
-                    </div>
-                    {p.scoreInfo && (
-                      <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0', verdictMap[p.scoreInfo.verdict].color)}>
-                        {verdictMap[p.scoreInfo.verdict].label}
-                      </span>
-                    )}
-                    <ArrowRight size={13} className="text-white/20 flex-shrink-0" />
-                  </Link>
-                )
-              })}
+        {/* ── [C] 8 KPI Cards ─────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
+          {[
+            { label: 'Importés',    value: summary.total,           icon: Layers,      rgb: '124,58,237', num: summary.total,     sub: 'projets total' },
+            { label: 'Analysés',    value: summary.analyzed,        icon: BrainCircuit,rgb: '59,130,246',  num: summary.analyzed,  sub: `${summary.total > 0 ? Math.round(summary.analyzed/summary.total*100) : 0}% du total` },
+            { label: 'Scorés',      value: summary.scored,          icon: Target,      rgb: '6,182,212',   num: summary.scored,    sub: `${summary.total > 0 ? Math.round(summary.scored/summary.total*100) : 0}% du total` },
+            { label: 'Répondus',    value: summary.replied,         icon: Send,        rgb: '99,102,241',  num: summary.replied,   sub: 'gagnés + perdus' },
+            { label: 'Gagnés',      value: summary.won,             icon: Trophy,      rgb: '16,185,129',  num: summary.won,       sub: summary.responded > 0 ? `sur ${summary.responded} clôturés` : 'projets gagnés' },
+            { label: 'CA Pipeline', value: fmtCA(summary.caPipeline), icon: DollarSign, rgb: '16,185,129', num: summary.caPipeline, sub: 'projets actifs' },
+            { label: 'CA Généré',   value: fmtCA(summary.caGenerated), icon: TrendingUp, rgb: '34,197,94', num: summary.caGenerated, sub: `${summary.won} gagné${summary.won !== 1 ? 's' : ''}` },
+            { label: 'Taux Go',     value: `${summary.tauxGo}%`,    icon: Percent,     rgb: '124,58,237',  num: summary.tauxGo,    sub: `${verdicts.go} go / ${scoring.total} scorés` },
+          ].map(({ label, value, icon: Icon, rgb, num, sub }) => (
+            <div key={label} className="relative rounded-2xl p-4 overflow-hidden transition-all duration-300 hover:-translate-y-px group cursor-default"
+              style={num > 0 ? G.glow(rgb) : { ...G.card }}>
+              {/* Glow overlay */}
+              {num > 0 && (
+                <div className="absolute -top-6 -right-6 w-20 h-20 pointer-events-none"
+                  style={{ background: `radial-gradient(circle, rgba(${rgb},0.35) 0%, transparent 70%)`, filter: 'blur(12px)' }} />
+              )}
+              <div className="relative">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-white/35">{label}</span>
+                  <div className="w-6 h-6 rounded-lg flex items-center justify-center"
+                    style={{ background: num > 0 ? `rgba(${rgb},0.15)` : 'rgba(255,255,255,0.05)' }}>
+                    <Icon size={11} style={{ color: num > 0 ? `rgb(${rgb})` : 'rgba(255,255,255,0.2)' }} />
+                  </div>
+                </div>
+                <div className={cn('text-2xl font-extrabold tabular-nums leading-none mb-1', num === 0 && 'text-white/20')}
+                  style={num > 0 ? { color: `rgb(${rgb})`, textShadow: `0 0 20px rgba(${rgb},0.4)` } : {}}>
+                  {num > 0 ? value : '—'}
+                </div>
+                <p className="text-[10px] text-white/25 leading-none truncate">{num > 0 ? sub : 'Aucun pour l\'instant'}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── [D] Secondary KPIs ──────────────────────────────────────────── */}
+        {showSecondary && (
+          <div className={cn('grid gap-3', `grid-cols-${secItems.length} sm:grid-cols-${secItems.length}`)}>
+            {secItems.map(item => (
+              <GlassCard key={item.label} className="p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/32 mb-2">{item.label}</p>
+                <p className="text-2xl font-extrabold tabular-nums" style={{ color: `rgb(${item.rgb})` }}>{item.value}</p>
+                <p className="text-[10px] text-white/30 mt-1">{item.sub}</p>
+              </GlassCard>
+            ))}
+          </div>
+        )}
+
+        {/* ── [E] Upcoming Deadlines ──────────────────────────────────────── */}
+        {upcoming.length > 0 && (
+          <GlassCard>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                  style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.20)' }}>
+                  <Calendar size={14} className="text-amber-400" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-white/90">Prochaines échéances</h2>
+                  <p className="text-[10px] text-white/35">30 prochains jours · {upcoming.length} projet{upcoming.length > 1 ? 's' : ''}</p>
+                </div>
+              </div>
+              <Link href="/projects"
+                className="flex items-center gap-1 text-xs text-white/35 hover:text-white/65 transition-colors">
+                Tous <ChevronRight size={12} />
+              </Link>
             </div>
 
-            {/* ── Desktop: table layout ── */}
+            {/* Table — desktop */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="text-left px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30 w-16">Urgence</th>
-                    <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30">Projet</th>
-                    <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30 hidden lg:table-cell">Client</th>
-                    <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30 hidden xl:table-cell">Localisation</th>
-                    <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30">Échéance</th>
-                    <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/30">Score</th>
-                    <th className="w-10" />
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    {['Urgence', 'Projet', 'Client', 'Localisation', 'Échéance', 'Score', ''].map(h => (
+                      <th key={h} className="text-left px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/25">
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/4">
-                  {upcoming.map(p => {
-                    const isUrgent  = p.daysLeft <= 3
-                    const isWarning = p.daysLeft <= 7
-                    const isSoon    = p.daysLeft <= 14
-                    const urgencyColor = isUrgent  ? 'bg-red-500/20 text-red-400 border-red-500/20'
-                                       : isWarning ? 'bg-amber-500/20 text-amber-400 border-amber-500/20'
-                                       : isSoon    ? 'bg-blue-500/15 text-blue-400 border-blue-500/15'
-                                       :             'bg-white/5 text-white/40 border-white/8'
-                    const verdictMap: Record<GoNoGoVerdict, { label: string; color: string }> = {
-                      GO:        { label: 'GO',       color: 'bg-emerald-500/15 text-emerald-400' },
-                      A_ETUDIER: { label: '~ Étudier',color: 'bg-amber-500/15 text-amber-400'    },
-                      NO_GO:     { label: 'NO GO',    color: 'bg-red-500/15 text-red-400'         },
-                    }
+                <tbody>
+                  {upcoming.map((p, idx) => {
+                    const urgent  = p.daysLeft <= 3
+                    const warning = p.daysLeft <= 7
+                    const soon    = p.daysLeft <= 14
+                    const urgRgb  = urgent ? '239,68,68' : warning ? '245,158,11' : soon ? '59,130,246' : '255,255,255'
                     return (
-                      <tr key={p.id} className={cn('group hover:bg-white/3 transition-colors', isUrgent && 'bg-red-500/3')}>
+                      <tr key={p.id} className="group transition-colors hover:bg-white/[0.025]"
+                        style={{ borderBottom: idx < upcoming.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                          background: urgent ? 'rgba(239,68,68,0.02)' : 'transparent' }}>
                         <td className="px-5 py-3.5">
-                          <span className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-extrabold tabular-nums', urgencyColor)}>
-                            {isUrgent && <Flame size={10} />}
-                            {p.daysLeft === 0 ? "Auj." : `${p.daysLeft}j`}
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-extrabold tabular-nums"
+                            style={{ background: `rgba(${urgRgb},0.12)`, border: `1px solid rgba(${urgRgb},0.22)`, color: `rgb(${urgRgb})` }}>
+                            {urgent && <Flame size={9} />}
+                            {p.daysLeft === 0 ? 'Auj.' : `${p.daysLeft}j`}
                           </span>
                         </td>
-                        <td className="px-4 py-3.5 max-w-[200px]">
-                          <Link href={`/projects/${p.id}`} className="font-medium text-white/80 group-hover:text-white truncate block leading-tight transition-colors hover:text-blue-300">
+                        <td className="px-4 py-3.5 max-w-[180px]">
+                          <Link href={`/projects/${p.id}`} className="text-sm font-semibold text-white/75 hover:text-blue-400 truncate block transition-colors">
                             {p.name}
                           </Link>
-                          {p.consultation_type && <span className="text-[11px] text-white/30 truncate block mt-0.5">{p.consultation_type}</span>}
+                          {p.consultation_type && <span className="text-[10px] text-white/28 block mt-0.5 truncate">{p.consultation_type}</span>}
                         </td>
                         <td className="px-4 py-3.5 hidden lg:table-cell">
-                          <span className="flex items-center gap-1.5 text-white/50 text-xs">
-                            <Building size={11} className="flex-shrink-0 text-white/25" />
-                            <span className="truncate max-w-[120px]">{p.client}</span>
+                          <span className="flex items-center gap-1.5 text-xs text-white/45">
+                            <Building size={10} className="text-white/25 flex-shrink-0" />{p.client}
                           </span>
                         </td>
                         <td className="px-4 py-3.5 hidden xl:table-cell">
-                          <span className="flex items-center gap-1.5 text-white/40 text-xs">
-                            <MapPin size={11} className="flex-shrink-0 text-white/20" />
-                            <span className="truncate max-w-[120px]">{p.location}</span>
+                          <span className="flex items-center gap-1.5 text-xs text-white/35">
+                            <MapPin size={10} className="text-white/20 flex-shrink-0" />{p.location}
                           </span>
                         </td>
                         <td className="px-4 py-3.5">
-                          <span className="text-xs text-white/60 font-medium whitespace-nowrap">
-                            {new Date(p.offer_deadline!).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                          <span className="text-xs text-white/55 font-medium whitespace-nowrap">
+                            {new Date(p.offer_deadline!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-center">
                           {p.scoreInfo ? (
                             <div className="flex flex-col items-center gap-1">
-                              <span className={cn('inline-block px-2 py-0.5 rounded-full text-[10px] font-bold', verdictMap[p.scoreInfo.verdict].color)}>
-                                {verdictMap[p.scoreInfo.verdict].label}
+                              <span className="inline-block px-2 py-0.5 rounded-lg text-[10px] font-bold"
+                                style={{ background: `rgba(${VERDICT_BADGE[p.scoreInfo.verdict].rgb},0.12)`, color: `rgb(${VERDICT_BADGE[p.scoreInfo.verdict].rgb})` }}>
+                                {VERDICT_BADGE[p.scoreInfo.verdict].label}
                               </span>
-                              <span className="text-[10px] text-white/30 tabular-nums">{p.scoreInfo.total_score}/100</span>
+                              <span className="text-[10px] text-white/28 tabular-nums">{p.scoreInfo.total_score}/100</span>
                             </div>
                           ) : <span className="text-[10px] text-white/20">—</span>}
                         </td>
-                        <td className="pr-4 py-3.5 text-right">
-                          <Link href={`/projects/${p.id}`} className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/4 hover:bg-blue-500/20 text-white/20 hover:text-blue-400 transition-all">
+                        <td className="pr-5 py-3.5">
+                          <Link href={`/projects/${p.id}`}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-xl transition-all text-white/20 hover:text-blue-400"
+                            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
                             <ArrowRight size={12} />
                           </Link>
                         </td>
@@ -446,272 +513,315 @@ export default async function DashboardPage() {
                 </tbody>
               </table>
             </div>
-          </>) : (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <Calendar size={20} className="text-amber-400/40" />
-              </div>
-              <p className="text-sm text-white/30 text-center">Aucune échéance dans les 30 prochains jours</p>
-              <Link href="/projects/new"
-                className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors">
-                Nouveau projet <ChevronRight size={12} />
-              </Link>
+
+            {/* Cards — mobile */}
+            <div className="md:hidden divide-y divide-white/5">
+              {upcoming.map(p => {
+                const urgent = p.daysLeft <= 3
+                const urgRgb = urgent ? '239,68,68' : p.daysLeft <= 7 ? '245,158,11' : '59,130,246'
+                return (
+                  <Link key={p.id} href={`/projects/${p.id}`}
+                    className="flex items-center gap-3 px-4 py-3.5 hover:bg-white/[0.025] transition-colors">
+                    <span className="flex-shrink-0 px-2 py-1 rounded-lg text-[11px] font-bold tabular-nums"
+                      style={{ background: `rgba(${urgRgb},0.12)`, color: `rgb(${urgRgb})`, border: `1px solid rgba(${urgRgb},0.2)` }}>
+                      {p.daysLeft === 0 ? 'Auj.' : `${p.daysLeft}j`}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white/80 truncate">{p.name}</p>
+                      <p className="text-[11px] text-white/35 truncate mt-0.5">{p.client}</p>
+                    </div>
+                    <ArrowRight size={13} className="text-white/20 flex-shrink-0" />
+                  </Link>
+                )
+              })}
             </div>
+          </GlassCard>
+        )}
+
+        {/* ── [F+G] Pipeline + Donut ──────────────────────────────────────── */}
+        {summary.total > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+
+            {/* [F] Pipeline */}
+            <GlassCard className="lg:col-span-3 p-5">
+              <SectionHeader icon={Activity} iconColor="text-blue-400" iconRgb="59,130,246"
+                title="Pipeline de conversion" sub="De l'import à la victoire" />
+              <FunnelChart steps={funnel} />
+            </GlassCard>
+
+            {/* [G] Go/NoGo Donut */}
+            <GlassCard className="lg:col-span-2 p-5">
+              <SectionHeader icon={Target} iconColor="text-violet-400" iconRgb="124,58,237"
+                title="Répartition Go / No Go" sub={`${scoring.total} projets scorés · score moyen ${summary.scoreMoyen}`} />
+              {donutData.length > 0
+                ? <DonutChart data={donutData} centerLabel={summary.scoreMoyen > 0 ? String(summary.scoreMoyen) : undefined} />
+                : <EmptySlate message="Scorez vos projets pour voir la répartition" cta={{ label: 'Mes projets', href: '/projects' }} />
+              }
+            </GlassCard>
+          </div>
+        )}
+
+        {/* ── [H] Monthly Activity ────────────────────────────────────────── */}
+        {hasMonthlyActivity && (
+          <GlassCard className="p-5">
+            <SectionHeader icon={BarChart3} iconColor="text-blue-400" iconRgb="59,130,246"
+              title="Activité mensuelle" sub="12 derniers mois · Importés · Analysés · Scorés" />
+            <MonthlyBarChart data={monthlyData} />
+          </GlassCard>
+        )}
+
+        {/* ── [I] Score Distribution + Reliability ────────────────────────── */}
+        {scoring.total >= 1 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+            {/* I.1 Distribution */}
+            <GlassCard className="p-5">
+              <SectionHeader icon={BarChart3} iconColor="text-amber-400" iconRgb="245,158,11"
+                title="Distribution des scores" sub="Nombre de projets par tranche" />
+              {scoring.total >= 3
+                ? <ScoreDistribChart data={scoreDistrib} />
+                : <EmptySlate message="Scorez au moins 3 projets pour voir la distribution" />
+              }
+            </GlassCard>
+
+            {/* I.2 Reliability */}
+            <GlassCard className="p-5">
+              <SectionHeader icon={Zap} iconColor="text-emerald-400" iconRgb="16,185,129"
+                title="Fiabilité du scoring prédictif" sub="Score moyen gagné vs perdu" />
+              {(avgWon !== null || avgLost !== null) ? (
+                <div className="space-y-5 mt-2">
+                  {avgWon !== null && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-white/45">Projets gagnés</span>
+                        <span className="text-sm font-extrabold text-emerald-400 tabular-nums">{avgWon}/100</span>
+                      </div>
+                      <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                        <div className="h-full rounded-full transition-all"
+                          style={{ width: `${avgWon}%`, background: 'linear-gradient(90deg, #059669, #10B981)', boxShadow: '0 0 10px rgba(16,185,129,0.5)' }} />
+                      </div>
+                    </div>
+                  )}
+                  {avgLost !== null && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-white/45">Projets perdus</span>
+                        <span className="text-sm font-extrabold text-red-400 tabular-nums">{avgLost}/100</span>
+                      </div>
+                      <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                        <div className="h-full rounded-full"
+                          style={{ width: `${avgLost}%`, background: 'linear-gradient(90deg, #dc2626, #EF4444)', boxShadow: '0 0 10px rgba(239,68,68,0.4)' }} />
+                      </div>
+                    </div>
+                  )}
+                  {avgWon !== null && avgLost !== null && (
+                    <div className="rounded-xl p-3" style={{ background: avgWon > avgLost ? 'rgba(16,185,129,0.07)' : 'rgba(245,158,11,0.07)', border: `1px solid ${avgWon > avgLost ? 'rgba(16,185,129,0.18)' : 'rgba(245,158,11,0.18)'}` }}>
+                      <p className="text-xs leading-relaxed" style={{ color: avgWon > avgLost ? 'rgba(52,211,153,0.9)' : 'rgba(251,191,36,0.9)' }}>
+                        {avgWon > avgLost
+                          ? `✅ Scoring fiable — +${avgWon - avgLost} pts d'écart entre projets gagnés et perdus`
+                          : `⚠️ Scoring à calibrer — écart insuffisant entre gagnés et perdus`
+                        }
+                      </p>
+                    </div>
+                  )}
+                  {(avgWon === null || avgLost === null) && (
+                    <p className="text-xs text-white/30 italic">Clôturez au moins un projet gagné et un perdu pour voir l&apos;écart</p>
+                  )}
+                </div>
+              ) : (
+                <EmptySlate message="Clôturez des projets gagnés et perdus pour évaluer la fiabilité du scoring" />
+              )}
+            </GlassCard>
+          </div>
+        )}
+
+        {/* ── [J] By Consultation Type + [M] Top Clients ─────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+          {/* [J] By type */}
+          {bySegment.length >= 2 && (
+            <GlassCard className="p-5">
+              <SectionHeader icon={Layers} iconColor="text-indigo-400" iconRgb="99,102,241"
+                title="Par type de consultation" sub="Répartition et taux de réussite" />
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      {['Type', 'Total', 'Gagnés', 'Score moy.', 'Taux'].map(h => (
+                        <th key={h} className={cn('py-2 text-white/32 font-bold', h === 'Type' ? 'text-left pr-3' : 'text-right px-2')}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bySegment.map((row, i) => (
+                      <tr key={row.type} className="transition-colors hover:bg-white/[0.025]"
+                        style={{ borderBottom: i < bySegment.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                        <td className="py-2.5 pr-3 text-white/65 font-medium truncate max-w-[110px]">{row.type}</td>
+                        <td className="py-2.5 px-2 text-right text-white/50 tabular-nums">{row.total}</td>
+                        <td className="py-2.5 px-2 text-right text-emerald-400/80 tabular-nums font-semibold">{row.won}</td>
+                        <td className="py-2.5 px-2 text-right text-white/40 tabular-nums">{row.scoreMoyen ?? '—'}</td>
+                        <td className="py-2.5 pl-2 text-right">
+                          <span className="inline-block px-1.5 py-0.5 rounded-md text-[10px] font-bold tabular-nums"
+                            style={{
+                              background: row.taux >= 50 ? 'rgba(16,185,129,0.12)' : row.taux >= 25 ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.10)',
+                              color: row.taux >= 50 ? '#34d399' : row.taux >= 25 ? '#fbbf24' : '#f87171',
+                            }}>
+                            {row.taux}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {/* Total row */}
+                    <tr style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                      <td className="pt-2.5 pr-3 text-white/60 font-bold text-xs">Total</td>
+                      <td className="pt-2.5 px-2 text-right font-bold text-white/65 tabular-nums">{summary.total}</td>
+                      <td className="pt-2.5 px-2 text-right font-bold text-emerald-400 tabular-nums">{summary.won}</td>
+                      <td className="pt-2.5 px-2 text-right font-bold text-white/50 tabular-nums">{summary.scoreMoyen > 0 ? summary.scoreMoyen : '—'}</td>
+                      <td className="pt-2.5 pl-2 text-right font-bold text-white/50">
+                        {summary.replied > 0 ? `${Math.round(summary.won/summary.replied*100)}%` : '—'}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </GlassCard>
           )}
-        </div>
 
-        {/* ── Row 2 : Funnel + Donut ───────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
-            <CardHeader icon={Activity} iconColor="text-blue-400" iconBg="rgba(59,130,246,0.12)"
-              title="Pipeline de conversion"
-              sub="De l'import à la victoire" />
-            {summary.total > 0
-              ? <FunnelChart steps={funnel} />
-              : <EmptyState message="Importez votre premier DCE pour voir le pipeline"
-                  cta={{ label: 'Nouveau projet', href: '/projects/new' }} />
-            }
-          </div>
-
-          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
-            <CardHeader icon={Target} iconColor="text-violet-400" iconBg="rgba(139,92,246,0.12)"
-              title="Répartition Go / No Go"
-              sub="Sur les projets scorés" />
-            {donutData.length > 0
-              ? <DonutChart data={donutData} />
-              : <EmptyState message="Scorez vos projets pour voir la répartition"
-                  cta={{ label: 'Mes projets', href: '/projects' }} />
-            }
-          </div>
-        </div>
-
-        {/* ── Row 3 : Activité mensuelle (full width) ──────────────────────── */}
-        <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
-          <CardHeader icon={BarChart3} iconColor="text-blue-400" iconBg="rgba(59,130,246,0.12)"
-            title="Activité mensuelle — 12 derniers mois"
-            sub="Importés · Analysés · Scorés" />
-          <MonthlyBarChart data={monthlyData} />
-        </div>
-
-        {/* ── Row 4 : Score distrib + Raisons de perte ────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
-            <CardHeader icon={BarChart3} iconColor="text-amber-400" iconBg="rgba(245,158,11,0.12)"
-              title="Distribution des scores"
-              sub="Nombre de projets par tranche" />
-            {scoring.total > 0
-              ? <ScoreDistribChart data={scoreDistrib} />
-              : <EmptyState message="Scorez des projets pour voir la distribution" />
-            }
-          </div>
-
-          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
-            <CardHeader icon={XCircle} iconColor="text-red-400" iconBg="rgba(239,68,68,0.12)"
-              title="Top 5 raisons de perte"
-              sub="Cloturez des projets comme « Perdu » pour alimenter" />
-            {lossReasons.length > 0 ? (
-              <div className="space-y-3 mt-1">
-                {lossReasons.map(([reason, count], i) => {
-                  const maxCount = lossReasons[0][1]
+          {/* [M] Top Clients */}
+          {topClients.length >= 2 && (
+            <GlassCard className="p-5">
+              <SectionHeader icon={Users} iconColor="text-blue-400" iconRgb="59,130,246"
+                title="Top clients" sub={`${topClients.length} clients · classés par volume`} />
+              <div className="space-y-4">
+                {topClients.map(({ client, count, won }, i) => {
+                  const maxCount = topClients[0].count
                   const pct = Math.round((count / maxCount) * 100)
                   return (
-                    <div key={reason} className="flex items-center gap-3">
-                      <span className="text-xs font-bold text-white/30 w-4 tabular-nums flex-shrink-0">{i + 1}</span>
+                    <div key={client} className="flex items-center gap-3 group">
+                      <span className="text-xs font-extrabold w-4 text-right flex-shrink-0 tabular-nums"
+                        style={{ color: i === 0 ? '#fbbf24' : 'rgba(255,255,255,0.25)' }}>
+                        {i + 1}
+                      </span>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="text-xs text-white/70 truncate">{reason}</span>
-                          <span className="text-xs font-bold text-red-400 flex-shrink-0">{count}</span>
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className="text-xs font-semibold text-white/65 truncate">{client}</span>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {won > 0 && <span className="text-[10px] font-bold text-emerald-400">{won}✓</span>}
+                            <span className="text-xs font-bold text-blue-400 tabular-nums">{count}</span>
+                          </div>
                         </div>
-                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                          <div className="h-full bg-red-500/60 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                          <div className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${pct}%`, background: 'linear-gradient(90deg, rgba(59,130,246,0.6), rgba(99,102,241,0.8))', boxShadow: `0 0 8px rgba(59,130,246,0.4)` }} />
                         </div>
                       </div>
                     </div>
                   )
                 })}
               </div>
-            ) : (
-              <EmptyState message="Aucune perte enregistrée — cloturez des projets pour analyser vos échecs" />
-            )}
-          </div>
-        </div>
+            </GlassCard>
+          )}
 
-        {/* ── Row 5 : Fiabilité scoring + Segmentation ────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-          {/* Scoring accuracy */}
-          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
-            <CardHeader icon={Zap} iconColor="text-amber-400" iconBg="rgba(245,158,11,0.12)"
-              title="Fiabilité du scoring prédictif"
-              sub="Score moyen gagné vs perdu" />
-            {(scoring.avgWon !== null || scoring.avgLost !== null) ? (
-              <div className="space-y-4 mt-2">
-                {scoring.avgWon !== null && (
-                  <div className="flex items-center gap-4">
-                    <div className="w-24 flex-shrink-0">
-                      <span className="text-xs text-white/40">Projets gagnés</span>
-                    </div>
-                    <div className="flex-1 bg-white/5 rounded-full h-6 overflow-hidden">
-                      <div className="h-full bg-emerald-500/70 rounded-full flex items-center px-3 transition-all"
-                        style={{ width: `${scoring.avgWon}%` }}>
-                        <span className="text-xs font-bold text-white">{scoring.avgWon}/100</span>
+          {/* If only one section fits, fill with loss reasons */}
+          {(bySegment.length < 2 || topClients.length < 2) && lossReasons.length > 0 && (
+            <GlassCard className="p-5">
+              <SectionHeader icon={XCircle} iconColor="text-red-400" iconRgb="239,68,68"
+                title="Raisons de perte" sub="Top raisons identifiées" />
+              <div className="space-y-4">
+                {lossReasons.map(([reason, count], i) => {
+                  const maxCount = lossReasons[0][1]
+                  return (
+                    <div key={reason} className="flex items-center gap-3">
+                      <span className="text-xs font-bold w-4 text-right text-white/25 tabular-nums flex-shrink-0">{i+1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className="text-xs text-white/60 truncate">{reason}</span>
+                          <span className="text-xs font-bold text-red-400 flex-shrink-0 tabular-nums">{count}</span>
+                        </div>
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                          <div className="h-full rounded-full"
+                            style={{ width: `${Math.round((count/maxCount)*100)}%`, background: 'linear-gradient(90deg, rgba(220,38,38,0.6), rgba(239,68,68,0.8))' }} />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-                {scoring.avgLost !== null && (
-                  <div className="flex items-center gap-4">
-                    <div className="w-24 flex-shrink-0">
-                      <span className="text-xs text-white/40">Projets perdus</span>
-                    </div>
-                    <div className="flex-1 bg-white/5 rounded-full h-6 overflow-hidden">
-                      <div className="h-full bg-red-500/60 rounded-full flex items-center px-3 transition-all"
-                        style={{ width: `${scoring.avgLost}%` }}>
-                        <span className="text-xs font-bold text-white">{scoring.avgLost}/100</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {scoring.avgWon !== null && scoring.avgLost !== null && (
-                  <div className="mt-4 p-3 bg-white/4 rounded-lg border border-white/8">
-                    <p className="text-xs text-white/50">
-                      {scoring.avgWon > scoring.avgLost
-                        ? `✅ Votre scoring est fiable — les projets gagnés sont scorés en moyenne ${scoring.avgWon - scoring.avgLost} pts plus haut que les perdus.`
-                        : `⚠️ Scoring à calibrer — les projets gagnés ne sont pas mieux scorés que les perdus.`
-                      }
-                    </p>
-                  </div>
-                )}
+                  )
+                })}
               </div>
-            ) : (
-              <EmptyState message="Cloturez au moins un projet gagné et un perdu pour évaluer la fiabilité du scoring" />
-            )}
-          </div>
+            </GlassCard>
+          )}
 
-          {/* Segmentation */}
-          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
-            <CardHeader icon={Layers} iconColor="text-blue-400" iconBg="rgba(59,130,246,0.12)"
-              title="Par type de consultation"
-              sub="Répartition et taux de réussite" />
-            {bySegment.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-white/5">
-                      <th className="text-left py-2 pr-3 text-white/40 font-semibold">Type</th>
-                      <th className="text-right py-2 px-3 text-white/40 font-semibold">Total</th>
-                      <th className="text-right py-2 px-3 text-white/40 font-semibold">Gagnés</th>
-                      <th className="text-right py-2 pl-3 text-white/40 font-semibold">Taux</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/4">
-                    {bySegment.map(row => (
-                      <tr key={row.type} className="hover:bg-white/3 transition-colors">
-                        <td className="py-2.5 pr-3 text-white/70 font-medium truncate max-w-[120px]">{row.type}</td>
-                        <td className="py-2.5 px-3 text-right text-white/60 tabular-nums">{row.total}</td>
-                        <td className="py-2.5 px-3 text-right text-emerald-400 tabular-nums font-semibold">{row.won}</td>
-                        <td className="py-2.5 pl-3 text-right">
-                          <span className={cn(
-                            'inline-block px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums',
-                            row.won === 0 && row.total > 0 ? 'bg-white/5 text-white/30' :
-                            row.taux >= 50 ? 'bg-emerald-500/15 text-emerald-400' :
-                            row.taux >= 25 ? 'bg-amber-500/15 text-amber-400' :
-                            'bg-red-500/15 text-red-400'
-                          )}>
-                            {row.taux}%
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <EmptyState message="Aucun projet pour segmenter" />
-            )}
-          </div>
-        </div>
-
-        {/* ── Row 6 : Top clients + Stats temps ───────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-          {/* Top clients */}
-          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
-            <CardHeader icon={Users} iconColor="text-blue-400" iconBg="rgba(59,130,246,0.12)" title="Top clients" />
-            {topClients.length > 0 ? (
-              <ol className="space-y-3">
-                {topClients.map(({ client, count }, i) => (
-                  <li key={client} className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-white/25 w-4 tabular-nums">{i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mb-1.5">
-                        <div className="h-full bg-blue-500/60 rounded-full"
-                          style={{ width: `${Math.round((count / topClients[0].count) * 100)}%` }} />
-                      </div>
-                      <span className="text-xs text-white/60 truncate block">{client}</span>
+          {/* Cadence metrics if available */}
+          {secondary.avgDecisionDays !== null && (
+            <GlassCard className="p-5">
+              <SectionHeader icon={Clock} iconColor="text-cyan-400" iconRgb="6,182,212"
+                title="Métriques de cadence" sub="Délais et état du pipeline" />
+              <div className="space-y-0">
+                {[
+                  { label: 'Délai moyen import → décision', value: secondary.avgDecisionDays !== null ? `${secondary.avgDecisionDays} jours` : '—', sub: `sur ${lossReasons.length > 0 ? won + lost : won} projets clôturés`, rgb: '6,182,212' },
+                  { label: 'Projets en attente de clôture', value: String(secondary.pending), sub: 'sans issue définie', rgb: '245,158,11' },
+                  { label: 'Projets abandonnés', value: String(secondary.abandoned), sub: 'à analyser', rgb: '239,68,68' },
+                ].map(({ label, value, sub, rgb }, i, arr) => (
+                  <div key={label} className="flex items-center justify-between py-4"
+                    style={{ borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                    <div>
+                      <p className="text-xs text-white/40">{label}</p>
+                      <p className="text-2xl font-extrabold mt-1 tabular-nums" style={{ color: `rgb(${rgb})`, textShadow: `0 0 15px rgba(${rgb},0.4)` }}>{value}</p>
                     </div>
-                    <span className="text-sm font-bold text-blue-400 tabular-nums flex-shrink-0">{count}</span>
-                  </li>
+                    <p className="text-[10px] text-white/22 text-right">{sub}</p>
+                  </div>
                 ))}
-              </ol>
-            ) : (
-              <EmptyState message="Aucun client pour l'instant" />
-            )}
-          </div>
-
-          {/* Time & stats card */}
-          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
-            <CardHeader icon={Clock} iconColor="text-cyan-400" iconBg="rgba(6,182,212,0.12)" title="Métriques de cadence" />
-            <div className="space-y-4">
-              <div className="flex items-center justify-between py-3 border-b border-white/5">
-                <div>
-                  <p className="text-xs text-white/40">Temps moyen import → décision</p>
-                  <p className="text-2xl font-extrabold text-cyan-400 tabular-nums mt-1">
-                    {avgDecisionDays !== null ? `${avgDecisionDays}j` : '—'}
-                  </p>
-                </div>
-                <Clock size={24} className="text-cyan-400/20" />
               </div>
-              <div className="flex items-center justify-between py-3 border-b border-white/5">
-                <div>
-                  <p className="text-xs text-white/40">Projets abandonnés</p>
-                  <p className="text-2xl font-extrabold text-white/50 tabular-nums mt-1">{summary.abandoned}</p>
-                </div>
-                <AlertTriangle size={24} className="text-white/10" />
-              </div>
-              <div className="flex items-center justify-between py-3">
-                <div>
-                  <p className="text-xs text-white/40">En attente de clôture</p>
-                  <p className="text-2xl font-extrabold text-amber-400 tabular-nums mt-1">{summary.pending}</p>
-                </div>
-                <AlertCircle size={24} className="text-amber-400/20" />
-              </div>
-            </div>
-          </div>
+            </GlassCard>
+          )}
         </div>
 
-        {/* ── Insights banner ──────────────────────────────────────────────── */}
-        {summary.total > 0 && (
-          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
-            <CardHeader icon={Lightbulb} iconColor="text-amber-400" iconBg="rgba(245,158,11,0.12)" title="Insights automatiques" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {[
-                summary.tauxTransfo > 0 && `Taux de transformation : ${summary.tauxTransfo}% (${summary.won} gagné${summary.won>1?'s':''} sur ${summary.responded} clôturé${summary.responded>1?'s':''})`,
-                scoring.avgWon !== null && scoring.avgLost !== null && scoring.avgWon > scoring.avgLost &&
-                  `Scoring fiable : +${scoring.avgWon - scoring.avgLost} pts d'écart entre projets gagnés et perdus`,
-                upcoming.length > 0 && `${upcoming.length} projet${upcoming.length>1?'s':''} nécessite${upcoming.length>1?'nt':''} une action dans les 30 prochains jours`,
-                lossReasons[0] && `Principale raison de perte : « ${lossReasons[0][0]} » (${lossReasons[0][1]} fois)`,
-                summary.abandoned > 0 && `${summary.abandoned} projet${summary.abandoned>1?'s':''} abandonné${summary.abandoned>1?'s':''} — analysez les raisons`,
-                summary.caTotal > 0 && `CA total généré via PILOT+ : ${caFormatted}`,
-              ].filter(Boolean).map((ins, i) => (
-                <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl" style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.10)' }}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400/70 flex-shrink-0 mt-1.5" style={{ boxShadow: '0 0 4px rgba(245,158,11,0.6)' }} />
-                  <span className="text-xs text-white/60 leading-relaxed">{ins as string}</span>
+        {/* ── [Q] Auto Insights ───────────────────────────────────────────── */}
+        {insights.length > 0 && (
+          <div className="relative overflow-hidden rounded-2xl p-5"
+            style={{ background: 'rgba(8,8,28,0.72)', backdropFilter: 'blur(24px)', border: '1px solid rgba(245,158,11,0.14)', boxShadow: '0 0 40px rgba(245,158,11,0.04), 0 8px 32px rgba(0,0,0,0.4)' }}>
+            <div className="absolute inset-0 pointer-events-none"
+              style={{ background: 'radial-gradient(ellipse 40% 60% at 5% 50%, rgba(245,158,11,0.05) 0%, transparent 60%)' }} />
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                  style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.22)' }}>
+                  <Lightbulb size={14} className="text-amber-400" />
                 </div>
-              ))}
+                <div>
+                  <h2 className="text-sm font-bold text-white/90">Insights automatiques</h2>
+                  <p className="text-[10px] text-white/35">{insights.length} observation{insights.length > 1 ? 's' : ''} générée{insights.length > 1 ? 's' : ''} depuis vos données</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {insights.map((ins, i) => (
+                  <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl"
+                    style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.10)' }}>
+                    <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0"
+                      style={{ background: '#fbbf24', boxShadow: '0 0 6px rgba(251,191,36,0.7)' }} />
+                    <p className="text-[12px] text-white/58 leading-relaxed">{ins}</p>
+                  </div>
+                ))}
+              </div>
             </div>
+          </div>
+        )}
+
+        {/* ── Empty state — no projects ────────────────────────────────────── */}
+        {summary.total === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 gap-5">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.20)' }}>
+              <Layers size={26} className="text-violet-400/60" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-base font-bold text-white/50 mb-1">Aucune donnée disponible</h3>
+              <p className="text-sm text-white/25 max-w-xs">Importez votre premier DCE pour voir les métriques se remplir</p>
+            </div>
+            <Link href="/projects/new"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-px"
+              style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.30)', color: '#c4b5fd' }}>
+              Nouveau projet <ArrowRight size={14} />
+            </Link>
           </div>
         )}
 
@@ -719,3 +829,4 @@ export default async function DashboardPage() {
     </div>
   )
 }
+
