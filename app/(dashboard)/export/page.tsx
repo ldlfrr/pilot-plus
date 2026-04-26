@@ -418,14 +418,14 @@ export default function ExportPage() {
                     className={cn(
                       'relative text-left rounded-2xl p-4 transition-all duration-200',
                       locked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
-                      active ? 'ring-1' : 'hover:scale-[1.01]',
+                      active ? '' : 'hover:scale-[1.01]',
                     )}
                     style={{
                       background: active
                         ? `linear-gradient(135deg, ${p.color.glow}, rgba(255,255,255,0.02))`
                         : 'rgba(255,255,255,0.02)',
                       border: `1px solid ${active ? p.color.border : 'rgba(255,255,255,0.07)'}`,
-                      ringColor: p.color.border,
+                      boxShadow: active ? `0 0 0 1px ${p.color.border}` : 'none',
                     }}
                   >
                     {active && (
