@@ -99,7 +99,7 @@ const PRESETS = [
     formats: ['pdf'] as Format[],
     color: { border: 'rgba(245,158,11,0.45)', glow: 'rgba(245,158,11,0.10)', icon: '#fbbf24', badge: 'rgba(245,158,11,0.18)' },
   },
-] as const
+]
 
 // ── CSV helpers ───────────────────────────────────────────────────────────────
 
